@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "description": "Play music on Discord",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "npx nodemon index.js"
+  },
+  "dependencies": {
+    "@discordjs/opus": "^0.7.0",
+    "discord.js": "^12.5.1",
+    "dotenv": "^10.0.0",
+    "ffmpeg-static": "^4.4.0",
+    "ytdl-core": "^4.9.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}
