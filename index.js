@@ -6,6 +6,7 @@ const prefix = '-';
 const { botToken } = process.env;
 
 const ytdl = require('ytdl-core');
+const yts = require('yt-search');
 
 const client = new Discord.Client();
 client.login(botToken);
@@ -25,28 +26,29 @@ client.once('disconnect', () => {
 });
 
 client.on('message', async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(prefix)) return;
+  const tokens = message.content.split(' ');
+  let command = tokens.shift();
 
-  const serverQueue = queue.get(message.guild.id);
+  if (!message.author.bot && command[0] == prefix) {
+    const serverQueue = queue.get(message.guild.id);
 
-  if (message.content.startsWith(`${prefix}play`)) {
-    execute(message, serverQueue);
-    return;
-  } else if (message.content.startsWith(`${prefix}skip`)) {
-    skip(message, serverQueue);
-    return;
-  } else if (message.content.startsWith(`${prefix}stop`)) {
-    stop(message, serverQueue);
-    return;
-  } else {
-    message.channel.send('You need to enter a valid command!');
+    // remove prefix from command
+    command = command.substring(1);
+    // commands[command](message, tokens);
+
+    if (command == 'play' || command == 'p') {
+      execute(message, tokens, serverQueue);
+    } else if (command == 'skip' || command == 's') {
+      skip(message, serverQueue);
+    } else if (command == 'stop') {
+      stop(message, serverQueue);
+    } else {
+      message.channel.send('You need to enter a valid command!');
+    }
   }
 });
 
-async function execute(message, serverQueue) {
-  const args = message.content.split(' ');
-
+async function execute(message, tokens, serverQueue) {
   const voiceChannel = message.member.voice.channel;
   if (!voiceChannel)
     return message.channel.send(
@@ -59,7 +61,19 @@ async function execute(message, serverQueue) {
     );
   }
 
-  const songInfo = await ytdl.getInfo(args[1]);
+  let songUrl = '';
+  if (ytdl.validateURL(tokens[0])) {
+    songUrl = tokens[0];
+    // valid url
+  } else {
+    // search for song
+    const search = await yts(tokens.join(' '));
+    if (search.videos[0]) {
+      songUrl = search.videos[0].url;
+    }
+  }
+
+  const songInfo = await ytdl.getInfo(songUrl);
   const song = {
     title: songInfo.videoDetails.title,
     url: songInfo.videoDetails.video_url,
@@ -80,7 +94,7 @@ async function execute(message, serverQueue) {
     queueContruct.songs.push(song);
 
     try {
-      var connection = await voiceChannel.join();
+      let connection = await voiceChannel.join();
       queueContruct.connection = connection;
       play(message.guild, queueContruct.songs[0]);
     } catch (err) {
@@ -117,7 +131,7 @@ function stop(message, serverQueue) {
   serverQueue.connection.dispatcher.end();
 }
 
-function play(guild, song) {
+async function play(guild, song) {
   const serverQueue = queue.get(guild.id);
   if (!song) {
     serverQueue.voiceChannel.leave();
@@ -125,13 +139,18 @@ function play(guild, song) {
     return;
   }
 
+  // let info = await ytdl.getInfo(videoID);
+  // let audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
+  const audio = await ytdl(song.url, { filter: 'audioonly' });
+
   const dispatcher = serverQueue.connection
-    .play(ytdl(song.url))
+    .play(audio)
     .on('finish', () => {
       serverQueue.songs.shift();
       play(guild, serverQueue.songs[0]);
     })
     .on('error', (error) => console.error(error));
   dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
+  // delete message after x seconds
   serverQueue.textChannel.send(`Start playing: **${song.title}**`);
 }
