@@ -7,6 +7,7 @@ const {
   joinVoiceChannel,
   createAudioResource,
   createAudioPlayer,
+  AudioPlayerStatus,
 } = require('@discordjs/voice');
 
 const prefix = '-';
@@ -32,13 +33,13 @@ client.login(botToken);
 
 const queue = new Map();
 
-// client.once('reconnecting', () => {
-//   console.log('Reconnecting!');
-// });
+client.on('reconnecting', () => {
+  console.log('Reconnecting!');
+});
 
-// client.once('disconnect', () => {
-//   console.log('Disconnect!');
-// });
+client.on('disconnect', () => {
+  console.log('Disconnect!');
+});
 
 client.on('messageCreate', async (message) => {
   const tokens = message.content.split(' ');
@@ -52,6 +53,9 @@ client.on('messageCreate', async (message) => {
 
     if (command === 'play' || command === 'p') {
       execute(message, tokens, serverQueue);
+    } else if (command === 'skip' || command === 's') {
+    } else if (command === 'stop') {
+    } else if (command === 'pause') {
     } else if (command === 'ping') {
       message.channel.send({
         content: 'pong',
@@ -179,7 +183,8 @@ function stop(message, serverQueue) {
 async function play(guild, song, connection) {
   const serverQueue = queue.get(guild.id);
   if (!song) {
-    serverQueue.voiceChannel.leave();
+    // serverQueue.voiceChannel.leave();
+    connection.destroy();
     queue.delete(guild.id);
     return;
   }
@@ -189,22 +194,27 @@ async function play(guild, song, connection) {
   const audio = await ytdl(song.url, { filter: 'audioonly' });
 
   const audioplayer = voice.createAudioPlayer();
-  // connection
-  // connection
+
+  // player.pause();
+
+  // // Unpause after 5 seconds
+  // setTimeout(() => player.unpause(), 5_000);
 
   audioplayer.play(createAudioResource(audio));
   connection.subscribe(audioplayer);
 
+  audioplayer.on(AudioPlayerStatus.Idle, () => {
+    serverQueue.songs.shift();
+    play(guild, serverQueue.songs[0], connection);
+  });
+
+  audioplayer.on('error', (error) => console.error(error));
+  // audioplayer.on('finish', () => {
+  //   serverQueue.songs.shift();
+  //   play(guild, serverQueue.songs[0]);
+  // });
+
   // const dispatcher = serverQueue.connection
-  //   .subscribe(audioplayer)
-  //   .on('finish', () => {})
-  //   .on('error', (err) => {});
-  //   .play(audio)
-  //   .on('finish', () => {
-  //     serverQueue.songs.shift();
-  //     play(guild, serverQueue.songs[0]);
-  //   })
-  //   .on('error', (error) => console.error(error));
   // dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
   // delete message after x seconds
   serverQueue.textChannel.send(`Start playing: **${song.title}**`);
