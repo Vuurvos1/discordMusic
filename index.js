@@ -42,7 +42,7 @@ client.on('disconnect', () => {
   console.log('Disconnect!');
 });
 
-client.on('messageCreate', async (message) => {
+client.on('messageCreate', (message) => {
   const tokens = message.content.split(' ');
   let command = tokens.shift();
 
