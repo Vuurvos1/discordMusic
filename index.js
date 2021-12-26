@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const { URL } = require('url');
+
 const DiscordJS = require('discord.js');
 const { Intents } = require('discord.js');
 const voice = require('@discordjs/voice');
@@ -25,7 +27,7 @@ const client = new DiscordJS.Client({
   ],
 });
 
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log('Ready!');
 });
 client.login(botToken);
@@ -50,6 +52,7 @@ client.on('messageCreate', async (message) => {
     // remove prefix from command
     command = command.substring(1);
 
+    // convert to switch / controller object?
     if (command === 'play' || command === 'p') {
       execute(message, tokens, serverQueue);
     } else if (command === 'skip' || command === 's') {
@@ -87,35 +90,75 @@ async function execute(message, tokens, serverQueue) {
     );
   }
 
-  let songUrl = '';
-  if (ytdl.validateURL(tokens[0])) {
-    songUrl = tokens[0];
-    // valid url
+  let songs;
+
+  // if youtube url
+  if (tokens[0].match(/^http(s)?:\/\/(www.youtube.com|youtube.com)(.*)$/)) {
+    const url = new URL(tokens[0]);
+    const params = url.searchParams; // get url parameters
+
+    // url contains a playlist
+    if (params.has('list')) {
+      // add playlist to queue
+      const listId = params.get('list');
+      const list = await yts({ listId: listId });
+
+      if (list.length > 0) {
+        songs = [];
+        list.videos.forEach((video) => {
+          songs.push({
+            title: video.title,
+            id: video.videoId,
+          });
+        });
+
+        message.channel.send(`Added **${songs.length}** songs to the queue!`);
+      } else {
+        message.channel.send(`Couldn't find playlist`);
+      }
+    } else {
+      // get single video by id
+      videoId = params.get('v');
+      const video = await yts({ videoId: videoId });
+
+      songs = {
+        title: video.title,
+        id: video.videoId,
+      };
+
+      message.channel.send(`${songs.title} has been added to the queue!`);
+    }
   } else {
     // search for song
     const search = await yts(tokens.join(' '));
     if (search.videos[0]) {
-      songUrl = search.videos[0].url;
+      const video = search.videos[0];
+
+      songs = {
+        title: video.title,
+        id: video.videoId,
+      };
+
+      message.channel.send(`${songs.title} has been added to the queue!`);
+    } else {
+      // no song found
+      message.channel.send(`Couldn't find a song`);
     }
   }
-  const songInfo = await ytdl.getInfo(songUrl);
-  const song = {
-    title: songInfo.videoDetails.title,
-    url: songInfo.videoDetails.video_url,
-  };
 
   if (!serverQueue) {
     const queueContruct = {
       textChannel: message.channel,
       voiceChannel: voiceChannel,
       connection: null,
-      audioplayer: null,
+      audioPlayer: null,
       songs: [],
       volume: 5,
       playing: true,
     };
     queue.set(message.guild.id, queueContruct);
-    queueContruct.songs.push(song);
+    queueContruct.songs = queueContruct.songs.concat(songs);
+
     try {
       let connection = joinVoiceChannel({
         channelId: message.member.voice.channel.id,
@@ -132,8 +175,7 @@ async function execute(message, tokens, serverQueue) {
       return message.channel.send(err);
     }
   } else {
-    serverQueue.songs.push(song);
-    return message.channel.send(`${song.title} has been added to the queue!`);
+    serverQueue.songs = serverQueue.songs.concat(songs);
   }
 }
 
@@ -145,7 +187,7 @@ function skip(message, serverQueue) {
   if (!serverQueue)
     return message.channel.send('There is no song that I could skip!');
 
-  serverQueue.audioplayer.stop();
+  serverQueue.audioPlayer.stop();
 }
 
 function stop(message, serverQueue) {
@@ -158,7 +200,7 @@ function stop(message, serverQueue) {
     return message.channel.send('There is no song that I could stop!');
 
   serverQueue.songs = [];
-  serverQueue.audioplayer.stop();
+  serverQueue.audioPlayer.stop();
 }
 
 async function play(guild, song, connection) {
@@ -169,7 +211,7 @@ async function play(guild, song, connection) {
     return;
   }
 
-  const audio = await ytdl(song.url, { filter: 'audioonly' });
+  const audio = await ytdl(song.id, { filter: 'audioonly' });
 
   const audioPlayer = voice.createAudioPlayer();
   serverQueue.audioPlayer = audioPlayer;
