@@ -103,7 +103,7 @@ async function execute(message, tokens, serverQueue) {
       const listId = params.get('list');
       const list = await yts({ listId: listId });
 
-      if (list.length > 0) {
+      if (list.videos.length > 0) {
         songs = [];
         list.videos.forEach((video) => {
           songs.push({
