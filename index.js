@@ -63,6 +63,8 @@ client.on('messageCreate', (message) => {
       pause(message, serverQueue);
     } else if (command === 'unpause') {
       unpause(message, serverQueue);
+    } else if (command === 'shuffle') {
+      shuffle(message, serverQueue);
     } else if (command === 'ping') {
       message.channel.send({
         content: 'pong',
@@ -240,6 +242,10 @@ function pause(message, serverQueue) {
 
 function unpause(message, serverQueue) {
   serverQueue.audioPlayer.unpause();
+}
+
+function shuffle(message, serverQueue) {
+  serverQueue.songs.sort(() => Math.random() - 0.5);
 }
 
 function clear(message, serverQueue) {
