@@ -4,7 +4,6 @@ const { URL } = require('url');
 
 const DiscordJS = require('discord.js');
 const { Intents } = require('discord.js');
-const voice = require('@discordjs/voice');
 const {
   joinVoiceChannel,
   createAudioResource,
@@ -207,20 +206,24 @@ function stop(message, serverQueue) {
 
 async function play(guild, song, connection) {
   const serverQueue = queue.get(guild.id);
+
   if (!song) {
     connection.destroy();
     queue.delete(guild.id);
     return;
   }
 
-  const audio = await ytdl(song.id, { filter: 'audioonly' });
+  if (!serverQueue.audioPlayer) {
+    const audioPlayer = createAudioPlayer();
+    serverQueue.audioPlayer = audioPlayer;
+    connection.subscribe(audioPlayer);
 
-  const audioPlayer = voice.createAudioPlayer();
-  serverQueue.audioPlayer = audioPlayer;
+    // move audioplayer on events here?
+  }
 
-  const audioResource = createAudioResource(audio);
-  serverQueue.audioPlayer.play(audioResource);
-  connection.subscribe(audioPlayer);
+  const audio = await ytdl(song.id);
+  const resource = createAudioResource(audio);
+  serverQueue.audioPlayer.play(resource);
 
   const msg = await serverQueue.textChannel.send(
     `Now playing: **${song.title}**`
