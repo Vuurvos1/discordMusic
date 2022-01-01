@@ -241,18 +241,22 @@ async function play(guild, song, connection) {
 
 function pause(message, serverQueue) {
   serverQueue.audioPlayer.pause();
+  return message.channel.send('Paused music');
 }
 
 function unpause(message, serverQueue) {
   serverQueue.audioPlayer.unpause();
+  return message.channel.send('Unpaused music');
 }
 
 function shuffle(message, serverQueue) {
   serverQueue.songs.sort(() => Math.random() - 0.5);
+  return message.channel.send('Queue shuffled');
 }
 
 function clear(message, serverQueue) {
   serverQueue.songs = [];
+  message.channel.send('Cleared the queue');
 }
 
 function leave(message, connection) {
