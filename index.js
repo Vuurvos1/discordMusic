@@ -215,10 +215,18 @@ async function play(guild, song, connection) {
 
   if (!serverQueue.audioPlayer) {
     const audioPlayer = createAudioPlayer();
+
+    // once song finished playing, play next song in queue
+    audioPlayer.on(AudioPlayerStatus.Idle, () => {
+      serverQueue.songs.shift();
+      play(guild, serverQueue.songs[0], connection);
+      msg.delete(); // delete now playing mewwssage
+    });
+
+    audioPlayer.on('error', (err) => console.error(err));
+
     serverQueue.audioPlayer = audioPlayer;
     connection.subscribe(audioPlayer);
-
-    // move audioplayer on events here?
   }
 
   const audio = await ytdl(song.id);
@@ -228,15 +236,6 @@ async function play(guild, song, connection) {
   const msg = await serverQueue.textChannel.send(
     `Now playing: **${song.title}**`
   );
-
-  // once song finished playing, play next song in queue
-  serverQueue.audioPlayer.on(AudioPlayerStatus.Idle, () => {
-    serverQueue.songs.shift();
-    play(guild, serverQueue.songs[0], connection);
-    msg.delete(); // delete now playing message
-  });
-
-  serverQueue.audioPlayer.on('error', (error) => console.error(error));
 }
 
 function pause(message, serverQueue) {
