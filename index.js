@@ -64,6 +64,8 @@ client.on('messageCreate', (message) => {
       unpause(message, serverQueue);
     } else if (command === 'shuffle') {
       shuffle(message, serverQueue);
+    } else if (command === 'queue' || command === 'q') {
+      queueCommand(message, serverQueue);
     } else if (command === 'ping') {
       message.channel.send({
         content: 'pong',
@@ -104,11 +106,13 @@ async function execute(message, tokens, serverQueue) {
       const listId = params.get('list');
       const list = await yts({ listId: listId });
 
+      // merge song objects?
       if (list.videos.length > 0) {
         songs = [];
         list.videos.forEach((video) => {
           songs.push({
             title: video.title,
+            duration: video.duration.timestamp,
             id: video.videoId,
           });
         });
@@ -124,6 +128,7 @@ async function execute(message, tokens, serverQueue) {
 
       songs = {
         title: video.title,
+        duration: video.duration.timestamp,
         id: video.videoId,
       };
 
@@ -137,6 +142,7 @@ async function execute(message, tokens, serverQueue) {
 
       songs = {
         title: video.title,
+        duration: video.duration.timestamp,
         id: video.videoId,
       };
 
@@ -151,6 +157,7 @@ async function execute(message, tokens, serverQueue) {
     const queueContruct = {
       textChannel: message.channel,
       voiceChannel: voiceChannel,
+      msg: null,
       connection: null,
       audioPlayer: null,
       songs: [],
@@ -220,7 +227,9 @@ async function play(guild, song, connection) {
     audioPlayer.on(AudioPlayerStatus.Idle, () => {
       serverQueue.songs.shift();
       play(guild, serverQueue.songs[0], connection);
-      msg.delete(); // delete now playing mewwssage
+      if (serverQueue.msg) {
+        serverQueue.msg.delete(); // delete now playing mewwssage
+      }
     });
 
     audioPlayer.on('error', (err) => console.error(err));
@@ -233,7 +242,7 @@ async function play(guild, song, connection) {
   const resource = createAudioResource(audio);
   serverQueue.audioPlayer.play(resource);
 
-  const msg = await serverQueue.textChannel.send(
+  serverQueue.msg = await serverQueue.textChannel.send(
     `Now playing: **${song.title}**`
   );
 }
@@ -251,6 +260,38 @@ function unpause(message, serverQueue) {
 function shuffle(message, serverQueue) {
   serverQueue.songs.sort(() => Math.random() - 0.5);
   return message.channel.send('Queue shuffled');
+}
+
+function queueCommand(message, serverQueue) {
+  const songs = serverQueue.songs.slice(0, 5); // get first 5 songs
+
+  if (songs.length < 1) {
+    return message.channel.send('```nim\nThe queue is empty ;-;`\n```');
+  }
+
+  let queueMsg = '```nim\n';
+
+  for (let i = 0; i < songs.length; i++) {
+    const song = songs[i];
+    if (i === 0) {
+      queueMsg += '    ⬐ current track\n';
+    }
+
+    queueMsg += `${i + 1}) ${
+      song.title.length > 40
+        ? song.title.substring(0, 40 - 1) + '…'
+        : song.title.padEnd(40, ' ')
+    } ${song.duration}\n`;
+    // TODO show time left for current song `2:39 left`
+
+    if (i === 0) {
+      queueMsg += '    ⬑ current track\n';
+    }
+  }
+
+  queueMsg += '```';
+
+  return message.channel.send(queueMsg);
 }
 
 function clear(message, serverQueue) {
