@@ -238,7 +238,10 @@ async function play(guild, song, connection) {
     connection.subscribe(audioPlayer);
   }
 
-  const audio = await ytdl(song.id);
+  const audio = await ytdl(song.id, {
+    filter: 'audioonly',
+    quality: 'lowest',
+  });
   const resource = createAudioResource(audio);
   serverQueue.audioPlayer.play(resource);
 
