@@ -9,12 +9,12 @@
   "dependencies": {
     "@discordjs/opus": "^0.7.0",
     "@discordjs/voice": "^0.7.5",
-    "discord.js": "^13.5.0",
+    "discord.js": "^13.6.0",
     "dotenv": "^10.0.0",
-    "ffmpeg-static": "^4.4.0",
+    "ffmpeg-static": "^4.4.1",
     "libsodium-wrappers": "^0.7.9",
     "yt-search": "^2.10.3",
-    "ytdl-core": "^4.9.2"
+    "ytdl-core": "^4.10.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

@@ -3,31 +3,31 @@ lockfileVersion: 5.3
 specifiers:
   '@discordjs/opus': ^0.7.0
   '@discordjs/voice': ^0.7.5
-  discord.js: ^13.5.0
+  discord.js: ^13.6.0
   dotenv: ^10.0.0
-  ffmpeg-static: ^4.4.0
+  ffmpeg-static: ^4.4.1
   libsodium-wrappers: ^0.7.9
   nodemon: ^2.0.15
   yt-search: ^2.10.3
-  ytdl-core: ^4.9.2
+  ytdl-core: ^4.10.0
 
 dependencies:
   '@discordjs/opus': 0.7.0
-  '@discordjs/voice': 0.7.5_8bfb5dec8864f11d9bc33774281a78f4
-  discord.js: 13.5.0
+  '@discordjs/voice': 0.7.5_9765f935dad003c4428adcfeefec9f90
+  discord.js: 13.6.0
   dotenv: 10.0.0
-  ffmpeg-static: 4.4.0
+  ffmpeg-static: 4.4.1
   libsodium-wrappers: 0.7.9
   yt-search: 2.10.3
-  ytdl-core: 4.9.2
+  ytdl-core: 4.10.0
 
 devDependencies:
   nodemon: 2.0.15
 
 packages:
 
-  /@derhuerst/http-basic/8.2.1:
-    resolution: {integrity: sha512-Rmn7qQQulw2sxJ8qGfZ7OuqMWuhz8V+L5xnYKMF5cXVcYqmgWqlVEAme90pF7Ya8OVhxVxLmhh0rI2k6t7ITWw==}
+  /@derhuerst/http-basic/8.2.2:
+    resolution: {integrity: sha512-ek065nW95mleLHo8vZ+ob7QTQPNOwDEjCe27BX2flme/UTu9z2mD1uRRPko38u7al4tTZADMtozpll8PQHAZgg==}
     engines: {node: '>=6.0.0'}
     dependencies:
       caseless: 0.12.0
@@ -40,8 +40,8 @@ packages:
     resolution: {integrity: sha512-ZTB8yJdJKrKlq44dpWkNUrAtEJEq0gqpb7ASdv4vmq6/mZal5kOv312hQ56I/vxwMre+VIkoHquNUAfnTbiYtg==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@sindresorhus/is': 4.2.0
-      discord-api-types: 0.26.0
+      '@sindresorhus/is': 4.2.1
+      discord-api-types: 0.26.1
       ts-mixer: 6.0.0
       tslib: 2.3.1
       zod: 3.11.6
@@ -80,16 +80,16 @@ packages:
       - supports-color
     dev: false
 
-  /@discordjs/voice/0.7.5_8bfb5dec8864f11d9bc33774281a78f4:
+  /@discordjs/voice/0.7.5_9765f935dad003c4428adcfeefec9f90:
     resolution: {integrity: sha512-lUk+CmIXNKslT6DkC9IF9rpsqhzlTiedauUCPBzepjd4XWxwBZiyVIzR6QpbAirxkAwCoAbbje+3Ho71PGLEAw==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
       '@types/ws': 8.2.2
       discord-api-types: 0.24.0
-      prism-media: 1.3.2_8bfb5dec8864f11d9bc33774281a78f4
+      prism-media: 1.3.2_9765f935dad003c4428adcfeefec9f90
       tiny-typed-emitter: 2.1.0
       tslib: 2.3.1
-      ws: 8.4.0
+      ws: 8.4.2
     transitivePeerDependencies:
       - '@discordjs/opus'
       - bufferutil
@@ -109,8 +109,8 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /@sindresorhus/is/4.2.0:
-    resolution: {integrity: sha512-VkE3KLBmJwcCaVARtQpfuKcKv8gcBmUubrfHGF84dXuuW6jgsRYxPtzcIhPyK9WAPpRt2/xY6zkD9MnRaJzSyw==}
+  /@sindresorhus/is/4.2.1:
+    resolution: {integrity: sha512-BrzrgtaqEre0qfvI8sMTaEvx+bayuhPmfe2rfeUGPPHYr/PLxCOqkOe4TQTDPb+qcqgNcsAtXV/Ew74mcDIE8w==}
     engines: {node: '>=10'}
     dev: false
 
@@ -124,7 +124,7 @@ packages:
   /@types/node-fetch/2.5.12:
     resolution: {integrity: sha512-MKgC4dlq4kKNa/mYrwpKfzQMB5X3ee5U6fSprkKpToBqBmX4nFZL9cW5jl6sWn+xpRJ7ypWh2yyqqr8UUCstSw==}
     dependencies:
-      '@types/node': 17.0.5
+      '@types/node': 17.0.8
       form-data: 3.0.1
     dev: false
 
@@ -132,14 +132,14 @@ packages:
     resolution: {integrity: sha512-F0KIgDJfy2nA3zMLmWGKxcH2ZVEtCZXHHdOQs2gSaQ27+lNeEfGxzkIw90aXswATX7AZ33tahPbzy6KAfUreVw==}
     dev: false
 
-  /@types/node/17.0.5:
-    resolution: {integrity: sha512-w3mrvNXLeDYV1GKTZorGJQivK6XLCoGwpnyJFbJVK/aTBQUxOCaa/GlFAAN3OTDFcb7h5tiFG+YXCO2By+riZw==}
+  /@types/node/17.0.8:
+    resolution: {integrity: sha512-YofkM6fGv4gDJq78g4j0mMuGMkZVxZDgtU0JRdx6FgiJDG+0fY0GKVolOV8WqVmEhLCXkQRjwDdKyPxJp/uucg==}
     dev: false
 
   /@types/ws/8.2.2:
     resolution: {integrity: sha512-NOn5eIcgWLOo6qW8AcuLZ7G8PycXu0xTxxkS6Q18VWFxgPUSOwV0pBj2a/4viNZVu25i7RIB7GttdkAIUUXOOg==}
     dependencies:
-      '@types/node': 17.0.5
+      '@types/node': 17.0.8
     dev: false
 
   /abbrev/1.1.1:
@@ -186,7 +186,7 @@ packages:
     engines: {node: '>= 8'}
     dependencies:
       normalize-path: 3.0.0
-      picomatch: 2.3.0
+      picomatch: 2.3.1
     dev: true
 
   /aproba/2.0.0:
@@ -287,7 +287,7 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       ansi-align: 3.0.1
-      camelcase: 6.2.1
+      camelcase: 6.3.0
       chalk: 4.1.2
       cli-boxes: 2.2.1
       string-width: 4.2.3
@@ -326,8 +326,8 @@ packages:
       responselike: 1.0.2
     dev: true
 
-  /camelcase/6.2.1:
-    resolution: {integrity: sha512-tVI4q5jjFV5CavAU8DXfza/TJcZutVKo/5Foskmsqcm0MsL91moHvwiGNnqaa2o6PF/7yT5ikDRcVcl8Rj6LCA==}
+  /camelcase/6.3.0:
+    resolution: {integrity: sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==}
     engines: {node: '>=10'}
     dev: true
 
@@ -453,7 +453,7 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       dot-prop: 5.3.0
-      graceful-fs: 4.2.8
+      graceful-fs: 4.2.9
       make-dir: 3.1.0
       unique-string: 2.0.0
       write-file-atomic: 3.0.3
@@ -553,13 +553,13 @@ packages:
     engines: {node: '>=12'}
     dev: false
 
-  /discord-api-types/0.26.0:
-    resolution: {integrity: sha512-bnUltSHpQLzTVZTMjm+iNgVhAbtm5oAKHrhtiPaZoxprbm1UtuCZCsG0yXM61NamWfeSz7xnLvgFc50YzVJ5cQ==}
+  /discord-api-types/0.26.1:
+    resolution: {integrity: sha512-T5PdMQ+Y1MEECYMV5wmyi9VEYPagEDEi4S0amgsszpWY0VB9JJ/hEvM6BgLhbdnKky4gfmZEXtEEtojN8ZKJQQ==}
     engines: {node: '>=12'}
     dev: false
 
-  /discord.js/13.5.0:
-    resolution: {integrity: sha512-K+ZcB0f+wA1ZzDhz3hlaAi4Ap7jSvVEUZ+U29T4DMoiNNUv22F4vu1byrOq8GyyLLDFiZ3iSudea0MvSHu3fQA==}
+  /discord.js/13.6.0:
+    resolution: {integrity: sha512-tXNR8zgsEPxPBvGk3AQjJ9ljIIC6/LOPjzKwpwz8Y1Q2X66Vi3ZqFgRHYwnHKC0jC0F+l4LzxlhmOJsBZDNg9g==}
     engines: {node: '>=16.6.0', npm: '>=7.0.0'}
     dependencies:
       '@discordjs/builders': 0.11.0
@@ -567,10 +567,10 @@ packages:
       '@sapphire/async-queue': 1.1.9
       '@types/node-fetch': 2.5.12
       '@types/ws': 8.2.2
-      discord-api-types: 0.26.0
+      discord-api-types: 0.26.1
       form-data: 4.0.0
       node-fetch: 2.6.6
-      ws: 8.4.0
+      ws: 8.4.2
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -687,12 +687,12 @@ packages:
       type: 2.5.0
     dev: false
 
-  /ffmpeg-static/4.4.0:
-    resolution: {integrity: sha512-NIJHVPXlSsIK9pYvsTPh4ZlppauorpPLLeOaIG7VOXWQck4Fx4Qi7Ahe+j8mj8KZXhWwCg3Hx46JdWAIOWLcpg==}
+  /ffmpeg-static/4.4.1:
+    resolution: {integrity: sha512-gyGTIf5kgmLDmH7Rwj8vMmNK46bjXKKofHS2gY+LUqoTe/iybVuTuvnhJQR2tZHlKlDG7A/BIH7cRa2jWDKgWw==}
     engines: {node: '>=10'}
     requiresBuild: true
     dependencies:
-      '@derhuerst/http-basic': 8.2.1
+      '@derhuerst/http-basic': 8.2.2
       env-paths: 2.2.1
       https-proxy-agent: 5.0.0
       progress: 2.0.3
@@ -815,8 +815,8 @@ packages:
       url-parse-lax: 3.0.0
     dev: true
 
-  /graceful-fs/4.2.8:
-    resolution: {integrity: sha512-qkIilPUYcNhJpd33n0GBXTB1MMPp14TxEsEs0pTrsSVucApsYzW5V+Q8Qxhik6KU3evy+qkAAowTByymK0avdg==}
+  /graceful-fs/4.2.9:
+    resolution: {integrity: sha512-NtNxqUcXgpW2iMrfqSfR73Glt39K+BLwWsPs94yR63v45T0Wbej7eRmL5cWfwEgqXnmjQp3zaJTshdRW/qC2ZQ==}
     dev: true
 
   /has-flag/3.0.0:
@@ -1042,11 +1042,11 @@ packages:
       es5-ext: 0.10.53
     dev: false
 
-  /m3u8stream/0.8.4:
-    resolution: {integrity: sha512-sco80Db+30RvcaIOndenX6E6oQNgTiBKeJbFPc+yDXwPQIkryfboEbCvXPlBRq3mQTCVPQO93TDVlfRwqpD35w==}
-    engines: {node: '>=10'}
+  /m3u8stream/0.8.6:
+    resolution: {integrity: sha512-LZj8kIVf9KCphiHmH7sbFQTVe4tOemb202fWwvJwR9W5ENW/1hxJN6ksAWGhQgSBSa3jyWhnjKU1Fw1GaOdbyA==}
+    engines: {node: '>=12'}
     dependencies:
-      miniget: 4.2.1
+      miniget: 4.2.2
       sax: 1.2.4
     dev: false
 
@@ -1086,9 +1086,9 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /miniget/4.2.1:
-    resolution: {integrity: sha512-O/DduzDR6f+oDtVype9S/Qu5hhnx73EDYGyZKwU/qN82lehFZdfhoa4DT51SpsO+8epYrB3gcRmws56ROfTIoQ==}
-    engines: {node: '>=10'}
+  /miniget/4.2.2:
+    resolution: {integrity: sha512-a7voNL1N5lDMxvTMExOkg+Fq89jM2vY8pAi9ZEWzZtfNmdfP6RXkvUtFnCAXoCv2T9k1v/fUJVaAEuepGcvLYA==}
+    engines: {node: '>=12'}
     dev: false
 
   /minimatch/3.0.4:
@@ -1261,8 +1261,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /picomatch/2.3.0:
-    resolution: {integrity: sha512-lY1Q/PiJGC2zOv/z391WOTD+Z02bCgsFfvxoXXf6h7kv9o+WmsmzYqrAwY63sNgOxE4xEdq0WyUnXfKeBrSvYw==}
+  /picomatch/2.3.1:
+    resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
     dev: true
 
@@ -1271,7 +1271,7 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /prism-media/1.3.2_8bfb5dec8864f11d9bc33774281a78f4:
+  /prism-media/1.3.2_9765f935dad003c4428adcfeefec9f90:
     resolution: {integrity: sha512-L6UsGHcT6i4wrQhFF1aPK+MNYgjRqR2tUoIqEY+CG1NqVkMjPRKzS37j9f8GiYPlD6wG9ruBj+q5Ax+bH8Ik1g==}
     peerDependencies:
       '@discordjs/opus': ^0.5.0
@@ -1289,7 +1289,7 @@ packages:
         optional: true
     dependencies:
       '@discordjs/opus': 0.7.0
-      ffmpeg-static: 4.4.0
+      ffmpeg-static: 4.4.1
     dev: false
 
   /process-nextick-args/2.0.1:
@@ -1354,7 +1354,7 @@ packages:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
     dependencies:
-      picomatch: 2.3.0
+      picomatch: 2.3.1
     dev: true
 
   /redstar/0.0.2:
@@ -1661,8 +1661,8 @@ packages:
       typedarray-to-buffer: 3.1.5
     dev: true
 
-  /ws/8.4.0:
-    resolution: {integrity: sha512-IHVsKe2pjajSUIl4KYMQOdlyliovpEPquKkqbwswulszzI7r0SfQrxnXdWAEqOlDCLrVSJzo+O1hAwdog2sKSQ==}
+  /ws/8.4.2:
+    resolution: {integrity: sha512-Kbk4Nxyq7/ZWqr/tarI9yIt/+iNNFOjBXEWgTb4ydaNHBNGgvf2QHbS9fdfsndfjFlFwEd4Al+mw83YkaD10ZA==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -1696,12 +1696,12 @@ packages:
       node-fzf: 0.5.3
     dev: false
 
-  /ytdl-core/4.9.2:
-    resolution: {integrity: sha512-aTlsvsN++03MuOtyVD4DRF9Z/9UAeeuiNbjs+LjQBAiw4Hrdp48T3U9vAmRPyvREzupraY8pqRoBfKGqpq+eHA==}
+  /ytdl-core/4.10.0:
+    resolution: {integrity: sha512-RCCoSVTmMeBPH5NFR1fh3nkDU9okvWM0ZdN6plw6I5+vBBZVUEpOt8vjbSgprLRMmGUsmrQZJhvG1CHOat4mLA==}
     engines: {node: '>=10'}
     dependencies:
-      m3u8stream: 0.8.4
-      miniget: 4.2.1
+      m3u8stream: 0.8.6
+      miniget: 4.2.2
       sax: 1.2.4
     dev: false
 
