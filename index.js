@@ -17,6 +17,7 @@ const { botToken } = process.env;
 
 const ytdl = require('ytdl-core');
 const yts = require('yt-search');
+const ytsr = require('ytsr');
 
 const client = new DiscordJS.Client({
   intents: [
@@ -136,14 +137,14 @@ async function execute(message, tokens, serverQueue) {
     }
   } else {
     // search for song
-    const search = await yts(tokens.join(' '));
-    if (search.videos[0]) {
-      const video = search.videos[0];
+    const search = await ytsr(tokens.join(' '), { limit: 10 });
+    if (search.items[0]) {
+      const video = search.items[0];
 
       songs = {
         title: video.title,
-        duration: video.duration.timestamp,
-        id: video.videoId,
+        duration: video.duration,
+        id: video.id,
       };
 
       message.channel.send(`${songs.title} has been added to the queue!`);
