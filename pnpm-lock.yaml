@@ -9,7 +9,7 @@ specifiers:
   libsodium-wrappers: ^0.7.9
   nodemon: ^2.0.15
   yt-search: ^2.10.3
-  ytdl-core: ^4.10.0
+  ytdl-core: ^4.10.1
   ytsr: ^3.6.0
 
 dependencies:
@@ -20,7 +20,7 @@ dependencies:
   ffmpeg-static: 4.4.1
   libsodium-wrappers: 0.7.9
   yt-search: 2.10.3
-  ytdl-core: 4.10.0
+  ytdl-core: 4.10.1
   ytsr: 3.6.0
 
 devDependencies:
@@ -42,7 +42,7 @@ packages:
     resolution: {integrity: sha512-ZTB8yJdJKrKlq44dpWkNUrAtEJEq0gqpb7ASdv4vmq6/mZal5kOv312hQ56I/vxwMre+VIkoHquNUAfnTbiYtg==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@sindresorhus/is': 4.3.0
+      '@sindresorhus/is': 4.4.0
       discord-api-types: 0.26.1
       ts-mixer: 6.0.0
       tslib: 2.3.1
@@ -103,8 +103,8 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@sapphire/async-queue/1.1.9:
-    resolution: {integrity: sha512-CbXaGwwlEMq+l1TRu01FJCvySJ1CEFKFclHT48nIfNeZXaAAmmwwy7scUKmYHPUa3GhoMp6Qr1B3eAJux6XgOQ==}
+  /@sapphire/async-queue/1.2.0:
+    resolution: {integrity: sha512-O5ND5Ljpef86X5oy8zXorQ754TMjWALcPSAgPBu4+76HLtDTrNoDyzU2uGE2G4A8Wv51u0MXHzGQ0WZ4GMtpIw==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
     dev: false
 
@@ -113,8 +113,8 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /@sindresorhus/is/4.3.0:
-    resolution: {integrity: sha512-wwOvh0eO3PiTEivGJWiZ+b946SlMSb4pe+y+Ur/4S87cwo09pYi+FWHHnbrM3W9W7cBYKDqQXcrFYjYUCOJUEQ==}
+  /@sindresorhus/is/4.4.0:
+    resolution: {integrity: sha512-QppPM/8l3Mawvh4rn9CNEYIU9bxpXUCRMaX9yUpvBk1nMKusLKpfXGDEKExKaPhLzcn3lzil7pR6rnJ11HgeRQ==}
     engines: {node: '>=10'}
     dev: false
 
@@ -128,7 +128,7 @@ packages:
   /@types/node-fetch/2.5.12:
     resolution: {integrity: sha512-MKgC4dlq4kKNa/mYrwpKfzQMB5X3ee5U6fSprkKpToBqBmX4nFZL9cW5jl6sWn+xpRJ7ypWh2yyqqr8UUCstSw==}
     dependencies:
-      '@types/node': 17.0.10
+      '@types/node': 17.0.14
       form-data: 3.0.1
     dev: false
 
@@ -136,14 +136,14 @@ packages:
     resolution: {integrity: sha512-F0KIgDJfy2nA3zMLmWGKxcH2ZVEtCZXHHdOQs2gSaQ27+lNeEfGxzkIw90aXswATX7AZ33tahPbzy6KAfUreVw==}
     dev: false
 
-  /@types/node/17.0.10:
-    resolution: {integrity: sha512-S/3xB4KzyFxYGCppyDt68yzBU9ysL88lSdIah4D6cptdcltc4NCPCAMc0+PCpg/lLIyC7IPvj2Z52OJWeIUkog==}
+  /@types/node/17.0.14:
+    resolution: {integrity: sha512-SbjLmERksKOGzWzPNuW7fJM7fk3YXVTFiZWB/Hs99gwhk+/dnrQRPBQjPW9aO+fi1tAffi9PrwFvsmOKmDTyng==}
     dev: false
 
   /@types/ws/8.2.2:
     resolution: {integrity: sha512-NOn5eIcgWLOo6qW8AcuLZ7G8PycXu0xTxxkS6Q18VWFxgPUSOwV0pBj2a/4viNZVu25i7RIB7GttdkAIUUXOOg==}
     dependencies:
-      '@types/node': 17.0.10
+      '@types/node': 17.0.14
     dev: false
 
   /abbrev/1.1.1:
@@ -568,7 +568,7 @@ packages:
     dependencies:
       '@discordjs/builders': 0.11.0
       '@discordjs/collection': 0.4.0
-      '@sapphire/async-queue': 1.1.9
+      '@sapphire/async-queue': 1.2.0
       '@types/node-fetch': 2.5.12
       '@types/ws': 8.2.2
       discord-api-types: 0.26.1
@@ -689,7 +689,7 @@ packages:
   /ext/1.6.0:
     resolution: {integrity: sha512-sdBImtzkq2HpkdRLtlLWDa6w4DX22ijZLKx8BMPUuKe1c5lbN6xwQDQCxSfxBQnHZ13ls/FH0MQZx/q/gr6FQg==}
     dependencies:
-      type: 2.5.0
+      type: 2.6.0
     dev: false
 
   /ffmpeg-static/4.4.1:
@@ -1570,8 +1570,8 @@ packages:
     resolution: {integrity: sha512-+5nt5AAniqsCnu2cEQQdpzCAh33kVx8n0VoFidKpB1dVVLAN/F+bgVOqOJqOnEnrhp222clB5p3vUlD+1QAnfg==}
     dev: false
 
-  /type/2.5.0:
-    resolution: {integrity: sha512-180WMDQaIMm3+7hGXWf12GtdniDEy7nYcyFMKJn/eZz/6tSLXrUN9V0wKSbMjej0I1WHWbpREDEKHtqPQa9NNw==}
+  /type/2.6.0:
+    resolution: {integrity: sha512-eiDBDOmkih5pMbo9OqsqPRGMljLodLcwd5XD5JbtNB0o89xZAwynY9EdCDsJU7LtcVCClu9DvM7/0Ep1hYX3EQ==}
     dev: false
 
   /typedarray-to-buffer/3.1.5:
@@ -1706,8 +1706,8 @@ packages:
       node-fzf: 0.5.3
     dev: false
 
-  /ytdl-core/4.10.0:
-    resolution: {integrity: sha512-RCCoSVTmMeBPH5NFR1fh3nkDU9okvWM0ZdN6plw6I5+vBBZVUEpOt8vjbSgprLRMmGUsmrQZJhvG1CHOat4mLA==}
+  /ytdl-core/4.10.1:
+    resolution: {integrity: sha512-idBhW+e7HCzs5fR5cqp7Ci+mJhEch41YAaWabYlneQFCL6IGf6Hycv99yVx01Zl1Ci0t/70faOelMSrXaQTE/A==}
     engines: {node: '>=10'}
     dependencies:
       m3u8stream: 0.8.6
