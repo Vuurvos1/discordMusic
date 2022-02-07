@@ -139,7 +139,7 @@ async function execute(message, tokens, serverQueue) {
     // search for song
     const search = await ytsr(tokens.join(' '), { limit: 10 });
     // maybe this caused the undefined video id?
-    if (search.items[0] && search.items[0].id) {
+    if (search.items.length > 1 && search.items[0].id) {
       const video = search.items[0];
 
       songs = {
