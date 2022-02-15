@@ -19,6 +19,22 @@ const ytdl = require('ytdl-core');
 const yts = require('yt-search');
 const ytsr = require('ytsr');
 
+const commands = {
+  play: execute,
+  p: execute,
+  skip: skip,
+  s: skip,
+  stop: stop,
+  pause: pause,
+  unpause: unpause,
+  leave: leave,
+  shuffle: shuffle,
+  clear: clear,
+  queue: queueCommand,
+  q: queueCommand,
+  ping: ping,
+};
+
 const client = new DiscordJS.Client({
   intents: [
     Intents.FLAGS.GUILDS,
@@ -52,32 +68,20 @@ client.on('messageCreate', (message) => {
     // remove prefix from command
     command = command.substring(1);
 
-    // convert to switch / controller object?
-    if (command === 'play' || command === 'p') {
-      execute(message, tokens, serverQueue);
-    } else if (command === 'skip' || command === 's') {
-      skip(message, serverQueue);
-    } else if (command === 'stop') {
-      stop(message, serverQueue);
-    } else if (command === 'pause') {
-      pause(message, serverQueue);
-    } else if (command === 'unpause') {
-      unpause(message, serverQueue);
-    } else if (command === 'shuffle') {
-      shuffle(message, serverQueue);
-    } else if (command === 'queue' || command === 'q') {
-      queueCommand(message, serverQueue);
-    } else if (command === 'ping') {
-      message.channel.send({
-        content: 'pong',
-      });
+    if (commands[command]) {
+      commands[command](message, tokens, serverQueue);
     } else {
-      message.channel.send('You need to enter a valid command!');
+      message.channel.send('Please enter a valid command!');
     }
   }
 });
 
 async function execute(message, tokens, serverQueue) {
+  if (tokens.length < 1) {
+    // if no argument is given
+    return message.channel.send('Please enter a valid argument');
+  }
+
   // check if you are in a voice channel
   const voiceChannel = message.member.voice.channel;
   if (!voiceChannel) {
@@ -120,7 +124,7 @@ async function execute(message, tokens, serverQueue) {
 
         message.channel.send(`Added **${songs.length}** songs to the queue!`);
       } else {
-        message.channel.send(`Couldn't find playlist`);
+        message.channel.send("Couldn't find playlist");
       }
     } else {
       // get single video by id
@@ -185,11 +189,16 @@ async function execute(message, tokens, serverQueue) {
       return message.channel.send(err);
     }
   } else {
-    serverQueue.songs = serverQueue.songs.concat(songs);
+    if (serverQueue.songs.length < 1) {
+      serverQueue.songs = serverQueue.songs.concat(songs);
+      play(message.guild, serverQueue.songs[0], serverQueue.connection);
+    } else {
+      serverQueue.songs = serverQueue.songs.concat(songs);
+    }
   }
 }
 
-function skip(message, serverQueue) {
+function skip(message, tokens, serverQueue) {
   if (!message.member.voice.channel)
     return message.channel.send(
       'You have to be in a voice channel to stop the music!'
@@ -200,7 +209,7 @@ function skip(message, serverQueue) {
   serverQueue.audioPlayer.stop();
 }
 
-function stop(message, serverQueue) {
+function stop(message, tokens, serverQueue) {
   if (!message.member.voice.channel)
     return message.channel.send(
       'You have to be in a voice channel to stop the music!'
@@ -216,9 +225,23 @@ function stop(message, serverQueue) {
 async function play(guild, song, connection) {
   const serverQueue = queue.get(guild.id);
 
-  if (!song) {
+  // vc is empty
+  if (serverQueue.voiceChannel.members.size <= 1) {
+    // leave voice channel
     connection.destroy();
     queue.delete(guild.id);
+    return;
+  }
+
+  if (!song) {
+    setTimeout(() => {
+      // if still no songs in queue
+      if (serverQueue.songs.length < 1) {
+        // leave voice channel
+        connection.destroy();
+        queue.delete(guild.id);
+      }
+    }, 3 * 60 * 1000); // 3 minutes
     return;
   }
 
@@ -252,27 +275,27 @@ async function play(guild, song, connection) {
   );
 }
 
-function pause(message, serverQueue) {
+function pause(message, tokens, serverQueue) {
   serverQueue.audioPlayer.pause();
   return message.channel.send('Paused music');
 }
 
-function unpause(message, serverQueue) {
+function unpause(message, tokens, serverQueue) {
   serverQueue.audioPlayer.unpause();
   return message.channel.send('Unpaused music');
 }
 
-function shuffle(message, serverQueue) {
+function shuffle(message, tokens, serverQueue) {
   serverQueue.songs.sort(() => Math.random() - 0.5);
   return message.channel.send('Queue shuffled');
 }
 
-function queueCommand(message, serverQueue) {
-  const songs = serverQueue.songs.slice(0, 5); // get first 5 songs
-
-  if (songs.length < 1) {
+function queueCommand(message, tokens, serverQueue) {
+  if (!serverQueue || serverQueue?.songs.length < 1) {
     return message.channel.send('```nim\nThe queue is empty ;-;`\n```');
   }
+
+  const songs = serverQueue.songs.slice(0, 5); // get first 5 songs
 
   let queueMsg = '```nim\n';
 
@@ -299,11 +322,16 @@ function queueCommand(message, serverQueue) {
   return message.channel.send(queueMsg);
 }
 
-function clear(message, serverQueue) {
+function clear(message, tokens, serverQueue) {
   serverQueue.songs = [];
   message.channel.send('Cleared the queue');
 }
 
-function leave(message, connection) {
-  connection.destroy();
+function leave(message, tokens, serverQueue) {
+  serverQueue.connection.destroy();
+  queue.delete(message.guild.id);
+}
+
+function ping(message, tokens, serverQueue) {
+  message.channel.send('pong');
 }
