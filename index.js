@@ -225,14 +225,6 @@ function stop(message, tokens, serverQueue) {
 async function play(guild, song, connection) {
   const serverQueue = queue.get(guild.id);
 
-  // vc is empty
-  if (serverQueue.voiceChannel.members.size <= 1) {
-    // leave voice channel
-    connection.destroy();
-    queue.delete(guild.id);
-    return;
-  }
-
   if (!song) {
     setTimeout(() => {
       // if still no songs in queue
@@ -250,6 +242,14 @@ async function play(guild, song, connection) {
 
     // once song finished playing, play next song in queue
     audioPlayer.on(AudioPlayerStatus.Idle, () => {
+      // vc is empty
+      if (serverQueue.voiceChannel.members.size <= 1 && connection) {
+        // leave voice channel
+        connection.destroy();
+        queue.delete(guild.id);
+        return;
+      }
+
       serverQueue.songs.shift();
       play(guild, serverQueue.songs[0], connection);
       if (serverQueue.msg) {
