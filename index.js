@@ -1,19 +1,18 @@
 require('dotenv').config();
+const { botToken } = process.env;
 
 const { URL } = require('url');
 
-const DiscordJS = require('discord.js');
-const { Intents } = require('discord.js');
+const { Intents, Client } = require('discord.js');
 const {
   joinVoiceChannel,
   createAudioResource,
   createAudioPlayer,
+  demuxProbe,
   AudioPlayerStatus,
 } = require('@discordjs/voice');
 
-const prefix = '-';
-
-const { botToken } = process.env;
+const prefix = '!';
 
 const ytdl = require('ytdl-core');
 const yts = require('yt-search');
@@ -35,7 +34,7 @@ const commands = {
   ping: ping,
 };
 
-const client = new DiscordJS.Client({
+const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES,
@@ -230,8 +229,10 @@ async function play(guild, song, connection) {
       // if still no songs in queue
       if (serverQueue.songs.length < 1) {
         // leave voice channel
-        connection.destroy();
-        queue.delete(guild.id);
+        if (queue.get(guild.id)) {
+          connection.destroy();
+          queue.delete(guild.id);
+        }
       }
     }, 3 * 60 * 1000); // 3 minutes
     return;
@@ -245,8 +246,10 @@ async function play(guild, song, connection) {
       // vc is empty
       if (serverQueue.voiceChannel.members.size <= 1 && connection) {
         // leave voice channel
-        connection.destroy();
-        queue.delete(guild.id);
+        if (queue.get(guild.id)) {
+          connection.destroy();
+          queue.delete(guild.id);
+        }
         return;
       }
 
@@ -263,16 +266,25 @@ async function play(guild, song, connection) {
     connection.subscribe(audioPlayer);
   }
 
-  const audio = await ytdl(song.id, {
+  const audio = ytdl(song.id, {
     filter: 'audioonly',
     quality: 'lowest',
   });
-  const resource = createAudioResource(audio);
-  serverQueue.audioPlayer.play(resource);
 
-  serverQueue.msg = await serverQueue.textChannel.send(
-    `Now playing: **${song.title}**`
-  );
+  demuxProbe(audio)
+    .then(async (probe) => {
+      const resource = createAudioResource(probe.stream, {
+        inputType: probe.type,
+      });
+      serverQueue.audioPlayer.play(resource);
+
+      serverQueue.msg = await serverQueue.textChannel.send(
+        `Now playing: **${song.title}**`
+      );
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 }
 
 function pause(message, tokens, serverQueue) {
@@ -328,6 +340,11 @@ function clear(message, tokens, serverQueue) {
 }
 
 function leave(message, tokens, serverQueue) {
+  // add not in vc state
+  if (!serverQueue) {
+    return message.channel.send("I'm currently not in a voice channel");
+  }
+
   serverQueue.connection.destroy();
   queue.delete(message.guild.id);
 }
