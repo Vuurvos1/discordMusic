@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { botToken } = process.env;
+const prefix = process.env.prefix || '-';
 
 const { URL } = require('url');
 
@@ -11,8 +12,6 @@ const {
   demuxProbe,
   AudioPlayerStatus,
 } = require('@discordjs/voice');
-
-const prefix = '!';
 
 const ytdl = require('ytdl-core');
 const yts = require('yt-search');
@@ -340,7 +339,6 @@ function clear(message, tokens, serverQueue) {
 }
 
 function leave(message, tokens, serverQueue) {
-  // add not in vc state
   if (!serverQueue) {
     return message.channel.send("I'm currently not in a voice channel");
   }
