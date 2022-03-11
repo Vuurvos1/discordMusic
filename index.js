@@ -4,7 +4,7 @@ const prefix = process.env.prefix || '-';
 
 const { URL } = require('url');
 
-const { Intents, Client } = require('discord.js');
+const { Intents, Client, MessageEmbed } = require('discord.js');
 const {
   joinVoiceChannel,
   createAudioResource,
@@ -20,17 +20,22 @@ const ytsr = require('ytsr');
 const commands = {
   play: execute,
   p: execute,
+  sr: execute,
   skip: skip,
   s: skip,
   stop: stop,
   pause: pause,
   unpause: unpause,
   leave: leave,
+  dc: leave,
+  disconnect: leave,
   shuffle: shuffle,
+  sh: shuffle,
   clear: clear,
   queue: queueCommand,
   q: queueCommand,
   ping: ping,
+  commands: listCommands,
 };
 
 const client = new Client({
@@ -345,6 +350,26 @@ function leave(message, tokens, serverQueue) {
 
   serverQueue.connection.destroy();
   queue.delete(message.guild.id);
+}
+
+function listCommands(message, tokens, serverQueue) {
+  // TODO base this on commands object
+  const embed = new MessageEmbed()
+    .setColor('#ff69b4')
+    .setTitle('Music Bot Commands').setDescription(`
+    ${prefix}join - Join voice channel
+    ${prefix}leave - Leave voice channel \`(Alias: dc, disconnect)\`
+    ${prefix}play - Play a song \`(Alias: p, sr)\`
+    ${prefix}pause - Pause playback
+    ${prefix}unpause - Unpause playback
+    ${prefix}queue - Show current queue \`(Alias: q)\` 
+    ${prefix}skip - Skip the current song \`(Alias: s)\`
+    ${prefix}shuffle - Shuffle the queueu \`(Alias: sh)\`
+    ${prefix}stop - Stop playback
+    ${prefix}clear - Clear the current queue
+    `);
+
+  message.channel.send({ embeds: [embed] });
 }
 
 function ping(message, tokens, serverQueue) {
