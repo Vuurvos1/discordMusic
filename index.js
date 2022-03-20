@@ -4,7 +4,7 @@ const prefix = process.env.prefix || '-';
 
 const { URL } = require('url');
 
-const { Intents, Client, MessageEmbed } = require('discord.js');
+const { Intents, Client, MessageEmbed, Collection } = require('discord.js');
 const {
   joinVoiceChannel,
   createAudioResource,
@@ -17,26 +17,75 @@ const ytdl = require('ytdl-core');
 const yts = require('yt-search');
 const ytsr = require('ytsr');
 
-const commands = {
-  play: execute,
-  p: execute,
-  sr: execute,
-  skip: skip,
-  s: skip,
-  stop: stop,
-  pause: pause,
-  unpause: unpause,
-  leave: leave,
-  dc: leave,
-  disconnect: leave,
-  shuffle: shuffle,
-  sh: shuffle,
-  clear: clear,
-  queue: queueCommand,
-  q: queueCommand,
-  ping: ping,
-  commands: listCommands,
-};
+const commands = new Collection();
+
+const coms = [
+  {
+    name: 'play',
+    command: execute,
+    desciption: 'Play a song',
+    aliasses: ['p', 'sr'],
+  },
+  {
+    name: 'skip',
+    command: skip,
+    desciption: 'Skip the current song',
+    aliasses: ['s'],
+  },
+  {
+    name: 'stop',
+    command: stop,
+    desciption: 'Stop playpack',
+    aliasses: [],
+  },
+  { name: 'pause', command: pause, desciption: 'Pause playback', aliasses: [] },
+  {
+    name: 'unpause',
+    command: unpause,
+    desciption: 'Unpause playback',
+    aliasses: [],
+  },
+  {
+    name: 'leave',
+    command: leave,
+    desciption: 'Leave voice channel',
+    aliasses: ['dc', 'disconnect'],
+  },
+  {
+    name: 'shuffle',
+    command: shuffle,
+    desciption: 'Shuffle the queueu',
+    aliasses: ['sh'],
+  },
+  {
+    name: 'clear',
+    command: clear,
+    desciption: 'Clear the current queue',
+    aliasses: [],
+  },
+  {
+    name: 'queue',
+    command: queueCommand,
+    desciption: 'Show current queue',
+    aliasses: ['q'],
+  },
+  {
+    name: 'ping',
+    command: ping,
+    desciption: '',
+    aliasses: [],
+  },
+  {
+    name: 'commands',
+    command: listCommands,
+    desciption: 'List all supported commands',
+    aliasses: [],
+  },
+];
+
+for (const com of coms) {
+  commands.set(com.name, com);
+}
 
 const client = new Client({
   intents: [
@@ -63,16 +112,20 @@ client.on('disconnect', () => {
 
 client.on('messageCreate', (message) => {
   const tokens = message.content.split(' ');
-  let command = tokens.shift();
+  let cmd = tokens.shift();
 
-  if (!message.author.bot && command[0] == prefix) {
+  if (!message.author.bot && cmd[0] == prefix) {
     const serverQueue = queue.get(message.guild.id);
 
     // remove prefix from command
-    command = command.substring(1);
+    cmd = cmd.substring(1);
 
-    if (commands[command]) {
-      commands[command](message, tokens, serverQueue);
+    const command =
+      commands.get(cmd) ||
+      commands.find((a) => a.aliasses && a.aliasses.includes(cmd));
+
+    if (command) {
+      command.command(message, tokens, serverQueue);
     } else {
       message.channel.send('Please enter a valid command!');
     }
@@ -353,21 +406,21 @@ function leave(message, tokens, serverQueue) {
 }
 
 function listCommands(message, tokens, serverQueue) {
-  // TODO base this on commands object
+  let msg = '';
+  for (const [name, cmd] of commands) {
+    if (cmd.desciption) {
+      msg += `${prefix}${name} - ${cmd.desciption} ${
+        cmd?.aliasses?.length > 0
+          ? '`(Alias: ' + cmd.aliasses.join(', ') + ')`'
+          : ''
+      } \n`;
+    }
+  }
+
   const embed = new MessageEmbed()
     .setColor('#ff69b4')
-    .setTitle('Music Bot Commands').setDescription(`
-    ${prefix}join - Join voice channel
-    ${prefix}leave - Leave voice channel \`(Alias: dc, disconnect)\`
-    ${prefix}play - Play a song \`(Alias: p, sr)\`
-    ${prefix}pause - Pause playback
-    ${prefix}unpause - Unpause playback
-    ${prefix}queue - Show current queue \`(Alias: q)\` 
-    ${prefix}skip - Skip the current song \`(Alias: s)\`
-    ${prefix}shuffle - Shuffle the queueu \`(Alias: sh)\`
-    ${prefix}stop - Stop playback
-    ${prefix}clear - Clear the current queue
-    `);
+    .setTitle('Music Bot Commands')
+    .setDescription(msg);
 
   message.channel.send({ embeds: [embed] });
 }
