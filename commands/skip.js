@@ -9,12 +9,13 @@ module.exports = {
       );
     }
 
-    if (!serverQueue) {
+    const guildQueue = client.queue.get(message.guild.id);
+    if (!guildQueue) {
       return message.channel.send('There is no song that I could skip!');
     }
 
-    const song = serverQueue.songs[0]; // get current song
-    serverQueue.audioPlayer.stop(); // stop song
+    const song = guildQueue.songs[0]; // get current song
+    guildQueue.audioPlayer.stop(); // stop song
     return message.channel.send(`Skipped \`${song.title}\``);
   },
 };
