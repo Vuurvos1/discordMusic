@@ -2,9 +2,11 @@ require('dotenv').config();
 const { botToken } = process.env;
 const prefix = process.env.prefix || '-';
 
+const fs = require('fs');
+
 const { URL } = require('url');
 
-const { Intents, Client, MessageEmbed, Collection } = require('discord.js');
+const { Intents, Client, Collection } = require('discord.js');
 const {
   joinVoiceChannel,
   createAudioResource,
@@ -18,68 +20,20 @@ const yts = require('yt-search');
 const ytsr = require('ytsr');
 
 const commands = new Collection();
+const commandFiles = fs
+  .readdirSync('./commands/')
+  .filter((file) => file.endsWith('.js'));
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  commands.set(command.name, command);
+}
 
 const coms = [
   {
     name: 'play',
     command: execute,
     desciption: 'Play a song',
-    aliasses: ['p', 'sr'],
-  },
-  {
-    name: 'skip',
-    command: skip,
-    desciption: 'Skip the current song',
-    aliasses: ['s'],
-  },
-  {
-    name: 'stop',
-    command: stop,
-    desciption: 'Stop playpack',
-    aliasses: [],
-  },
-  { name: 'pause', command: pause, desciption: 'Pause playback', aliasses: [] },
-  {
-    name: 'unpause',
-    command: unpause,
-    desciption: 'Unpause playback',
-    aliasses: [],
-  },
-  {
-    name: 'leave',
-    command: leave,
-    desciption: 'Leave voice channel',
-    aliasses: ['dc', 'disconnect'],
-  },
-  {
-    name: 'shuffle',
-    command: shuffle,
-    desciption: 'Shuffle the queueu',
-    aliasses: ['sh'],
-  },
-  {
-    name: 'clear',
-    command: clear,
-    desciption: 'Clear the current queue',
-    aliasses: [],
-  },
-  {
-    name: 'queue',
-    command: queueCommand,
-    desciption: 'Show current queue',
-    aliasses: ['q'],
-  },
-  {
-    name: 'ping',
-    command: ping,
-    desciption: '',
-    aliasses: [],
-  },
-  {
-    name: 'commands',
-    command: listCommands,
-    desciption: 'List all supported commands',
-    aliasses: [],
+    aliases: ['p', 'sr'],
   },
 ];
 
@@ -98,9 +52,9 @@ const client = new Client({
 client.on('ready', async () => {
   console.log('Ready!');
 });
-client.login(botToken);
 
 const queue = new Map();
+client.queue = new Map();
 
 client.on('reconnecting', () => {
   console.log('Reconnecting!');
@@ -111,6 +65,7 @@ client.on('disconnect', () => {
 });
 
 client.on('messageCreate', (message) => {
+  // command handeler
   const tokens = message.content.split(' ');
   let cmd = tokens.shift();
 
@@ -122,15 +77,17 @@ client.on('messageCreate', (message) => {
 
     const command =
       commands.get(cmd) ||
-      commands.find((a) => a.aliasses && a.aliasses.includes(cmd));
+      commands.find((a) => a.aliases && a.aliases.includes(cmd));
 
     if (command) {
-      command.command(message, tokens, serverQueue);
+      command.command(message, tokens, serverQueue, client);
     } else {
       message.channel.send('Please enter a valid command!');
     }
   }
 });
+
+client.login(botToken);
 
 async function execute(message, tokens, serverQueue) {
   if (tokens.length < 1) {
@@ -254,35 +211,6 @@ async function execute(message, tokens, serverQueue) {
   }
 }
 
-function skip(message, tokens, serverQueue) {
-  if (!message.member.voice.channel) {
-    return message.channel.send(
-      'You have to be in a voice channel to stop the music!'
-    );
-  }
-
-  if (!serverQueue) {
-    return message.channel.send('There is no song that I could skip!');
-  }
-
-  const song = serverQueue.songs[0]; // get current song
-  serverQueue.audioPlayer.stop(); // stop song
-  return message.channel.send(`Skipped \`${song.title}\``);
-}
-
-function stop(message, tokens, serverQueue) {
-  if (!message.member.voice.channel)
-    return message.channel.send(
-      'You have to be in a voice channel to stop the music!'
-    );
-
-  if (!serverQueue)
-    return message.channel.send('There is no song that I could stop!');
-
-  serverQueue.songs = [];
-  serverQueue.audioPlayer.stop();
-}
-
 async function play(guild, song, connection) {
   const serverQueue = queue.get(guild.id);
 
@@ -347,89 +275,4 @@ async function play(guild, song, connection) {
     .catch((err) => {
       console.error(err);
     });
-}
-
-function pause(message, tokens, serverQueue) {
-  serverQueue.audioPlayer.pause();
-  return message.channel.send('Paused music');
-}
-
-function unpause(message, tokens, serverQueue) {
-  serverQueue.audioPlayer.unpause();
-  return message.channel.send('Unpaused music');
-}
-
-function shuffle(message, tokens, serverQueue) {
-  serverQueue.songs.sort(() => Math.random() - 0.5);
-  return message.channel.send('Queue shuffled');
-}
-
-function queueCommand(message, tokens, serverQueue) {
-  if (!serverQueue || serverQueue?.songs.length < 1) {
-    return message.channel.send('```nim\nThe queue is empty ;-;`\n```');
-  }
-
-  const songs = serverQueue.songs.slice(0, 5); // get first 5 songs
-
-  let queueMsg = '```nim\n';
-
-  for (let i = 0; i < songs.length; i++) {
-    const song = songs[i];
-    if (i === 0) {
-      queueMsg += '    ⬐ current track\n';
-    }
-
-    queueMsg += `${i + 1}) ${
-      song.title.length > 40
-        ? song.title.substring(0, 40 - 1) + '…'
-        : song.title.padEnd(40, ' ')
-    } ${song.duration}\n`;
-    // TODO show time left for current song `2:39 left`
-
-    if (i === 0) {
-      queueMsg += '    ⬑ current track\n';
-    }
-  }
-
-  queueMsg += '```';
-
-  return message.channel.send(queueMsg);
-}
-
-function clear(message, tokens, serverQueue) {
-  serverQueue.songs = [];
-  message.channel.send('Cleared the queue');
-}
-
-function leave(message, tokens, serverQueue) {
-  if (!serverQueue) {
-    return message.channel.send("I'm currently not in a voice channel");
-  }
-
-  serverQueue.connection.destroy();
-  queue.delete(message.guild.id);
-}
-
-function listCommands(message, tokens, serverQueue) {
-  let msg = '';
-  for (const [name, cmd] of commands) {
-    if (cmd.desciption) {
-      msg += `${prefix}${name} - ${cmd.desciption} ${
-        cmd?.aliasses?.length > 0
-          ? '`(Alias: ' + cmd.aliasses.join(', ') + ')`'
-          : ''
-      } \n`;
-    }
-  }
-
-  const embed = new MessageEmbed()
-    .setColor('#ff69b4')
-    .setTitle('Music Bot Commands')
-    .setDescription(msg);
-
-  message.channel.send({ embeds: [embed] });
-}
-
-function ping(message, tokens, serverQueue) {
-  message.channel.send('pong');
 }
