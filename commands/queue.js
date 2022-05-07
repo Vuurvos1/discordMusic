@@ -2,12 +2,14 @@ module.exports = {
   name: 'queue',
   description: 'Show current queue',
   aliases: ['q'],
-  command: (message, arguments, serverQueue, client) => {
-    if (!serverQueue || serverQueue?.songs.length < 1) {
+  command: (message, arguments, client) => {
+    const guildQueue = client.queue.get(message.guild.id);
+
+    if (!guildQueue || guildQueue?.songs.length < 1) {
       return message.channel.send('```nim\nThe queue is empty ;-;`\n```');
     }
 
-    const songs = serverQueue.songs.slice(0, 5); // get first 5 songs
+    const songs = guildQueue.songs.slice(0, 5); // get first 5 songs
 
     let queueMsg = '```nim\n';
 

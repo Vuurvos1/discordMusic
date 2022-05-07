@@ -16,18 +16,10 @@ module.exports = {
   name: 'play',
   description: 'Play a song',
   aliases: ['p', 'sr'],
-  command: async (message, arguments, serverQueue, client) => {
+  command: async (message, arguments, client) => {
     // if no argument is given
     if (arguments.length < 1) {
       return message.channel.send('Please enter a valid url');
-    }
-
-    // check if bot has premission to join vc
-    const permissions = voiceChannel.permissionsFor(message.client.user);
-    if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
-      return message.channel.send(
-        'I need the permissions to join and speak in your voice channel!'
-      );
     }
 
     // check if you are in a voice channel
@@ -38,7 +30,16 @@ module.exports = {
       );
     }
 
+    // check if bot has premission to join vc
+    const permissions = voiceChannel.permissionsFor(message.client.user);
+    if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+      return message.channel.send(
+        'I need the permissions to join and speak in your voice channel!'
+      );
+    }
+
     let songs;
+    const guildQueue = client.queue.get(message.guild.id);
 
     // if youtube url
     if (
@@ -101,7 +102,7 @@ module.exports = {
       }
     }
 
-    if (!serverQueue) {
+    if (!guildQueue) {
       const queueContruct = {
         textChannel: message.channel,
         voiceChannel: voiceChannel,
@@ -131,16 +132,11 @@ module.exports = {
         return message.channel.send(err);
       }
     } else {
-      if (serverQueue.songs.length < 1) {
-        serverQueue.songs = serverQueue.songs.concat(songs);
-        play(
-          message.guild,
-          serverQueue.songs[0],
-          serverQueue.connection,
-          client
-        );
+      if (guildQueue.songs.length < 1) {
+        guildQueue.songs = guildQueue.songs.concat(songs);
+        play(message.guild, guildQueue.songs[0], guildQueue.connection, client);
       } else {
-        serverQueue.songs = serverQueue.songs.concat(songs);
+        guildQueue.songs = guildQueue.songs.concat(songs);
       }
     }
   },
@@ -148,12 +144,12 @@ module.exports = {
 
 async function play(guild, song, connection, client) {
   const queue = client.queue;
-  const serverQueue = queue.get(guild.id);
+  const guildQueue = queue.get(guild.id);
 
   if (!song) {
     setTimeout(() => {
       // if still no songs in queue
-      if (serverQueue.songs.length < 1) {
+      if (guildQueue.songs.length < 1) {
         // leave voice channel
         if (queue.get(guild.id)) {
           connection.destroy();
@@ -164,13 +160,13 @@ async function play(guild, song, connection, client) {
     return;
   }
 
-  if (!serverQueue.audioPlayer) {
+  if (!guildQueue.audioPlayer) {
     const audioPlayer = createAudioPlayer();
 
     // once song finished playing, play next song in queue
     audioPlayer.on(AudioPlayerStatus.Idle, () => {
       // vc is empty
-      if (serverQueue.voiceChannel.members.size <= 1 && connection) {
+      if (guildQueue.voiceChannel.members.size <= 1 && connection) {
         // leave voice channel
         if (queue.get(guild.id)) {
           connection.destroy();
@@ -179,16 +175,16 @@ async function play(guild, song, connection, client) {
         return;
       }
 
-      serverQueue.songs.shift();
-      play(guild, serverQueue.songs[0], connection, client);
-      if (serverQueue.msg) {
-        serverQueue.msg.delete(); // delete now playing mewwssage
+      guildQueue.songs.shift();
+      play(guild, guildQueue.songs[0], connection, client);
+      if (guildQueue.msg) {
+        guildQueue.msg.delete(); // delete now playing mewwssage
       }
     });
 
     audioPlayer.on('error', (err) => console.error(err));
 
-    serverQueue.audioPlayer = audioPlayer;
+    guildQueue.audioPlayer = audioPlayer;
     connection.subscribe(audioPlayer);
   }
 
@@ -202,9 +198,9 @@ async function play(guild, song, connection, client) {
       const resource = createAudioResource(probe.stream, {
         inputType: probe.type,
       });
-      serverQueue.audioPlayer.play(resource);
+      guildQueue.audioPlayer.play(resource);
 
-      serverQueue.msg = await serverQueue.textChannel.send(
+      guildQueue.msg = await guildQueue.textChannel.send(
         `Now playing: **${song.title}**`
       );
     })

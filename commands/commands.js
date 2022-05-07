@@ -6,7 +6,7 @@ module.exports = {
   name: 'commands',
   description: 'List all supported commands',
   aliases: [],
-  command: (message, arguments, serverQueue, client) => {
+  command: (message, arguments, client) => {
     const commandFiles = fs
       .readdirSync('./commands/')
       .filter((file) => file.endsWith('.js'));

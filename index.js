@@ -44,8 +44,6 @@ client.on('messageCreate', (message) => {
   let cmd = tokens.shift();
 
   if (!message.author.bot && cmd[0] == prefix) {
-    const serverQueue = client.queue.get(message.guild.id);
-
     // remove prefix from command
     cmd = cmd.substring(1);
 
@@ -54,7 +52,7 @@ client.on('messageCreate', (message) => {
       commands.find((a) => a.aliases && a.aliases.includes(cmd));
 
     if (command) {
-      command.command(message, tokens, serverQueue, client);
+      command.command(message, tokens, client);
     } else {
       message.channel.send('Please enter a valid command!');
     }

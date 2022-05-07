@@ -2,7 +2,7 @@ module.exports = {
   name: 'skip',
   description: 'Skip the current song',
   aliases: ['s'],
-  command: (message, arguments, serverQueue, client) => {
+  command: (message, arguments, client) => {
     if (!message.member.voice.channel) {
       return message.channel.send(
         'You have to be in a voice channel to skip the music!'
