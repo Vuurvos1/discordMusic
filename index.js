@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { botToken } = process.env;
+const { botToken, guildId } = process.env;
 const prefix = process.env.prefix || '-';
 
 const { URL } = require('url');
@@ -97,8 +97,34 @@ const client = new Client({
 
 client.on('ready', async () => {
   console.log('Ready!');
+
+  const guild = client.guilds.cache.get(guildId);
+  let commands;
+
+  if (guild) {
+    commands = guild.commands;
+  } else {
+    commands = client.application.commands;
+  }
+
+  // commands.create({
+  //   name: 'ping',
+  //   description: 'ping pong!',
+  // });
+
+  // await client.application.commands.set([]); // clear all global commands
+
+  // const guild = await client.guilds.fetch(guildId);
+  // guild.commands.set([]);  // clear all guild commands
+
+  // Register global slash command
+  // client.api.applications(client.user.id).commands.post({
+  //   data: {
+  //     name: 'hello',
+  //     description: "Say 'Hello, World!'",
+  //   },
+  // });
 });
-client.login(botToken);
 
 const queue = new Map();
 
@@ -131,6 +157,25 @@ client.on('messageCreate', (message) => {
     }
   }
 });
+
+client.on('interactionCreate', async (interaction) => {
+  console.log('Interaction created!');
+
+  if (!interaction.isCommand()) {
+    return;
+  }
+
+  const { commandName, options } = interaction;
+
+  if (commandName === 'ping') {
+    interaction.reply({
+      content: 'pong',
+      // ephemeral: true,
+    });
+  }
+});
+
+client.login(botToken);
 
 async function execute(message, tokens, serverQueue) {
   if (tokens.length < 1) {

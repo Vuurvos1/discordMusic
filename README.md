@@ -2,6 +2,12 @@
 
 A Discord bot that plays music
 
+## Adding the bot to your server
+
+In de discord developer portal make sure you have selected `bot` and `applications.commands` under scope
+
+under Bot premissions, turn on administrator rights (or eneable all voice and text related premissions maybe?)
+
 ## Instalation
 
 1. clone the project
