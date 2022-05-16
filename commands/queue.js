@@ -6,7 +6,7 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue || guildQueue?.songs.length < 1) {
-      return message.channel.send('```nim\nThe queue is empty ;-;`\n```');
+      return message.channel.send('```nim\nThe queue is empty ;-;\n```');
     }
 
     const songs = guildQueue.songs.slice(0, 5); // get first 5 songs

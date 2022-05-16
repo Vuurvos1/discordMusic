@@ -188,23 +188,24 @@ async function play(guild, song, connection, client) {
     connection.subscribe(audioPlayer);
   }
 
-  const audio = ytdl(song.id, {
+  const options = {
     filter: 'audioonly',
-    quality: 'lowest',
-  });
+    quality: 'highestaudio',
+    highWaterMark: 1 << 25,
+  };
 
-  demuxProbe(audio)
-    .then(async (probe) => {
-      const resource = createAudioResource(probe.stream, {
-        inputType: probe.type,
-      });
-      guildQueue.audioPlayer.play(resource);
+  // Probe stream to optimize?
+  try {
+    const info = await ytdl.getInfo(song.id, options);
+    const stream = ytdl.downloadFromInfo(info);
+    const resource = createAudioResource(stream);
 
-      guildQueue.msg = await guildQueue.textChannel.send(
-        `Now playing: **${song.title}**`
-      );
-    })
-    .catch((err) => {
-      console.error(err);
-    });
+    guildQueue.audioPlayer.play(resource);
+
+    guildQueue.msg = await guildQueue.textChannel.send(
+      `Now playing: **${song.title}**`
+    );
+  } catch (err) {
+    console.log(err);
+  }
 }
