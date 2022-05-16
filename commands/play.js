@@ -194,7 +194,7 @@ async function play(guild, song, connection, client) {
     highWaterMark: 1 << 25,
   };
 
-  // Probe stream to optimize?
+  // Probe stream for optimize?
   try {
     const info = await ytdl.getInfo(song.id, options);
     const stream = ytdl.downloadFromInfo(info);
