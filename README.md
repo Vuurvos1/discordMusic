@@ -1,6 +1,13 @@
+![Discord music, a Discord bot that plays music](./docs/discord-music-dark.png#gh-dark-mode-only)
+![Discord music, a Discord bot that plays music](./docs/discord-music-light.png#gh-light-mode-only)
+
 # Discord Music
 
 A Discord bot that plays music
+
+## Features
+
+Play, queue, pause and skip songs
 
 ## Instalation
 
