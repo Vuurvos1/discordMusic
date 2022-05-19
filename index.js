@@ -36,10 +36,21 @@ client.on('ready', async () => {
     commands = client.application.commands;
   }
 
-  // commands.create({
-  //   name: 'ping',
-  //   description: 'ping pong!',
-  // });
+  for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+
+    const commandOptions = {
+      name: command.name,
+      description: command.description,
+    };
+
+    if (command.interactionOptions) {
+      console.log(command.interactionOptions);
+      commandOptions.options = command.interactionOptions;
+    }
+
+    commands.create(commandOptions);
+  }
 
   // await client.application.commands.set([]); // clear all global commands
 
@@ -111,12 +122,18 @@ client.on('interactionCreate', async (interaction) => {
 
   const { commandName, options } = interaction;
 
-  if (commandName === 'ping') {
-    interaction.reply({
-      content: 'pong',
-      // ephemeral: true,
-    });
-  }
+  // console.log(commandName, options, interaction);
+
+  const command = commands.get(commandName);
+
+  if (!command) return;
+
+  console.log(interaction.options.get('song'));
+
+  interaction.reply({
+    content: `${command.description}`,
+    ephemeral: true,
+  });
 });
 
 client.login(botToken);

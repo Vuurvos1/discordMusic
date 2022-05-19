@@ -16,6 +16,15 @@ module.exports = {
   name: 'play',
   description: 'Play a song',
   aliases: ['p', 'sr'],
+  interactionOptions: [
+    {
+      name: 'song',
+      description: 'song name or url',
+      type: 3, // type STRING
+      required: true,
+    },
+  ],
+
   command: async (message, arguments, client) => {
     // if no argument is given
     if (arguments.length < 1) {
