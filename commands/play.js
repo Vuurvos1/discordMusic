@@ -84,15 +84,16 @@ module.exports = {
       }
     } else {
       // search for song
-      const search = await ytsr(arguments.join(' '), { limit: 10 });
+      const { items } = await ytsr(arguments.join(' '), { limit: 10 });
+
       // maybe this caused the undefined video id?
-      if (search.items.length > 1 && search.items[0].id) {
-        const video = search.items[0];
+      if (items.length > 1 && items[0].id) {
+        const { title, duration, id } = items[0];
 
         songs = {
-          title: video.title,
-          duration: video.duration,
-          id: video.id,
+          title: title,
+          duration: duration,
+          id: id,
         };
 
         message.channel.send(`${songs.title} has been added to the queue!`);

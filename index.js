@@ -65,6 +65,22 @@ client.on('disconnect', () => {
   console.log('Disconnect!');
 });
 
+client.on('voiceStateUpdate', (oldState, newState) => {
+  // Disconnect
+  if (oldState.channelId && !newState.channelId) {
+    // Bot was Disconnected
+    if (newState.id === client.user.id) {
+      const guildQueue = client.queue.get(newState.guild.id);
+
+      guildQueue.audioPlayer.stop();
+      guildQueue.connection.destroy();
+      client.queue.delete(newState.guild.id);
+
+      return console.log('Bot was disconnected!');
+    }
+  }
+});
+
 client.on('messageCreate', (message) => {
   // command handeler
   const tokens = message.content.split(' ');
