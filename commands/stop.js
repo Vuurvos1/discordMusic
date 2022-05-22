@@ -17,4 +17,20 @@ module.exports = {
     guildQueue.songs = [];
     guildQueue.audioPlayer.stop();
   },
+
+  interaction: async (interaction, client) => {
+    if (!interaction.member.voice.channel) {
+      return interaction.channel.send(
+        'You have to be in a voice channel to stop the music!'
+      );
+    }
+
+    const guildQueue = client.queue.get(interaction.guild.id);
+    if (!guildQueue) {
+      return interaction.channel.send('There is no song that I could stop!');
+    }
+
+    guildQueue.songs = [];
+    guildQueue.audioPlayer.stop();
+  },
 };

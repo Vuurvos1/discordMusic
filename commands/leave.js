@@ -11,5 +11,26 @@ module.exports = {
 
     guildQueue.connection.destroy();
     client.queue.delete(message.guild.id);
+    return message.channel.send("I've left the voice channel");
+  },
+
+  interaction: async (interaction, client) => {
+    // TODO check if in vc
+
+    const guildQueue = client.queue.get(interaction.guild.id);
+
+    if (!guildQueue) {
+      interaction.reply({
+        content: "I'm currently not in a voice channel",
+        ephemeral: true,
+      });
+    }
+
+    guildQueue.connection.destroy();
+    client.queue.delete(interaction.guild.id);
+
+    interaction.reply({
+      content: "I've left the voice channel",
+    });
   },
 };

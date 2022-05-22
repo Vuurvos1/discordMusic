@@ -45,7 +45,6 @@ client.on('ready', async () => {
     };
 
     if (command.interactionOptions) {
-      console.log(command.interactionOptions);
       commandOptions.options = command.interactionOptions;
     }
 
@@ -114,26 +113,16 @@ client.on('messageCreate', (message) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  console.log('Interaction created!');
-
   if (!interaction.isCommand()) {
     return;
   }
 
-  const { commandName, options } = interaction;
-
-  // console.log(commandName, options, interaction);
-
+  const { commandName } = interaction;
   const command = commands.get(commandName);
 
-  if (!command) return;
+  if (!command || !command?.interaction) return;
 
-  console.log(interaction.options.get('song'));
-
-  interaction.reply({
-    content: `${command.description}`,
-    ephemeral: true,
-  });
+  command.interaction(interaction, client);
 });
 
 client.login(botToken);

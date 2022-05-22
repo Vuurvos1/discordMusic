@@ -1,5 +1,5 @@
 {
-  "version": "1.4.2",
+  "version": "1.5.2",
   "description": "Play music on Discord",
   "main": "index.js",
   "scripts": {

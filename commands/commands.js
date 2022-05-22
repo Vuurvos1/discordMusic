@@ -1,5 +1,6 @@
 const { MessageEmbed } = require('discord.js');
 const fs = require('fs');
+const { colors } = require('../utils/utils');
 const prefix = process.env.prefix || '-';
 
 module.exports = {
@@ -28,5 +29,32 @@ module.exports = {
       .setDescription(msg);
 
     message.channel.send({ embeds: [embed] });
+  },
+
+  interaction: async (interaction, client) => {
+    const commandFiles = fs
+      .readdirSync('./commands/')
+      .filter((file) => file.endsWith('.js'));
+
+    let msg = '';
+    for (const file of commandFiles) {
+      const { name, description, aliases } = require(`./${file}`);
+
+      if (description) {
+        msg += `${prefix}${name} - ${description} ${
+          aliases?.length > 0 ? '`(Alias: ' + aliases.join(', ') + ')`' : ''
+        } \n`;
+      }
+    }
+
+    const embed = new MessageEmbed()
+      .setColor(colors.default)
+      .setTitle('Music Bot Commands')
+      .setDescription(msg);
+
+    return interaction.reply({
+      embeds: [embed],
+      ephemeral: true,
+    });
   },
 };
