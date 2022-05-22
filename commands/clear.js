@@ -1,5 +1,5 @@
 const { MessageEmbed } = require('discord.js');
-const { colors, inVoiceChannel } = require('../utils/utils');
+const { colors } = require('../utils/utils');
 
 module.exports = {
   name: 'clear',

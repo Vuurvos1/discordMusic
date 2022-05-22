@@ -34,7 +34,7 @@ client.on('ready', async () => {
   if (guild) {
     commands = guild.commands;
   } else {
-    commands = client.application.commands;
+    commands = client.application?.commands;
   }
 
   for (const file of commandFiles) {
@@ -53,17 +53,7 @@ client.on('ready', async () => {
   }
 
   // await client.application.commands.set([]); // clear all global commands
-
-  // const guild = await client.guilds.fetch(guildId);
-  // guild.commands.set([]);  // clear all guild commands
-
-  // Register global slash command
-  // client.api.applications(client.user.id).commands.post({
-  //   data: {
-  //     name: 'hello',
-  //     description: "Say 'Hello, World!'",
-  //   },
-  // });
+  // console.log(await client.api.applications(client.user.id).commands.get()); // see if commands posted
 });
 
 client.queue = new Map();
@@ -83,11 +73,13 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     if (newState.id === client.user.id) {
       const guildQueue = client.queue.get(newState.guild.id);
 
-      guildQueue.audioPlayer.stop();
-      guildQueue.connection.destroy();
-      client.queue.delete(newState.guild.id);
+      if (guildQueue) {
+        guildQueue.audioPlayer.stop();
+        guildQueue.connection.destroy();
+        client.queue.delete(newState.guild.id);
 
-      return console.log('Bot was disconnected!');
+        return console.log('Bot was disconnected!');
+      }
     }
   }
 });
