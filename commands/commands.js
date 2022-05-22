@@ -11,49 +11,19 @@ module.exports = {
     memberInVoice: false,
   },
   command: (message, arguments, client) => {
-    const commandFiles = fs
-      .readdirSync('./commands/')
-      .filter((file) => file.endsWith('.js'));
-
-    let msg = '';
-    for (const file of commandFiles) {
-      const { name, description, aliases } = require(`./${file}`);
-
-      if (description) {
-        msg += `${prefix}${name} - ${description} ${
-          aliases?.length > 0 ? '`(Alias: ' + aliases.join(', ') + ')`' : ''
-        } \n`;
-      }
-    }
-
     const embed = new MessageEmbed()
       .setColor('#ff69b4')
       .setTitle('Music Bot Commands')
-      .setDescription(msg);
+      .setDescription(formatCommands());
 
-    message.channel.send({ embeds: [embed] });
+    return message.channel.send({ embeds: [embed] });
   },
 
   interaction: async (interaction, client) => {
-    const commandFiles = fs
-      .readdirSync('./commands/')
-      .filter((file) => file.endsWith('.js'));
-
-    let msg = '';
-    for (const file of commandFiles) {
-      const { name, description, aliases } = require(`./${file}`);
-
-      if (description) {
-        msg += `${prefix}${name} - ${description} ${
-          aliases?.length > 0 ? '`(Alias: ' + aliases.join(', ') + ')`' : ''
-        } \n`;
-      }
-    }
-
     const embed = new MessageEmbed()
       .setColor(colors.default)
       .setTitle('Music Bot Commands')
-      .setDescription(msg);
+      .setDescription(formatCommands());
 
     return interaction.reply({
       embeds: [embed],
@@ -61,3 +31,22 @@ module.exports = {
     });
   },
 };
+
+function formatCommands() {
+  const commandFiles = fs
+    .readdirSync('./commands/')
+    .filter((file) => file.endsWith('.js'));
+
+  let msg = '';
+  for (const file of commandFiles) {
+    const { name, description, aliases } = require(`./${file}`);
+
+    if (description) {
+      msg += `${prefix}${name} - ${description} ${
+        aliases?.length > 0 ? '`(Alias: ' + aliases.join(', ') + ')`' : ''
+      } \n`;
+    }
+  }
+
+  return msg;
+}

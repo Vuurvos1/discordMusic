@@ -14,6 +14,7 @@ module.exports = {
 
     const song = guildQueue.songs[0]; // get current song
     guildQueue.audioPlayer.stop(); // stop song
+
     return message.channel.send(`Skipped \`${song.title}\``);
   },
 
@@ -21,11 +22,18 @@ module.exports = {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {
-      return interaction.channel.send('There is no song that I could skip!');
+      return interaction.reply({
+        content: 'There is no song that I could skip!',
+        ephemeral: true,
+      });
     }
 
     const song = guildQueue.songs[0]; // get current song
     guildQueue.audioPlayer.stop(); // stop song
-    return interaction.channel.send(`Skipped \`${song.title}\``);
+
+    return interaction.reply({
+      content: `Skipped \`${song.title}\``,
+      ephemeral: false,
+    });
   },
 };

@@ -54,7 +54,7 @@ module.exports = {
       const embed = new MessageEmbed()
         .setColor(colors.error)
         .setDescription('Please enter a valid argument');
-      return interaction.channel.send({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     const voiceChannel = interaction.member.voice.channel;
@@ -67,7 +67,7 @@ module.exports = {
         .setDescription(
           'I need the permissions to join and speak in your voice channel!'
         );
-      return interaction.channel.send({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     getSong(song, interaction, voiceChannel, client);

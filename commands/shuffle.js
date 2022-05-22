@@ -13,6 +13,7 @@ module.exports = {
     }
 
     guildQueue.songs.sort(() => Math.random() - 0.5);
+
     return message.channel.send('Shuffled queue');
   },
 
@@ -24,6 +25,10 @@ module.exports = {
     }
 
     guildQueue.songs.sort(() => Math.random() - 0.5);
-    return interaction.channel.send('Shuffled queue');
+
+    return interaction.reply({
+      content: 'Shuffled queue',
+      ephemeral: false,
+    });
   },
 };

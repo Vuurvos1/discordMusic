@@ -22,9 +22,7 @@ module.exports = {
       return interaction.reply('```nim\nThe queue is empty ;-;\n```');
     }
 
-    return interaction.channel.send(
-      buildQueueMsg(guildQueue.songs.slice(0, 5))
-    );
+    return interaction.reply(buildQueueMsg(guildQueue.songs.slice(0, 5)));
   },
 };
 

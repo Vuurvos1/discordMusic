@@ -10,6 +10,9 @@ module.exports = {
   },
 
   interaction: async (interaction, client) => {
-    return interaction.reply('pong!');
+    return interaction.reply({
+      content: 'pong!',
+      ephemeral: true,
+    });
   },
 };

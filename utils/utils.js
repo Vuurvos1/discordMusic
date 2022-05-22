@@ -1,7 +1,7 @@
 const { MessageEmbed } = require('discord.js');
 
 const colors = {
-  error: '#ff0000',
+  error: '#FF1155',
   default: '11FFAA',
 };
 
@@ -28,12 +28,7 @@ function inVoiceChannel(message) {
   return true;
 }
 
-function ifQueue() {
-  return true;
-}
-
 module.exports = {
   colors,
   inVoiceChannel,
-  ifQueue,
 };

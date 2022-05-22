@@ -20,10 +20,16 @@ module.exports = {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {
-      return interaction.reply('Nothing to unpause');
+      return interaction.reply({
+        content: 'Nothing to unpause',
+        ephemeral: true,
+      });
     }
 
     guildQueue.audioPlayer.unpause();
-    return interaction.reply('Unpaused music');
+    return interaction.reply({
+      content: 'Unpaused music',
+      ephemeral: false,
+    });
   },
 };

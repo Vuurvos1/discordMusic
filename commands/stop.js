@@ -22,12 +22,18 @@ module.exports = {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {
-      return interaction.channel.send('There is no song that I could stop!');
+      return interaction.reply({
+        content: 'There is no song that I could stop!',
+        ephemeral: false,
+      });
     }
 
     guildQueue.songs = [];
     guildQueue.audioPlayer.stop();
 
-    return interaction.channel.send('Stopped music');
+    return interaction.reply({
+      content: 'Stopped music',
+      ephemeral: false,
+    });
   },
 };

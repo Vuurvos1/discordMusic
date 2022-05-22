@@ -14,6 +14,7 @@ module.exports = {
 
     guildQueue.connection.destroy();
     client.queue.delete(message.guild.id);
+
     return message.channel.send("I've left the voice channel");
   },
 
@@ -30,8 +31,9 @@ module.exports = {
     guildQueue.connection.destroy();
     client.queue.delete(interaction.guild.id);
 
-    interaction.reply({
+    return interaction.reply({
       content: "I've left the voice channel",
+      ephemeral: false,
     });
   },
 };
