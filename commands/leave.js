@@ -2,6 +2,9 @@ module.exports = {
   name: 'leave',
   description: 'Leave voice channel',
   aliases: ['dc', 'disconnect'],
+  permissions: {
+    memberInVoice: true,
+  },
   command: (message, arguments, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
@@ -15,8 +18,6 @@ module.exports = {
   },
 
   interaction: async (interaction, client) => {
-    // TODO check if in vc
-
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {

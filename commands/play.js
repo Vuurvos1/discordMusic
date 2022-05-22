@@ -24,6 +24,9 @@ module.exports = {
       required: true,
     },
   ],
+  permissions: {
+    memberInVoice: true,
+  },
 
   command: async (message, arguments, client) => {
     // if no argument is given
@@ -31,14 +34,7 @@ module.exports = {
       return message.channel.send('Please enter a valid url');
     }
 
-    // check if you are in a voice channel
     const voiceChannel = message.member.voice.channel;
-    if (!voiceChannel) {
-      return message.channel.send(
-        'You need to be in a voice channel to play music'
-      );
-    }
-
     // check if bot has premission to join vc
     const permissions = voiceChannel.permissionsFor(message.client.user);
     if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
@@ -61,14 +57,7 @@ module.exports = {
       return interaction.channel.send({ embeds: [embed], ephemeral: true });
     }
 
-    // check if you are in a voice channel
     const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription('You need to be in a voice channel to play music');
-      return interaction.channel.send({ embeds: [embed], ephemeral: true });
-    }
 
     // check if bot has premission to join vc
     const permissions = voiceChannel.permissionsFor(interaction.client.user);
@@ -111,9 +100,17 @@ async function getSong(song, message, voiceChannel, client) {
           });
         });
 
-        message.channel.send(`Added **${songs.length}** songs to the queue!`);
+        if (message.commandName) {
+          message.reply(`Added **${songs.length}** songs to the queue!`);
+        } else {
+          message.channel.send(`Added **${songs.length}** songs to the queue!`);
+        }
       } else {
-        message.channel.send("Couldn't find playlist");
+        if (message.commandName) {
+          message.reply("Couldn't find playlist");
+        } else {
+          message.channel.send("Couldn't find playlist");
+        }
       }
     } else {
       // get single video by id
@@ -126,7 +123,11 @@ async function getSong(song, message, voiceChannel, client) {
         id: video.videoId,
       };
 
-      message.channel.send(`${songs.title} has been added to the queue!`);
+      if (message.commandName) {
+        message.reply(`${songs.title} has been added to the queue!`);
+      } else {
+        message.channel.send(`${songs.title} has been added to the queue!`);
+      }
     }
   } else {
     // search for song
@@ -142,10 +143,18 @@ async function getSong(song, message, voiceChannel, client) {
         id: id,
       };
 
-      message.channel.send(`${songs.title} has been added to the queue!`);
+      if (message.commandName) {
+        message.reply(`${songs.title} has been added to the queue!`);
+      } else {
+        message.channel.send(`${songs.title} has been added to the queue!`);
+      }
     } else {
       // no song found
-      message.channel.send(`Couldn't find a song`);
+      if (message.commandName) {
+        message.reply(`Couldn't find a song`);
+      } else {
+        message.channel.send(`Couldn't find a song`);
+      }
     }
   }
 

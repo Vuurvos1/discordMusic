@@ -2,14 +2,12 @@ module.exports = {
   name: 'skip',
   description: 'Skip the current song',
   aliases: ['s'],
+  permissions: {
+    memberInVoice: true,
+  },
   command: (message, arguments, client) => {
-    if (!message.member.voice.channel) {
-      return message.channel.send(
-        'You have to be in a voice channel to skip the music!'
-      );
-    }
-
     const guildQueue = client.queue.get(message.guild.id);
+
     if (!guildQueue) {
       return message.channel.send('There is no song that I could skip!');
     }
@@ -20,13 +18,8 @@ module.exports = {
   },
 
   interaction: async (interaction, client) => {
-    if (!interaction.member.voice.channel) {
-      return interaction.channel.send(
-        'You have to be in a voice channel to skip the music!'
-      );
-    }
-
     const guildQueue = client.queue.get(interaction.guild.id);
+
     if (!guildQueue) {
       return interaction.channel.send('There is no song that I could skip!');
     }

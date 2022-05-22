@@ -7,6 +7,9 @@ module.exports = {
   name: 'commands',
   description: 'List all supported commands',
   aliases: [],
+  permissions: {
+    memberInVoice: false,
+  },
   command: (message, arguments, client) => {
     const commandFiles = fs
       .readdirSync('./commands/')

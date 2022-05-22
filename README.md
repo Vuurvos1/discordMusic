@@ -13,7 +13,8 @@ under Bot premissions, turn on administrator rights (or eneable all voice and te
 
 ## Features
 
-Play, queue, pause and skip songs
+- Play, pause, queue and skip songs
+- Slash commands
 
 ## Instalation
 

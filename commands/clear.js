@@ -1,22 +1,15 @@
 const { MessageEmbed } = require('discord.js');
-const { colors } = require('../utils/utils');
+const { colors, inVoiceChannel } = require('../utils/utils');
 
 module.exports = {
   name: 'clear',
   description: 'Clear the current queue',
   aliases: [],
-  command: (message, arguments, client) => {
-    // check if you are in a voice channel
-    const voiceChannel = message.member.voice.channel;
-    if (!voiceChannel) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription(
-          'You have to be in a voice channel to use this command!'
-        );
-      return message.channel.send({ embeds: [embed] });
-    }
+  permissions: {
+    memberInVoice: true,
+  },
 
+  command: (message, arguments, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
@@ -35,17 +28,6 @@ module.exports = {
   },
 
   interaction: async (interaction, client) => {
-    // check if you are in a voice channel
-    const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription(
-          'You have to be in a voice channel to use this command!'
-        );
-      return interaction.channel.send({ embeds: [embed] });
-    }
-
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {

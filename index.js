@@ -5,6 +5,7 @@ const prefix = process.env.prefix || '-';
 const fs = require('fs');
 
 const { Intents, Client, Collection } = require('discord.js');
+const { inVoiceChannel } = require('./utils/utils');
 
 // get command files
 const commands = new Collection();
@@ -105,6 +106,12 @@ client.on('messageCreate', (message) => {
       commands.find((a) => a.aliases && a.aliases.includes(cmd));
 
     if (command) {
+      if (command.permissions?.memberInVoice) {
+        if (!inVoiceChannel(message)) {
+          return;
+        }
+      }
+
       command.command(message, tokens, client);
     } else {
       message.channel.send('Please enter a valid command!');
@@ -120,7 +127,15 @@ client.on('interactionCreate', async (interaction) => {
   const { commandName } = interaction;
   const command = commands.get(commandName);
 
-  if (!command || !command?.interaction) return;
+  if (command.permissions?.memberInVoice) {
+    if (!inVoiceChannel(interaction)) {
+      return;
+    }
+  }
+
+  if (!command || !command?.interaction) {
+    return;
+  }
 
   command.interaction(interaction, client);
 });
