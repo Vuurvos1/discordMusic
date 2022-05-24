@@ -28,7 +28,24 @@ function inVoiceChannel(message) {
   return true;
 }
 
+function leaveVoiceChannel(queue, id) {
+  // destroy connection and delete queue
+  const guildQueue = queue.get(id);
+
+  guildQueue.audioPlayer.stop();
+  guildQueue.connection.destroy();
+  queue.delete(id);
+}
+
+function getVoiceUsers(queue) {
+  // get the amount of users in a voice channel
+  return queue.voiceChannel.members.size;
+}
+
 module.exports = {
   colors,
+  MINUTES: 60 * 1000,
   inVoiceChannel,
+  leaveVoiceChannel,
+  getVoiceUsers,
 };
