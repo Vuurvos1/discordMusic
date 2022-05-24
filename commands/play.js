@@ -206,6 +206,7 @@ async function play(guild, song, connection, client) {
       // if still no songs in queue
       if (guildQueue.songs.length < 1) {
         // leave voice channel
+        guildQueue.textChannel.send('No more songs to play');
         leaveVoiceChannel(queue, guild.id);
       }
     }, 3 * MINUTES);
