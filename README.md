@@ -22,3 +22,17 @@ under Bot premissions, turn on administrator rights (or eneable all voice and te
 2. open the project directory
 3. run `pnpm install`
 4. start the bot using `pnpm start` or `npm run start`
+
+<!-- command removal notes
+
+```js
+// local
+let coms = await guild.commands.fetch();
+await coms.forEach(async (com) => {
+  await com.delete();
+});
+
+// global
+await client.application.commands.set([]); // clear all global commands
+console.log(await client.api.applications(client.user.id).commands.get()); //
+``` -->

@@ -10,7 +10,7 @@ const {
 const ytdl = require('ytdl-core');
 const yts = require('yt-search');
 const ytsr = require('ytsr');
-const { colors } = require('../utils/utils');
+const { colors, MINUTES, leaveVoiceChannel } = require('../utils/utils');
 
 module.exports = {
   name: 'play',
@@ -206,12 +206,9 @@ async function play(guild, song, connection, client) {
       // if still no songs in queue
       if (guildQueue.songs.length < 1) {
         // leave voice channel
-        if (queue.get(guild.id)) {
-          connection.destroy();
-          queue.delete(guild.id);
-        }
+        leaveVoiceChannel(queue, guild.id);
       }
-    }, 3 * 60 * 1000); // 3 minutes
+    }, 3 * MINUTES);
     return;
   }
 
@@ -249,7 +246,7 @@ async function play(guild, song, connection, client) {
     highWaterMark: 1 << 25,
   };
 
-  // Probe stream for optimize?
+  // Probe stream to optimize?
   try {
     const info = await ytdl.getInfo(song.id, options);
     const stream = ytdl.downloadFromInfo(info);

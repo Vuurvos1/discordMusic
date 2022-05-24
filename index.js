@@ -5,7 +5,12 @@ const prefix = process.env.prefix || '-';
 const fs = require('fs');
 
 const { Intents, Client, Collection } = require('discord.js');
-const { inVoiceChannel } = require('./utils/utils');
+const {
+  inVoiceChannel,
+  leaveVoiceChannel,
+  getVoiceUsers,
+  MINUTES,
+} = require('./utils/utils');
 
 // get command files
 const commands = new Collection();
@@ -51,9 +56,6 @@ client.on('ready', async () => {
 
     commands.create(commandOptions);
   }
-
-  // await client.application.commands.set([]); // clear all global commands
-  // console.log(await client.api.applications(client.user.id).commands.get()); // see if commands posted
 });
 
 client.queue = new Map();
@@ -69,16 +71,23 @@ client.on('disconnect', () => {
 client.on('voiceStateUpdate', (oldState, newState) => {
   // Disconnect
   if (oldState.channelId && !newState.channelId) {
+    const guildQueue = client.queue.get(newState.guild.id);
+
     // Bot was Disconnected
     if (newState.id === client.user.id) {
-      const guildQueue = client.queue.get(newState.guild.id);
-
+      // bot gets disconnected from voice channel
       if (guildQueue) {
-        guildQueue.audioPlayer.stop();
-        guildQueue.connection.destroy();
-        client.queue.delete(newState.guild.id);
-
-        return console.log('Bot was disconnected!');
+        leaveVoiceChannel(client.queue, newState.guild.id);
+      }
+    } else {
+      // user gets disconnected from voice channel
+      if (getVoiceUsers(guildQueue) < 2) {
+        setTimeout(() => {
+          if (getVoiceUsers(guildQueue) < 2) {
+            leaveVoiceChannel(client.queue, newState.guild.id);
+            // Left the voice channel
+          }
+        }, 3 * MINUTES);
       }
     }
   }
