@@ -82,14 +82,17 @@ client.on('voiceStateUpdate', (oldState, newState) => {
       }
     } else {
       // user gets disconnected from voice channel
-      if (getVoiceUsers(guildQueue) < 2) {
-        setTimeout(() => {
-          if (getVoiceUsers(guildQueue) < 2) {
-            // Left the voice channel
-            guildQueue.textChannel.send('No one in the voice channel');
-            leaveVoiceChannel(client.queue, newState.guild.id);
-          }
-        }, 3 * MINUTES);
+
+      if (guildQueue) {
+        if (getVoiceUsers(guildQueue) < 2) {
+          setTimeout(() => {
+            if (getVoiceUsers(guildQueue) < 2) {
+              // Left the voice channel
+              guildQueue.textChannel.send('No one in the voice channel');
+              leaveVoiceChannel(client.queue, newState.guild.id);
+            }
+          }, 3 * MINUTES);
+        }
       }
     }
   }

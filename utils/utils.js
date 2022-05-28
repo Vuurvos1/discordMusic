@@ -39,7 +39,7 @@ function leaveVoiceChannel(queue, id) {
 
 function getVoiceUsers(queue) {
   // get the amount of users in a voice channel
-  return queue.voiceChannel.members.size;
+  return queue?.voiceChannel?.members?.size;
 }
 
 module.exports = {

@@ -13,7 +13,10 @@ module.exports = {
     }
 
     guildQueue.songs = [];
-    guildQueue.audioPlayer.stop();
+
+    if (guildQueue.audioPlayer) {
+      guildQueue.audioPlayer.stop();
+    }
 
     return message.channel.send('Stopped music');
   },
@@ -29,7 +32,10 @@ module.exports = {
     }
 
     guildQueue.songs = [];
-    guildQueue.audioPlayer.stop();
+
+    if (guildQueue.audioPlayer) {
+      guildQueue.audioPlayer.stop();
+    }
 
     return interaction.reply({
       content: 'Stopped music',

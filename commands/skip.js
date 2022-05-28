@@ -13,7 +13,9 @@ module.exports = {
     }
 
     const song = guildQueue.songs[0]; // get current song
-    guildQueue.audioPlayer.stop(); // stop song
+    if (guildQueue.audioPlayer) {
+      guildQueue.audioPlayer.stop(); // stop song
+    }
 
     return message.channel.send(`Skipped \`${song.title}\``);
   },
@@ -29,7 +31,9 @@ module.exports = {
     }
 
     const song = guildQueue.songs[0]; // get current song
-    guildQueue.audioPlayer.stop(); // stop song
+    if (guildQueue.audioPlayer) {
+      guildQueue.audioPlayer.stop(); // stop song
+    }
 
     return interaction.reply({
       content: `Skipped \`${song.title}\``,
