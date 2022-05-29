@@ -188,6 +188,9 @@ async function getSong(song, message, voiceChannel, client) {
       return message.channel.send(err);
     }
   } else {
+    // update channel once a new song is added to the queue
+    guildQueue.textChannel = message.channel;
+
     if (guildQueue.songs.length < 1) {
       guildQueue.songs = guildQueue.songs.concat(songs);
       play(message.guild, guildQueue.songs[0], guildQueue.connection, client);
