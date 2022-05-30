@@ -17,7 +17,7 @@ module.exports = {
       guildQueue.audioPlayer.stop(); // stop song
     }
 
-    return message.channel.send(`Skipped \`${song.title}\``);
+    message.react('👌');
   },
 
   interaction: async (interaction, client) => {

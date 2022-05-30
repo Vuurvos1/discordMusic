@@ -1,16 +1,18 @@
 const { URL } = require('url');
 
+const ytdl = require('ytdl-core');
+const yts = require('yt-search');
+const ytsr = require('ytsr');
+
+const { colors, MINUTES, leaveVoiceChannel } = require('../utils/utils');
+
 const {
   joinVoiceChannel,
   createAudioResource,
   createAudioPlayer,
   AudioPlayerStatus,
 } = require('@discordjs/voice');
-
-const ytdl = require('ytdl-core');
-const yts = require('yt-search');
-const ytsr = require('ytsr');
-const { colors, MINUTES, leaveVoiceChannel } = require('../utils/utils');
+const { MessageEmbed } = require('discord.js');
 
 module.exports = {
   name: 'play',
@@ -97,6 +99,7 @@ async function getSong(song, message, voiceChannel, client) {
             title: video.title,
             duration: video.duration.timestamp,
             id: video.videoId,
+            url: `https://youtu.be/${vidoe.videoId}`,
           });
         });
 
@@ -121,6 +124,7 @@ async function getSong(song, message, voiceChannel, client) {
         title: video.title,
         duration: video.duration.timestamp,
         id: video.videoId,
+        url: video.url,
       };
 
       if (message.commandName) {
@@ -134,32 +138,33 @@ async function getSong(song, message, voiceChannel, client) {
     const { items } = await ytsr(song, { limit: 10 });
 
     if (items.length >= 1 && items[0].id) {
-      const { title, duration, id } = items[0];
-      songs = { title, duration, id };
+      const { title, duration, id, url } = items[0];
+      songs = { title, duration, id, url };
 
-      if (songs.length == 0) {
-        // if first song in queue
-      } else {
+      // if not first song in queue send queued message
+      if (guildQueue && guildQueue?.songs?.length !== 0) {
         if (message.commandName) {
+          // slash command
           const embed = new MessageEmbed().setDescription(
             `Queued [${
-              song.title.length > 40
-                ? song.title.substring(0, 40 - 1) + '…'
-                : song.title
-            }](${song.url}) [${message.author.user}]`
+              songs.title.length > 60
+                ? songs.title.substring(0, 60 - 1) + '…'
+                : songs.title
+            }](${songs.url})`
           );
 
-          interaction.reply({
+          message.reply({
             embeds: [embed],
             ephemeral: false,
           });
         } else {
+          // text command
           const embed = new MessageEmbed().setDescription(
             `Queued [${
-              song.title.length > 40
-                ? song.title.substring(0, 60 - 1) + '…'
-                : song.title
-            }](${song.url}) [${message.author.user}]`
+              songs.title.length > 60
+                ? songs.title.substring(0, 60 - 1) + '…'
+                : songs.title
+            }](${songs.url}) [<@${message.author.id}>]`
           );
 
           message.channel.send({ embeds: [embed] });
@@ -282,9 +287,19 @@ async function play(guild, song, connection, client) {
       await guildQueue.songMessage.delete();
     }
 
-    guildQueue.songMessage = await guildQueue.textChannel.send(
-      `Now playing: **${song.title}**`
-    );
+    const embed = new MessageEmbed()
+      .setTitle('Now Playing')
+      .setDescription(
+        `[${
+          song.title.length > 60
+            ? song.title.substring(0, 60 - 1) + '…'
+            : song.title
+        }](${song.url})`
+      );
+
+    guildQueue.songMessage = await guildQueue.textChannel.send({
+      embeds: [embed],
+    });
   } catch (err) {
     console.log(err);
   }

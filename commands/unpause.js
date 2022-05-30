@@ -13,7 +13,7 @@ module.exports = {
     }
 
     guildQueue.audioPlayer.unpause();
-    return message.channel.send('Unpaused music');
+    message.react('👌');
   },
 
   interaction: async (interaction, client) => {

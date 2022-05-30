@@ -14,7 +14,7 @@ module.exports = {
 
     guildQueue.songs.sort(() => Math.random() - 0.5);
 
-    return message.channel.send('Shuffled queue');
+    message.react('🔀');
   },
 
   interaction: async (interaction, client) => {

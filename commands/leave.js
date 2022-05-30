@@ -15,7 +15,7 @@ module.exports = {
     guildQueue.connection.destroy();
     client.queue.delete(message.guild.id);
 
-    return message.channel.send("I've left the voice channel");
+    message.react('👋');
   },
 
   interaction: async (interaction, client) => {
