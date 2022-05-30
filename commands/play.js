@@ -133,20 +133,37 @@ async function getSong(song, message, voiceChannel, client) {
     // search for song
     const { items } = await ytsr(song, { limit: 10 });
 
-    // maybe this caused the undefined video id?
-    if (items.length > 1 && items[0].id) {
+    if (items.length >= 1 && items[0].id) {
       const { title, duration, id } = items[0];
+      songs = { title, duration, id };
 
-      songs = {
-        title: title,
-        duration: duration,
-        id: id,
-      };
-
-      if (message.commandName) {
-        message.reply(`${songs.title} has been added to the queue!`);
+      if (songs.length == 0) {
+        // if first song in queue
       } else {
-        message.channel.send(`${songs.title} has been added to the queue!`);
+        if (message.commandName) {
+          const embed = new MessageEmbed().setDescription(
+            `Queued [${
+              song.title.length > 40
+                ? song.title.substring(0, 40 - 1) + '…'
+                : song.title
+            }](${song.url}) [${message.author.user}]`
+          );
+
+          interaction.reply({
+            embeds: [embed],
+            ephemeral: false,
+          });
+        } else {
+          const embed = new MessageEmbed().setDescription(
+            `Queued [${
+              song.title.length > 40
+                ? song.title.substring(0, 60 - 1) + '…'
+                : song.title
+            }](${song.url}) [${message.author.user}]`
+          );
+
+          message.channel.send({ embeds: [embed] });
+        }
       }
     } else {
       // no song found
@@ -162,7 +179,7 @@ async function getSong(song, message, voiceChannel, client) {
     const queueContruct = {
       textChannel: message.channel,
       voiceChannel: voiceChannel,
-      msg: null,
+      songMessage: null,
       connection: null,
       audioPlayer: null,
       songs: [],
@@ -205,6 +222,11 @@ async function play(guild, song, connection, client) {
   const guildQueue = queue.get(guild.id);
 
   if (!song) {
+    if (guildQueue.songMessage) {
+      guildQueue.songMessage.delete();
+      guildQueue.songMessage = undefined;
+    }
+
     setTimeout(() => {
       // if still no songs in queue
       if (guildQueue.songs.length < 1) {
@@ -233,9 +255,6 @@ async function play(guild, song, connection, client) {
 
       guildQueue.songs.shift();
       play(guild, guildQueue.songs[0], connection, client);
-      if (guildQueue.msg) {
-        guildQueue.msg.delete(); // delete now playing mewwssage
-      }
     });
 
     audioPlayer.on('error', (err) => console.error(err));
@@ -253,12 +272,17 @@ async function play(guild, song, connection, client) {
   // Probe stream to optimize?
   try {
     const info = await ytdl.getInfo(song.id, options);
-    const stream = ytdl.downloadFromInfo(info);
+    const stream = ytdl.downloadFromInfo(info); // await these?
     const resource = createAudioResource(stream);
 
     guildQueue.audioPlayer.play(resource);
 
-    guildQueue.msg = await guildQueue.textChannel.send(
+    // delete old song message
+    if (guildQueue.songMessage) {
+      await guildQueue.songMessage.delete();
+    }
+
+    guildQueue.songMessage = await guildQueue.textChannel.send(
       `Now playing: **${song.title}**`
     );
   } catch (err) {
