@@ -19,10 +19,16 @@ module.exports = {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue || guildQueue?.songs.length < 1) {
-      return interaction.reply('```nim\nThe queue is empty ;-;\n```');
+      return interaction.reply({
+        content: '```nim\nThe queue is empty ;-;\n```',
+        ephemeral: true,
+      });
     }
 
-    return interaction.reply(buildQueueMsg(guildQueue.songs.slice(0, 5)));
+    return interaction.reply({
+      content: buildQueueMsg(guildQueue.songs.slice(0, 5)),
+      ephemeral: true,
+    });
   },
 };
 
@@ -48,6 +54,5 @@ function buildQueueMsg(songs) {
   }
 
   queueMsg += '```';
-
   return queueMsg;
 }

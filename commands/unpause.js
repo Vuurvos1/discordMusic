@@ -1,3 +1,5 @@
+const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+
 module.exports = {
   name: 'unpause',
   description: 'Unpause playback',
@@ -9,11 +11,13 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
-      return message.channel.send('Nothing to unpause');
+      return message.channel.send({
+        embeds: [errorEmbed('Nothing to unpause')],
+      });
     }
 
     guildQueue.audioPlayer.unpause();
-    return message.channel.send('Unpaused music');
+    message.react('👌');
   },
 
   interaction: async (interaction, client) => {
@@ -21,14 +25,14 @@ module.exports = {
 
     if (!guildQueue) {
       return interaction.reply({
-        content: 'Nothing to unpause',
+        embeds: [errorEmbed('Nothing to unpause')],
         ephemeral: true,
       });
     }
 
     guildQueue.audioPlayer.unpause();
     return interaction.reply({
-      content: 'Unpaused music',
+      embeds: [defaultEmbed('Unpaused music')],
       ephemeral: false,
     });
   },

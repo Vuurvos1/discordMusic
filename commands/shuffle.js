@@ -1,3 +1,5 @@
+const { errorEmbed } = require('../utils/embeds');
+
 module.exports = {
   name: 'shuffle',
   description: 'Shuffle the song queueu',
@@ -9,19 +11,21 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
-      return message.channel.send('Nothing to shuffle');
+      return message.channel.send({
+        embeds: [errorEmbed('Nothing to shuffle!')],
+      });
     }
 
     guildQueue.songs.sort(() => Math.random() - 0.5);
 
-    return message.channel.send('Shuffled queue');
+    message.react('🔀');
   },
 
   interaction: async (interaction, client) => {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {
-      return interaction.reply('Nothing to shuffle');
+      return interaction.reply({ embeds: [errorEmbed('Nothing to shuffle')] });
     }
 
     guildQueue.songs.sort(() => Math.random() - 0.5);

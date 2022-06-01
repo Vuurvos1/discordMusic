@@ -1,3 +1,5 @@
+const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+
 module.exports = {
   name: 'skip',
   description: 'Skip the current song',
@@ -9,15 +11,16 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
-      return message.channel.send('There is no song that I could skip!');
+      return message.channel.send({
+        embeds: [errorEmbed('Nothing to skip!')],
+      });
     }
 
-    const song = guildQueue.songs[0]; // get current song
     if (guildQueue.audioPlayer) {
       guildQueue.audioPlayer.stop(); // stop song
     }
 
-    return message.channel.send(`Skipped \`${song.title}\``);
+    message.react('👌');
   },
 
   interaction: async (interaction, client) => {
@@ -25,18 +28,18 @@ module.exports = {
 
     if (!guildQueue) {
       return interaction.reply({
-        content: 'There is no song that I could skip!',
+        embeds: [errorEmbed('Nothing to skip!')],
         ephemeral: true,
       });
     }
 
-    const song = guildQueue.songs[0]; // get current song
+    const songTitle = guildQueue.songs[0].title; // get current song title
     if (guildQueue.audioPlayer) {
       guildQueue.audioPlayer.stop(); // stop song
     }
 
     return interaction.reply({
-      content: `Skipped \`${song.title}\``,
+      embeds: defaultEmbed(`Skipped \`${songTitle}\``),
       ephemeral: false,
     });
   },

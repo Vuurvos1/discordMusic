@@ -1,5 +1,4 @@
-const { MessageEmbed } = require('discord.js');
-const { colors } = require('../utils/utils');
+const { errorEmbed, defaultEmbed } = require('../utils/embeds');
 
 module.exports = {
   name: 'clear',
@@ -13,42 +12,30 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription('Nothing to clear');
-      return message.channel.send({ embeds: [embed] });
+      return message.channel.send({ embeds: [errorEmbed('Nothing to clear')] });
     }
 
     guildQueue.songs = [];
 
-    const embed = new MessageEmbed()
-      .setColor(colors.default)
-      .setDescription('Cleared the queue');
-    return message.channel.send({ embeds: [embed] });
+    return message.channel.send({
+      embeds: [defaultEmbed('Cleared the queue')],
+    });
   },
 
   interaction: async (interaction, client) => {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription('Nothing to clear');
-
       return interaction.reply({
-        embeds: [embed],
+        embeds: [errorEmbed('Nothing to clear')],
         ephemeral: true,
       });
     }
 
     guildQueue.songs = [];
 
-    const embed = new MessageEmbed()
-      .setColor(colors.default)
-      .setDescription('Cleared the queue');
-
     return interaction.reply({
-      embeds: [embed],
+      embeds: [defaultEmbed('Cleared the queue')],
       ephemeral: false,
     });
   },
