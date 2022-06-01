@@ -4,7 +4,7 @@ const ytdl = require('ytdl-core');
 const yts = require('yt-search');
 const ytsr = require('ytsr');
 
-const { colors, MINUTES, leaveVoiceChannel } = require('../utils/utils');
+const { MINUTES, leaveVoiceChannel } = require('../utils/utils');
 
 const {
   joinVoiceChannel,
@@ -12,7 +12,9 @@ const {
   createAudioPlayer,
   AudioPlayerStatus,
 } = require('@discordjs/voice');
+
 const { MessageEmbed } = require('discord.js');
+const { queuedEmbed, defaultEmbed, errorEmbed } = require('../utils/embeds');
 
 module.exports = {
   name: 'play',
@@ -53,10 +55,10 @@ module.exports = {
 
     // if no argument is given
     if (song.trim().length < 1) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription('Please enter a valid argument');
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({
+        embeds: [errorEmbed('Please enter a valid argument')],
+        ephemeral: true,
+      });
     }
 
     const voiceChannel = interaction.member.voice.channel;
@@ -64,12 +66,14 @@ module.exports = {
     // check if bot has premission to join vc
     const permissions = voiceChannel.permissionsFor(interaction.client.user);
     if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
-      const embed = new MessageEmbed()
-        .setColor(colors.error)
-        .setDescription(
-          'I need the permissions to join and speak in your voice channel!'
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({
+        embeds: [
+          errorEmbed(
+            'I need the permissions to join and speak in your voice channel!'
+          ),
+        ],
+        ephemeral: true,
+      });
     }
 
     getSong(song, interaction, voiceChannel, client);
@@ -99,20 +103,34 @@ async function getSong(song, message, voiceChannel, client) {
             title: video.title,
             duration: video.duration.timestamp,
             id: video.videoId,
-            url: `https://youtu.be/${vidoe.videoId}`,
+            url: `https://youtu.be/${video.videoId}`,
           });
         });
 
         if (message.commandName) {
-          message.reply(`Added **${songs.length}** songs to the queue!`);
+          // slash command
+          message.reply({
+            embeds: [defaultEmbed(`Queued **${songs.length}** songs`)],
+            ephemeral: false,
+          });
         } else {
-          message.channel.send(`Added **${songs.length}** songs to the queue!`);
+          // text command
+          message.channel.send({
+            embeds: [defaultEmbed(`Queued **${songs.length}** songs`)],
+          });
         }
       } else {
         if (message.commandName) {
-          message.reply("Couldn't find playlist");
+          // slash command
+          message.reply({
+            embeds: [errorEmbed("Couldn't find playlist")],
+            ephemeral: true,
+          });
         } else {
-          message.channel.send("Couldn't find playlist");
+          // text command
+          message.channel.send({
+            embeds: [errorEmbed("Couldn't find playlist")],
+          });
         }
       }
     } else {
@@ -128,9 +146,14 @@ async function getSong(song, message, voiceChannel, client) {
       };
 
       if (message.commandName) {
-        message.reply(`${songs.title} has been added to the queue!`);
+        // slash command
+        message.reply({
+          embeds: [queuedEmbed(message, songs)],
+          ephemeral: false,
+        });
       } else {
-        message.channel.send(`${songs.title} has been added to the queue!`);
+        // text command
+        message.channel.send({ embeds: [queuedEmbed(message, songs)] });
       }
     }
   } else {
@@ -145,37 +168,24 @@ async function getSong(song, message, voiceChannel, client) {
       if (guildQueue && guildQueue?.songs?.length !== 0) {
         if (message.commandName) {
           // slash command
-          const embed = new MessageEmbed().setDescription(
-            `Queued [${
-              songs.title.length > 60
-                ? songs.title.substring(0, 60 - 1) + '…'
-                : songs.title
-            }](${songs.url})`
-          );
-
           message.reply({
-            embeds: [embed],
+            embeds: [queuedEmbed(message, songs)],
             ephemeral: false,
           });
         } else {
           // text command
-          const embed = new MessageEmbed().setDescription(
-            `Queued [${
-              songs.title.length > 60
-                ? songs.title.substring(0, 60 - 1) + '…'
-                : songs.title
-            }](${songs.url}) [<@${message.author.id}>]`
-          );
-
-          message.channel.send({ embeds: [embed] });
+          message.channel.send({ embeds: [queuedEmbed(message, songs)] });
         }
       }
     } else {
       // no song found
       if (message.commandName) {
-        message.reply(`Couldn't find a song`);
+        message.reply({
+          embeds: [errorEmbed(`Couldn't find song`)],
+          ephemeral: true,
+        });
       } else {
-        message.channel.send(`Couldn't find a song`);
+        message.channel.send({ embeds: [errorEmbed(`Couldn't find song`)] });
       }
     }
   }
@@ -190,6 +200,8 @@ async function getSong(song, message, voiceChannel, client) {
       songs: [],
       volume: 5,
       playing: true,
+      paused: false,
+      looping: false,
     };
     client.queue.set(message.guild.id, queueContruct);
     queueContruct.songs = queueContruct.songs.concat(songs);

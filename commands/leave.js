@@ -1,3 +1,5 @@
+const { errorEmbed } = require('../utils/embeds');
+
 module.exports = {
   name: 'leave',
   description: 'Leave voice channel',
@@ -9,7 +11,9 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
-      return message.channel.send("I'm currently not in a voice channel");
+      return message.channel.send({
+        embeds: [errorEmbed("I'm not in a voice channel")],
+      });
     }
 
     guildQueue.connection.destroy();
@@ -22,8 +26,8 @@ module.exports = {
     const guildQueue = client.queue.get(interaction.guild.id);
 
     if (!guildQueue) {
-      interaction.reply({
-        content: "I'm currently not in a voice channel",
+      return interaction.reply({
+        embeds: [errorEmbed("I'm not in a voice channel")],
         ephemeral: true,
       });
     }

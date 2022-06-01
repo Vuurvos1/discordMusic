@@ -2,7 +2,8 @@ const { MessageEmbed } = require('discord.js');
 
 const colors = {
   error: '#FF1155',
-  default: '11FFAA',
+  default: '#11FFAA',
+  hotpink: '#FF69B4',
 };
 
 function inVoiceChannel(message) {

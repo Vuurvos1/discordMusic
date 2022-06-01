@@ -1,3 +1,5 @@
+const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+
 module.exports = {
   name: 'stop',
   description: 'Stop playback',
@@ -9,7 +11,9 @@ module.exports = {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
-      return message.channel.send('There is no song that I could stop!');
+      return message.channel.send({
+        embeds: [errorEmbed('Nothing to stop!')],
+      });
     }
 
     guildQueue.songs = [];
@@ -18,7 +22,7 @@ module.exports = {
       guildQueue.audioPlayer.stop();
     }
 
-    return message.channel.send('Stopped music');
+    return message.react('🛑');
   },
 
   interaction: async (interaction, client) => {
@@ -26,7 +30,7 @@ module.exports = {
 
     if (!guildQueue) {
       return interaction.reply({
-        content: 'There is no song that I could stop!',
+        embeds: [errorEmbed('Nothing to stop!')],
         ephemeral: false,
       });
     }
@@ -38,7 +42,7 @@ module.exports = {
     }
 
     return interaction.reply({
-      content: 'Stopped music',
+      embeds: [defaultEmbed('Stopped music')],
       ephemeral: false,
     });
   },
