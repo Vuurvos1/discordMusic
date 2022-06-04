@@ -1,8 +1,6 @@
 const { URL } = require('url');
 
 const ytdl = require('ytdl-core');
-const yts = require('yt-search');
-const ytsr = require('ytsr');
 
 const { MINUTES, leaveVoiceChannel } = require('../utils/utils');
 
@@ -15,6 +13,9 @@ const {
 
 const { MessageEmbed } = require('discord.js');
 const { queuedEmbed, defaultEmbed, errorEmbed } = require('../utils/embeds');
+const { demuxProbe } = require('@discordjs/voice');
+
+const { getSongUtil, getPlaylist } = require('../utils/music');
 
 module.exports = {
   name: 'play',
@@ -47,7 +48,7 @@ module.exports = {
       );
     }
 
-    getSong(arguments.join(' '), message, voiceChannel, client);
+    getSong(arguments, message, voiceChannel, client);
   },
 
   interaction: async (interaction, client) => {
@@ -76,119 +77,12 @@ module.exports = {
       });
     }
 
-    getSong(song, interaction, voiceChannel, client);
+    getSong([song], interaction, voiceChannel, client);
   },
 };
 
-async function getSong(song, message, voiceChannel, client) {
-  let songs;
-  const guildQueue = client.queue.get(message.guild.id);
-
-  // if youtube url
-  if (song.match(/^http(s)?:\/\/(www.youtube.com|youtube.com)(.*)$/)) {
-    const url = new URL(song);
-    const params = url.searchParams; // get url parameters
-
-    // url contains a playlist
-    if (params.has('list')) {
-      // add playlist to queue
-      const listId = params.get('list');
-      const list = await yts({ listId: listId });
-
-      // merge song objects?
-      if (list.videos.length > 0) {
-        songs = [];
-        list.videos.forEach((video) => {
-          songs.push({
-            title: video.title,
-            duration: video.duration.timestamp,
-            id: video.videoId,
-            url: `https://youtu.be/${video.videoId}`,
-          });
-        });
-
-        if (message.commandName) {
-          // slash command
-          message.reply({
-            embeds: [defaultEmbed(`Queued **${songs.length}** songs`)],
-            ephemeral: false,
-          });
-        } else {
-          // text command
-          message.channel.send({
-            embeds: [defaultEmbed(`Queued **${songs.length}** songs`)],
-          });
-        }
-      } else {
-        if (message.commandName) {
-          // slash command
-          message.reply({
-            embeds: [errorEmbed("Couldn't find playlist")],
-            ephemeral: true,
-          });
-        } else {
-          // text command
-          message.channel.send({
-            embeds: [errorEmbed("Couldn't find playlist")],
-          });
-        }
-      }
-    } else {
-      // get single video by id
-      videoId = params.get('v');
-      const video = await yts({ videoId: videoId });
-
-      songs = {
-        title: video.title,
-        duration: video.duration.timestamp,
-        id: video.videoId,
-        url: video.url,
-      };
-
-      if (message.commandName) {
-        // slash command
-        message.reply({
-          embeds: [queuedEmbed(message, songs)],
-          ephemeral: false,
-        });
-      } else {
-        // text command
-        message.channel.send({ embeds: [queuedEmbed(message, songs)] });
-      }
-    }
-  } else {
-    // search for song
-    const { items } = await ytsr(song, { limit: 10 });
-
-    if (items.length >= 1 && items[0].id) {
-      const { title, duration, id, url } = items[0];
-      songs = { title, duration, id, url };
-
-      // if not first song in queue send queued message
-      if (guildQueue && guildQueue?.songs?.length !== 0) {
-        if (message.commandName) {
-          // slash command
-          message.reply({
-            embeds: [queuedEmbed(message, songs)],
-            ephemeral: false,
-          });
-        } else {
-          // text command
-          message.channel.send({ embeds: [queuedEmbed(message, songs)] });
-        }
-      }
-    } else {
-      // no song found
-      if (message.commandName) {
-        message.reply({
-          embeds: [errorEmbed(`Couldn't find song`)],
-          ephemeral: true,
-        });
-      } else {
-        message.channel.send({ embeds: [errorEmbed(`Couldn't find song`)] });
-      }
-    }
-  }
+async function getSong(args, message, voiceChannel, client) {
+  let guildQueue = client.queue.get(message.guild.id);
 
   if (!guildQueue) {
     const queueContruct = {
@@ -199,38 +93,104 @@ async function getSong(song, message, voiceChannel, client) {
       audioPlayer: null,
       songs: [],
       volume: 5,
-      playing: true,
+      playing: false,
       paused: false,
       looping: false,
     };
+
     client.queue.set(message.guild.id, queueContruct);
-    queueContruct.songs = queueContruct.songs.concat(songs);
+    guildQueue = client.queue.get(message.guild.id);
+  }
 
-    try {
-      let connection = joinVoiceChannel({
-        channelId: message.member.voice.channel.id,
-        guildId: message.guild.id,
-        adapterCreator: message.guild.voiceAdapterCreator,
-      });
+  guildQueue.textChannel = message.channel; // updated each time a song is added
 
-      queueContruct.connection = connection;
+  const song = args[0];
 
-      play(message.guild, queueContruct.songs[0], connection, client);
-    } catch (err) {
-      console.log(err);
-      queue.delete(message.guild.id);
-      return message.channel.send(err);
+  // if youtube url
+  if (song.match(/^http(s)?:\/\/(www.youtube.com|youtube.com)(.*)$/)) {
+    const url = new URL(song);
+    const params = url.searchParams; // get url parameters
+
+    // url contains a playlist
+    if (params.has('list')) {
+      // add playlist to queue
+      const { songs, error } = await getPlaylist(message, args);
+
+      if (!error) {
+        guildQueue.songs = guildQueue.songs.concat(songs);
+
+        if (message.commandName) {
+          // slash command
+          message.reply({
+            embeds: [defaultEmbed(`Queued **${songs.length}** songs`)],
+            ephemeral: false,
+          });
+        } else {
+          // text command
+          message.channel.send({
+            embeds: [defaultEmbed(`Queued **${songs.length}** songs`)],
+          });
+        }
+      }
+    } else {
+      // get single video by id
+      const { song, error } = await getSongUtil(message, args);
+
+      if (!error) {
+        guildQueue.songs = guildQueue.songs.concat(song);
+
+        if (message.commandName) {
+          // slash command
+          message.reply({
+            embeds: [queuedEmbed(message, song)],
+            ephemeral: false,
+          });
+        } else {
+          // text command
+          message.channel.send({ embeds: [queuedEmbed(message, song)] });
+        }
+      }
     }
   } else {
-    // update channel once a new song is added to the queue
-    guildQueue.textChannel = message.channel;
+    // search for song
+    const { song, error } = await getSongUtil(message, args);
+    if (!error) {
+      guildQueue.songs = guildQueue.songs.concat(song);
 
-    if (guildQueue.songs.length < 1) {
-      guildQueue.songs = guildQueue.songs.concat(songs);
-      play(message.guild, guildQueue.songs[0], guildQueue.connection, client);
-    } else {
-      guildQueue.songs = guildQueue.songs.concat(songs);
+      // if not first song in queue send queued message
+      if (guildQueue && guildQueue?.songs?.length !== 0) {
+        if (message.commandName) {
+          // slash command
+          message.reply({
+            embeds: [queuedEmbed(message, song)],
+            ephemeral: false,
+          });
+        } else {
+          // text command
+          message.channel.send({ embeds: [queuedEmbed(message, song)] });
+        }
+      }
     }
+  }
+
+  try {
+    let connection = joinVoiceChannel({
+      channelId: message.member.voice.channel.id,
+      guildId: message.guild.id,
+      adapterCreator: message.guild.voiceAdapterCreator,
+    });
+
+    guildQueue.connection = connection;
+
+    if (!guildQueue.playing) {
+      // play song
+      guildQueue.playing = true;
+      play(message.guild, guildQueue.songs[0], connection, client);
+    }
+  } catch (error) {
+    console.log(error);
+    queue.delete(message.guild.id);
+    return message.channel.send(error);
   }
 }
 
@@ -243,6 +203,8 @@ async function play(guild, song, connection, client) {
       guildQueue.songMessage.delete();
       guildQueue.songMessage = undefined;
     }
+
+    guildQueue.playing = false;
 
     setTimeout(() => {
       // if still no songs in queue
@@ -260,37 +222,24 @@ async function play(guild, song, connection, client) {
 
     // once song finished playing, play next song in queue
     audioPlayer.on(AudioPlayerStatus.Idle, () => {
-      // vc is empty
-      if (guildQueue.voiceChannel.members.size <= 1 && connection) {
-        // leave voice channel
-        if (queue.get(guild.id)) {
-          connection.destroy();
-          queue.delete(guild.id);
-        }
-        return;
-      }
-
       guildQueue.songs.shift();
       play(guild, guildQueue.songs[0], connection, client);
     });
 
-    audioPlayer.on('error', (err) => console.error(err));
+    audioPlayer.on('error', (error) => console.error(error));
 
     guildQueue.audioPlayer = audioPlayer;
     connection.subscribe(audioPlayer);
   }
 
-  const options = {
-    filter: 'audioonly',
-    quality: 'highestaudio',
-    highWaterMark: 1 << 25,
-  };
-
-  // Probe stream to optimize?
   try {
-    const info = await ytdl.getInfo(song.id, options);
-    const stream = ytdl.downloadFromInfo(info); // await these?
-    const resource = createAudioResource(stream);
+    const stream = await ytdl(song.url, {
+      filter: 'audioonly',
+      quality: 'highestaudio',
+      highWaterMark: 1 << 25,
+    });
+
+    const resource = await probeAndCreateResource(stream);
 
     guildQueue.audioPlayer.play(resource);
 
@@ -312,7 +261,12 @@ async function play(guild, song, connection, client) {
     guildQueue.songMessage = await guildQueue.textChannel.send({
       embeds: [embed],
     });
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.log(error);
   }
+}
+
+async function probeAndCreateResource(readableStream) {
+  const { stream, type } = await demuxProbe(readableStream);
+  return createAudioResource(stream, { inputType: type });
 }

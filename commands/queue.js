@@ -26,7 +26,7 @@ module.exports = {
     }
 
     return interaction.reply({
-      content: buildQueueMsg(guildQueue.songs.slice(0, 5)),
+      content: buildQueueMsg(guildQueue.songs.slice(0, 10)),
       ephemeral: true,
     });
   },
