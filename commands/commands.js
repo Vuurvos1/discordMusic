@@ -1,19 +1,21 @@
-const { commandsEmbed } = require('../utils/embeds');
+import { commandsEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'commands',
   description: 'List all supported commands',
   aliases: [],
   permissions: {
     memberInVoice: false,
   },
-  command: (message, arguments, client) => {
-    return message.channel.send({ embeds: [commandsEmbed()] });
+  command: async (message, args, client) => {
+    return message.channel.send({
+      embeds: [await commandsEmbed(client.commands)],
+    });
   },
 
   interaction: async (interaction, client) => {
     return interaction.reply({
-      embeds: [commandsEmbed()],
+      embeds: [await commandsEmbed(client.commands)],
       ephemeral: true,
     });
   },

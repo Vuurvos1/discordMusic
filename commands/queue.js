@@ -1,11 +1,11 @@
-module.exports = {
+export default {
   name: 'queue',
   description: 'Show current queue',
   aliases: ['q'],
   permissions: {
     memberInVoice: true,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue || guildQueue?.songs.length < 1) {

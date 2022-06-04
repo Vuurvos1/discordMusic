@@ -1,13 +1,13 @@
-const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'unpause',
   description: 'Unpause playback',
   aliases: [],
   permissions: {
     memberInVoice: true,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
@@ -17,6 +17,7 @@ module.exports = {
     }
 
     guildQueue.audioPlayer.unpause();
+    guildQueue.paused = false;
     message.react('👌');
   },
 
@@ -31,6 +32,7 @@ module.exports = {
     }
 
     guildQueue.audioPlayer.unpause();
+    guildQueue.paused = false;
     return interaction.reply({
       embeds: [defaultEmbed('Unpaused music')],
       ephemeral: false,

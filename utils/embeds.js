@@ -1,7 +1,5 @@
-const fs = require('fs');
-
-const { MessageEmbed } = require('discord.js');
-const { colors } = require('./utils');
+import { MessageEmbed } from 'discord.js';
+import { colors } from './utils.js';
 
 const prefix = process.env.prefix || '-';
 
@@ -11,7 +9,7 @@ const prefix = process.env.prefix || '-';
  * @param song.title The song title
  * @param song.url The url of the song
  */
-function queuedEmbed(message, song) {
+export function queuedEmbed(message, song) {
   if (message.commandName) {
     // slash command
     return new MessageEmbed().setDescription(
@@ -33,22 +31,18 @@ function queuedEmbed(message, song) {
   }
 }
 
-function defaultEmbed(text) {
+export function defaultEmbed(text) {
   return new MessageEmbed().setColor(colors.default).setDescription(text);
 }
 
-function errorEmbed(errText) {
+export function errorEmbed(errText) {
   return new MessageEmbed().setColor(colors.error).setDescription(errText);
 }
 
-function commandsEmbed(commands) {
-  const commandFiles = fs
-    .readdirSync('./commands/')
-    .filter((file) => file.endsWith('.js'));
-
+export async function commandsEmbed(commands) {
   let msg = '';
-  for (const file of commandFiles) {
-    const { name, description, aliases } = require(`../commands/${file}`);
+  for (const command of commands) {
+    const { name, description, aliases } = command[1];
 
     if (description) {
       msg += `${prefix}${name} - ${description} ${
@@ -62,10 +56,3 @@ function commandsEmbed(commands) {
     .setTitle('Music Bot Commands')
     .setDescription(msg);
 }
-
-module.exports = {
-  queuedEmbed,
-  errorEmbed,
-  defaultEmbed,
-  commandsEmbed,
-};

@@ -1,6 +1,6 @@
-const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'clear',
   description: 'Clear the current queue',
   aliases: [],
@@ -8,7 +8,7 @@ module.exports = {
     memberInVoice: true,
   },
 
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {

@@ -1,13 +1,13 @@
-const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'pause',
   description: 'Pause playback',
   aliases: [],
   permissions: {
     memberInVoice: true,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
@@ -15,13 +15,16 @@ module.exports = {
     }
 
     guildQueue.audioPlayer.pause();
+    guildQueue.paused = true;
     message.react('⏸');
   },
 
   interaction: async (interaction, client) => {
     const guildQueue = client.queue.get(interaction.guild.id);
 
-    if (!guildQueue) {
+    if (!guildQueue || guildQueue.paused) {
+      console.log('Nothing to pause');
+
       return interaction.reply({
         embeds: [errorEmbed('Nothing to pause')],
         ephemeral: true,
@@ -29,8 +32,9 @@ module.exports = {
     }
 
     guildQueue.audioPlayer.pause();
+    guildQueue.paused = true;
     return interaction.reply({
-      embeds: defaultEmbed('Paused music'),
+      embeds: [defaultEmbed('Paused music')],
       ephemeral: false,
     });
   },

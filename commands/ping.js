@@ -1,11 +1,11 @@
-module.exports = {
+export default {
   name: 'ping',
   description: 'Pong!',
   aliases: [],
   permissions: {
     memberInVoice: false,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     return message.channel.send('pong!');
   },
 

@@ -1,13 +1,13 @@
-const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'skip',
   description: 'Skip the current song',
   aliases: ['s'],
   permissions: {
     memberInVoice: true,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {
@@ -39,7 +39,7 @@ module.exports = {
     }
 
     return interaction.reply({
-      embeds: defaultEmbed(`Skipped \`${songTitle}\``),
+      embeds: [defaultEmbed(`Skipped \`${songTitle}\``)],
       ephemeral: false,
     });
   },

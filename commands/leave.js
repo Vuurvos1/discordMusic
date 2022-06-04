@@ -1,13 +1,13 @@
-const { errorEmbed } = require('../utils/embeds');
+import { errorEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'leave',
   description: 'Leave voice channel',
   aliases: ['dc', 'disconnect'],
   permissions: {
     memberInVoice: true,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {

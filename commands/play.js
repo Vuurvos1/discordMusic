@@ -1,23 +1,23 @@
-const { URL } = require('url');
+import { URL } from 'node:url';
 
-const ytdl = require('ytdl-core');
+import ytdl from 'ytdl-core';
 
-const { MINUTES, leaveVoiceChannel } = require('../utils/utils');
+import { MINUTES, leaveVoiceChannel } from '../utils/utils.js';
 
-const {
+import {
   joinVoiceChannel,
   createAudioResource,
   createAudioPlayer,
   AudioPlayerStatus,
-} = require('@discordjs/voice');
+} from '@discordjs/voice';
 
-const { MessageEmbed } = require('discord.js');
-const { queuedEmbed, defaultEmbed, errorEmbed } = require('../utils/embeds');
-const { demuxProbe } = require('@discordjs/voice');
+import { MessageEmbed } from 'discord.js';
+import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
+import { demuxProbe } from '@discordjs/voice';
 
-const { getSongUtil, getPlaylist } = require('../utils/music');
+import { getSong as getSongUtil, getPlaylist } from '../utils/music.js';
 
-module.exports = {
+export default {
   name: 'play',
   description: 'Play a song',
   aliases: ['p', 'sr'],
@@ -33,9 +33,9 @@ module.exports = {
     memberInVoice: true,
   },
 
-  command: async (message, arguments, client) => {
+  command: async (message, args, client) => {
     // if no argument is given
-    if (arguments.length < 1) {
+    if (args.length < 1) {
       return message.channel.send('Please enter a valid url');
     }
 
@@ -48,7 +48,7 @@ module.exports = {
       );
     }
 
-    getSong(arguments, message, voiceChannel, client);
+    getSong(args, message, voiceChannel, client);
   },
 
   interaction: async (interaction, client) => {

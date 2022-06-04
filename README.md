@@ -9,7 +9,7 @@ A Discord bot that plays music
 
 In de discord developer portal make sure you have selected `bot` and `applications.commands` under scope
 
-under Bot premissions, turn on administrator rights (or eneable all voice and text related premissions maybe?)
+under Bot premissions, turn on administrator rights (or eneable all voice and text related premissions)
 
 ## Features
 

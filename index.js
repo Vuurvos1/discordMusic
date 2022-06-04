@@ -1,26 +1,18 @@
-require('dotenv').config();
+import 'dotenv/config';
 const { botToken, guildId } = process.env;
 const prefix = process.env.prefix || '-';
 
-const fs = require('fs');
+import * as fs from 'node:fs';
 
-const { Intents, Client, Collection } = require('discord.js');
-const {
+import { Intents, Client, Collection } from 'discord.js';
+import {
   inVoiceChannel,
   leaveVoiceChannel,
   getVoiceUsers,
   MINUTES,
-} = require('./utils/utils');
+} from './utils/utils.js';
 
-// get command files
 const commands = new Collection();
-const commandFiles = fs
-  .readdirSync('./commands/')
-  .filter((file) => file.endsWith('.js'));
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  commands.set(command.name, command);
-}
 
 const client = new Client({
   intents: [
@@ -34,17 +26,27 @@ client.on('ready', async () => {
   console.log('Ready!');
 
   const guild = client.guilds.cache.get(guildId);
-  let commands;
 
+  // setup text commands
+  const commandFiles = fs
+    .readdirSync('./commands/')
+    .filter((file) => file.endsWith('.js'));
+
+  // setup slash commands scope
+  let slashCommands;
   if (guild) {
-    commands = guild.commands;
+    slashCommands = guild.commands;
   } else {
-    commands = client.application?.commands;
+    slashCommands = client.application?.commands;
   }
 
   for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
+    const { default: command } = await import(`./commands/${file}`);
 
+    // text commands
+    commands.set(command.name, command);
+
+    // slash commands
     const commandOptions = {
       name: command.name,
       description: command.description,
@@ -54,8 +56,10 @@ client.on('ready', async () => {
       commandOptions.options = command.interactionOptions;
     }
 
-    commands.create(commandOptions);
+    slashCommands.create(commandOptions);
   }
+
+  client.commands = commands;
 });
 
 client.queue = new Map();
@@ -82,7 +86,6 @@ client.on('voiceStateUpdate', (oldState, newState) => {
       }
     } else {
       // user gets disconnected from voice channel
-
       if (guildQueue) {
         if (getVoiceUsers(guildQueue) < 2) {
           setTimeout(() => {

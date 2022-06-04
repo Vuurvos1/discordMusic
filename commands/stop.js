@@ -1,13 +1,13 @@
-const { errorEmbed, defaultEmbed } = require('../utils/embeds');
+import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
-module.exports = {
+export default {
   name: 'stop',
   description: 'Stop playback',
   aliases: [],
   permissions: {
     memberInVoice: true,
   },
-  command: (message, arguments, client) => {
+  command: (message, args, client) => {
     const guildQueue = client.queue.get(message.guild.id);
 
     if (!guildQueue) {

@@ -1,11 +1,11 @@
-const ytdl = require('ytdl-core');
-const youtube = require('youtube-sr').default;
+import ytdl from 'ytdl-core';
+import { default as youtube } from 'youtube-sr';
 
-const { URL } = require('url');
+import { URL } from 'node:url';
 
-const { errorEmbed } = require('./embeds');
+import { errorEmbed } from './embeds.js';
 
-async function getPlaylist(message, args) {
+export async function getPlaylist(message, args) {
   const url = new URL(args[0]);
   const params = url.searchParams; // get url parameters
   const listId = params.get('list');
@@ -49,7 +49,7 @@ async function getPlaylist(message, args) {
   }
 }
 
-async function getSong(message, args) {
+export async function getSong(message, args) {
   const url = args[0];
   const validUrl = url.match(
     /^(http(s)?:\/\/)?((w{3}\.)?youtu(be|.be)?|(m|music)\.youtube\.com)\/.+/
@@ -124,8 +124,3 @@ async function getSong(message, args) {
     }
   }
 }
-
-module.exports = {
-  getPlaylist,
-  getSongUtil: getSong,
-};

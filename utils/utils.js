@@ -1,12 +1,12 @@
-const { MessageEmbed } = require('discord.js');
+import { MessageEmbed } from 'discord.js';
 
-const colors = {
+export const colors = {
   error: '#FF1155',
   default: '#11FFAA',
   hotpink: '#FF69B4',
 };
 
-function inVoiceChannel(message) {
+export function inVoiceChannel(message) {
   // check if you are in a voice channel
   const voiceChannel = message.member.voice.channel;
   if (!voiceChannel) {
@@ -29,7 +29,7 @@ function inVoiceChannel(message) {
   return true;
 }
 
-function leaveVoiceChannel(queue, id) {
+export function leaveVoiceChannel(queue, id) {
   // destroy connection and delete queue
   const guildQueue = queue.get(id);
 
@@ -38,15 +38,9 @@ function leaveVoiceChannel(queue, id) {
   queue.delete(id);
 }
 
-function getVoiceUsers(queue) {
+export function getVoiceUsers(queue) {
   // get the amount of users in a voice channel
   return queue?.voiceChannel?.members?.size;
 }
 
-module.exports = {
-  colors,
-  MINUTES: 60 * 1000,
-  inVoiceChannel,
-  leaveVoiceChannel,
-  getVoiceUsers,
-};
+export const MINUTES = 60 * 1000;
