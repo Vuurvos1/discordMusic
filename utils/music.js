@@ -58,13 +58,24 @@ export async function getSong(message, args) {
   if (validUrl) {
     // if url
     const songInfo = await ytdl.getInfo(url);
+    const { videoDetails } = songInfo;
 
     if (songInfo) {
+      // format time to mm:ss or hh:mm:ss
+      const formattedTime =
+        videoDetails > 3600
+          ? new Date(videoDetails.lengthSeconds * 1000)
+              .toISOString()
+              .slice(-13, -5)
+          : new Date(videoDetails.lengthSeconds * 1000)
+              .toISOString()
+              .slice(-10, -5);
+
       const song = {
-        title: songInfo.title,
-        duration: songInfo.duration,
-        id: songInfo.video_id,
-        url: songInfo.video_url,
+        title: videoDetails.title,
+        duration: formattedTime,
+        id: videoDetails.videoId,
+        url: videoDetails.video_url,
       };
 
       return {

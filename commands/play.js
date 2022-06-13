@@ -210,6 +210,7 @@ async function play(guild, song, connection, client) {
       // if still no songs in queue
       if (guildQueue.songs.length < 1) {
         // leave voice channel
+        // TODO bug send not a function?
         guildQueue.textChannel.send('No more songs to play');
         leaveVoiceChannel(queue, guild.id);
       }
@@ -258,9 +259,12 @@ async function play(guild, song, connection, client) {
         }](${song.url})`
       );
 
-    guildQueue.songMessage = await guildQueue.textChannel.send({
-      embeds: [embed],
-    });
+    // TODO bug send not a function?
+    if (guildQueue.textChannel) {
+      guildQueue.songMessage = await guildQueue.textChannel.send({
+        embeds: [embed],
+      });
+    }
   } catch (error) {
     console.log(error);
   }
