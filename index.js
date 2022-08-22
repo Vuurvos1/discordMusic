@@ -1,16 +1,18 @@
-import 'dotenv/config';
-const { botToken, guildId } = process.env;
-const prefix = process.env.prefix || '-';
-
-import * as fs from 'node:fs';
-
-import { Intents, Client, Collection } from 'discord.js';
+import "dotenv/config";
 import {
   inVoiceChannel,
   leaveVoiceChannel,
   getVoiceUsers,
   MINUTES,
-} from './utils/utils.js';
+} from "./utils/utils.js";
+
+const { botToken, guildId } = process.env;
+const prefix = process.env.prefix || "-";
+const timeout = process.env.timeout || 3;
+
+import * as fs from "node:fs";
+
+import { Intents, Client, Collection } from "discord.js";
 
 const commands = new Collection();
 
@@ -22,15 +24,15 @@ const client = new Client({
   ],
 });
 
-client.on('ready', async () => {
-  console.log('Ready!');
+client.on("ready", async () => {
+  console.log("Ready!");
 
   const guild = client.guilds.cache.get(guildId);
 
   // setup text commands
   const commandFiles = fs
-    .readdirSync('./commands/')
-    .filter((file) => file.endsWith('.js'));
+    .readdirSync("./commands/")
+    .filter((file) => file.endsWith(".js"));
 
   // setup slash commands scope
   let slashCommands;
@@ -64,15 +66,15 @@ client.on('ready', async () => {
 
 client.queue = new Map();
 
-client.on('reconnecting', () => {
-  console.log('Reconnecting!');
+client.on("reconnecting", () => {
+  console.log("Reconnecting!");
 });
 
-client.on('disconnect', () => {
-  console.log('Disconnect!');
+client.on("disconnect", () => {
+  console.log("Disconnect!");
 });
 
-client.on('voiceStateUpdate', (oldState, newState) => {
+client.on("voiceStateUpdate", (oldState, newState) => {
   // Disconnect
   if (oldState.channelId && !newState.channelId) {
     const guildQueue = client.queue.get(newState.guild.id);
@@ -81,7 +83,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     if (newState.id === client.user.id) {
       // bot gets disconnected from voice channel
       if (guildQueue) {
-        guildQueue.textChannel.send('Left voice channel');
+        guildQueue.textChannel.send("Left voice channel");
         leaveVoiceChannel(client.queue, newState.guild.id);
       }
     } else {
@@ -91,19 +93,19 @@ client.on('voiceStateUpdate', (oldState, newState) => {
           setTimeout(() => {
             if (getVoiceUsers(guildQueue) < 2) {
               // Left the voice channel
-              guildQueue.textChannel.send('No one in the voice channel');
+              guildQueue.textChannel.send("No one in the voice channel");
               leaveVoiceChannel(client.queue, newState.guild.id);
             }
-          }, 3 * MINUTES);
+          }, timeout * MINUTES);
         }
       }
     }
   }
 });
 
-client.on('messageCreate', (message) => {
+client.on("messageCreate", (message) => {
   // command handeler
-  const tokens = message.content.split(' ');
+  const tokens = message.content.split(" ");
   let cmd = tokens.shift();
 
   if (!message.author.bot && cmd[0] == prefix) {
@@ -123,12 +125,12 @@ client.on('messageCreate', (message) => {
 
       command.command(message, tokens, client);
     } else {
-      message.channel.send('Please enter a valid command!');
+      message.channel.send("Please enter a valid command!");
     }
   }
 });
 
-client.on('interactionCreate', async (interaction) => {
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) {
     return;
   }
