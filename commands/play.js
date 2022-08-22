@@ -11,7 +11,7 @@ import {
   AudioPlayerStatus,
 } from '@discordjs/voice';
 
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 import { demuxProbe } from '@discordjs/voice';
 
@@ -249,7 +249,7 @@ async function play(guild, song, connection, client) {
       await guildQueue.songMessage.delete();
     }
 
-    const embed = new MessageEmbed()
+    const embed = new EmbedBuilder()
       .setTitle('Now Playing')
       .setDescription(
         `[${

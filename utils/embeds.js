@@ -1,4 +1,4 @@
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { colors } from './utils.js';
 
 const prefix = process.env.prefix || '-';
@@ -12,7 +12,7 @@ const prefix = process.env.prefix || '-';
 export function queuedEmbed(message, song) {
   if (message.commandName) {
     // slash command
-    return new MessageEmbed().setDescription(
+    return new EmbedBuilder().setDescription(
       `Queued [${
         song.title.length > 60
           ? song.title.substring(0, 60 - 1) + '…'
@@ -21,7 +21,7 @@ export function queuedEmbed(message, song) {
     );
   } else {
     // text command
-    return new MessageEmbed().setDescription(
+    return new EmbedBuilder().setDescription(
       `Queued [${
         song.title.length > 60
           ? song.title.substring(0, 60 - 1) + '…'
@@ -32,11 +32,11 @@ export function queuedEmbed(message, song) {
 }
 
 export function defaultEmbed(text) {
-  return new MessageEmbed().setColor(colors.default).setDescription(text);
+  return new EmbedBuilder().setColor(colors.default).setDescription(text);
 }
 
 export function errorEmbed(errText) {
-  return new MessageEmbed().setColor(colors.error).setDescription(errText);
+  return new EmbedBuilder().setColor(colors.error).setDescription(errText);
 }
 
 export async function commandsEmbed(commands) {
@@ -51,7 +51,7 @@ export async function commandsEmbed(commands) {
     }
   }
 
-  return new MessageEmbed()
+  return new EmbedBuilder()
     .setColor(colors.default)
     .setTitle('Music Bot Commands')
     .setDescription(msg);

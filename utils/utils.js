@@ -1,4 +1,4 @@
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export const colors = {
   error: '#FF1155',
@@ -10,7 +10,7 @@ export function inVoiceChannel(message) {
   // check if you are in a voice channel
   const voiceChannel = message.member.voice.channel;
   if (!voiceChannel) {
-    const embed = new MessageEmbed()
+    const embed = new EmbedBuilder()
       .setColor(colors.error)
       .setDescription('You have to be in a voice channel to use this command!');
     if (message.commandName) {

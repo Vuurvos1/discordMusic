@@ -4,7 +4,7 @@ const prefix = process.env.prefix || '-';
 
 import * as fs from 'node:fs';
 
-import { Intents, Client, Collection } from 'discord.js';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import {
   inVoiceChannel,
   leaveVoiceChannel,
@@ -16,9 +16,10 @@ const commands = new Collection();
 
 const client = new Client({
   intents: [
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_VOICE_STATES,
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
 
