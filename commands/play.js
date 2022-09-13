@@ -214,7 +214,7 @@ async function play(guild, song, connection, client) {
         guildQueue.textChannel.send('No more songs to play');
         leaveVoiceChannel(queue, guild.id);
       }
-    }, 3 * MINUTES);
+    }, 10 * MINUTES);
     return;
   }
 
