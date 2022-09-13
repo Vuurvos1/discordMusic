@@ -85,6 +85,7 @@ async function getSong(args, message, voiceChannel, client) {
   let guildQueue = client.queue.get(message.guild.id);
 
   if (!guildQueue) {
+    // add current song?
     const queueContruct = {
       textChannel: message.channel,
       voiceChannel: voiceChannel,

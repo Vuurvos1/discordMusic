@@ -15,11 +15,10 @@ export default {
       return message.channel.send({ embeds: [errorEmbed('Nothing to clear')] });
     }
 
-    guildQueue.songs = [];
+    // remove all items from queue except first (this song might be playing)
+    guildQueue.songs = [guildQueue.songs[0]];
 
-    return message.channel.send({
-      embeds: [defaultEmbed('Cleared the queue')],
-    });
+    message.react('👌');
   },
 
   interaction: async (interaction, client) => {
@@ -32,7 +31,8 @@ export default {
       });
     }
 
-    guildQueue.songs = [];
+    // remove all items from queue except first (this song might be playing)
+    guildQueue.songs = [guildQueue.songs[0]];
 
     return interaction.reply({
       embeds: [defaultEmbed('Cleared the queue')],

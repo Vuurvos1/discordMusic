@@ -17,7 +17,7 @@ export default {
     }
 
     if (guildQueue.audioPlayer) {
-      guildQueue.audioPlayer.stop(); // stop song
+      guildQueue.audioPlayer.stop(); // stop song to trigger next song
     }
 
     message.react('👌');
@@ -33,11 +33,11 @@ export default {
       });
     }
 
-    const songTitle = guildQueue.songs[0].title; // get current song title
     if (guildQueue.audioPlayer) {
-      guildQueue.audioPlayer.stop(); // stop song
+      guildQueue.audioPlayer.stop(); // stop song to trigger next song
     }
 
+    const songTitle = guildQueue.songs[0].title; // get current song title
     return interaction.reply({
       embeds: [defaultEmbed(`Skipped \`${songTitle}\``)],
       ephemeral: false,
