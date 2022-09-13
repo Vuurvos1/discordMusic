@@ -74,11 +74,11 @@ client.on('disconnect', () => {
 });
 
 client.on('voiceStateUpdate', (oldState, newState) => {
-  // Disconnect
+  // disconnect
   if (oldState.channelId && !newState.channelId) {
     const guildQueue = client.queue.get(newState.guild.id);
 
-    // Bot was Disconnected
+    // bot was Disconnected
     if (newState.id === client.user.id) {
       // bot gets disconnected from voice channel
       if (guildQueue) {
@@ -86,7 +86,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
         leaveVoiceChannel(client.queue, newState.guild.id);
       }
     } else {
-      // user gets disconnected from voice channel
+      // other user gets disconnected from voice channel
       if (guildQueue) {
         if (getVoiceUsers(guildQueue) < 2) {
           setTimeout(() => {
@@ -95,7 +95,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
               guildQueue.textChannel.send('No one in the voice channel');
               leaveVoiceChannel(client.queue, newState.guild.id);
             }
-          }, 3 * MINUTES);
+          }, 5 * MINUTES);
         }
       }
     }
