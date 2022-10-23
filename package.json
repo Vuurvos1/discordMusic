@@ -15,10 +15,15 @@
     "ffmpeg-static": "^4.4.1",
     "libsodium-wrappers": "^0.7.10",
     "node-fetch": "^2.6.7",
+    "twitch-m3u8": "^1.1.5",
     "youtube-sr": "^4.3.4",
     "ytdl-core": "^4.11.2"
   },
   "devDependencies": {
-    "nodemon": "^2.0.20"
+    "nodemon": "^2.0.20",
+    "prettier": "^2.7.1",
+    "eslint": "^8.25.0",
+    "eslint-config-prettier": "^8.5.0",
+    "typescript": "^4.8.4"
   }
 }
