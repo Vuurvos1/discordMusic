@@ -27,9 +27,11 @@ export type command = {
 
 // song might not be the best name, maybe change to "Audio"
 export type Song = {
-	name: string;
+	title: string;
 	platform: 'search' | 'youtube' | 'twitch' | 'spotify' | 'soundcloud';
+	duration: string;
 	url: string;
+	id?: string;
 	user: string; // discord js user
 	message: strign;
 };
