@@ -43,6 +43,16 @@ export function getVoiceUsers(queue) {
 	return queue?.voiceChannel?.members?.size;
 }
 
+// check if bot has premission to join vc
+/**
+ * @param {import('discord.js').VoiceChannel} voiceChannel
+ * @param {import('discord.js').User} user
+ */
+export function canJoinVoiceChannel(voiceChannel, user) {
+	const permissions = voiceChannel.permissionsFor(user);
+	return permissions.has('CONNECT') && permissions.has('SPEAK');
+}
+
 export function isValidUrl(urlString) {
 	try {
 		return Boolean(new URL(urlString));

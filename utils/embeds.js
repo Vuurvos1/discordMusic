@@ -4,10 +4,8 @@ import { colors } from './utils.js';
 const prefix = process.env.prefix || '-';
 
 /**
- * @param message Discord js message object
- * @param song Song info
- * @param song.title The song title
- * @param song.url The url of the song
+ * @param {import('discord.js').Message} message Discord js message object
+ * @param {import('../index').Song} song Song info
  */
 export function queuedEmbed(message, song) {
 	return new EmbedBuilder().setDescription(

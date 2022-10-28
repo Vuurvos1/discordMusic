@@ -4,7 +4,11 @@ import ytdl from 'ytdl-core';
 import twitch from 'twitch-m3u8';
 import { default as youtube } from 'youtube-sr';
 
-import { MINUTES, leaveVoiceChannel, isValidUrl } from '../utils/utils.js';
+import spotifyWebApi from 'spotify-web-api-node';
+const { spotifyKey, spotifyClient } = process.env;
+
+import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel, isValidUrl } from '../utils/utils.js';
+import { getSong as getSongUtil, getPlaylist } from '../utils/music.js';
 
 import {
 	joinVoiceChannel,
@@ -17,7 +21,12 @@ import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 import { demuxProbe } from '@discordjs/voice';
 
-import { getSong as getSongUtil, getPlaylist } from '../utils/music.js';
+// // credentials are optional
+const spotifyApi = new spotifyWebApi({
+	clientId: spotifyClient,
+	clientSecret: spotifyKey,
+	redirectUri: 'http://www.example.com/callback'
+});
 
 export default {
 	name: 'play',
@@ -73,12 +82,6 @@ export default {
 		getSong([song], interaction, voiceChannel, client);
 	}
 };
-
-// check if bot has premission to join vc
-function canJoinVoiceChannel(voiceChannel, user) {
-	const permissions = voiceChannel.permissionsFor(user);
-	return permissions.has('CONNECT') && permissions.has('SPEAK');
-}
 
 // /** @param {import('../index').Song} songData  */
 // async function playSong(songData) {
@@ -178,10 +181,8 @@ async function searchSong(args) {
 					url: `https://youtu.be/${songData.id}`
 				};
 
-				console.log(songData, song);
-
 				return {
-					message: `Queued **${songs.length}** songs`,
+					message: `Queued ${song.title}`,
 					songs: [song],
 					error: false
 				};
@@ -256,12 +257,63 @@ async function searchSong(args) {
 
 		if (url.host.match(/(open.spotify.com)/)) {
 			console.log('spotify match');
+			// spotify through youtube (music)
+			// playlist / track
+			// https://open.spotify.com/playlist/id
 
-			// spotify (through youtube)
-			// playlist
-			// track
-			// https://open.spotify.com/track/3DamFFqW32WihKkTVlwTYQ?si=2b284268a85642ec
-			// https://open.spotify.com/playlist/2aOXJrpcNP8W6T50AevQej?si=p5CcByrmR0yIn5v78yCkGw&nd=1
+			const slugs = url.pathname.match(/[^/]+/g);
+
+			if (slugs[0] === 'track' && slugs[1]) {
+				try {
+					const credentialData = await spotifyApi.clientCredentialsGrant();
+					spotifyApi.setAccessToken(credentialData.body['access_token']);
+
+					const songData = await spotifyApi.getTrack(slugs[1]);
+
+					// look for song on youtube
+					const video = await youtube.searchOne(songData.body.name + songData.body.artists[0].name);
+					// what to do if not the music video, how to filter
+					console.log(video);
+
+					const song = {
+						title: video.title,
+						platform: 'youtube',
+						duration: video.durationFormatted,
+						id: video.id,
+						url: `https://youtu.be/${video.id}`
+					};
+
+					return {
+						message: '',
+						songs: [song],
+						error: false
+					};
+				} catch (error) {
+					// console.error(error);
+					return {
+						message: "Couldn't find song",
+						songs: [],
+						error: true
+					};
+				}
+			}
+
+			if (slugs[0] === 'playlist' && slugs[1]) {
+				// looking for playlist
+				try {
+					const credentialData = await spotifyApi.clientCredentialsGrant();
+					spotifyApi.setAccessToken(credentialData.body['access_token']);
+
+					const playlistData = await spotifyApi.getPlaylist(slugs[1]);
+					// get names of tracks from playlist to lookup on youtube
+				} catch (error) {
+					return {
+						message: "Couldn't find playlist",
+						songs: [],
+						error: true
+					};
+				}
+			}
 		}
 	}
 
