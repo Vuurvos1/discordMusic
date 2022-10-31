@@ -506,7 +506,9 @@ async function play(guild, song, client) {
 
 	try {
 		const audioResource = await getAudioResource(song);
-		// if (!audioResource) { }
+		if (!audioResource) {
+			throw 'No audio';
+		}
 		guildQueue.audioPlayer.play(audioResource);
 
 		const embed = new EmbedBuilder()
@@ -529,8 +531,11 @@ async function play(guild, song, client) {
 			});
 		}
 	} catch (error) {
-		console.error(error);
+		// console.error(error);
+		// couldn't find song/problem getting audio
 		// skip song
+		guildQueue.songs.shift();
+		play(guild, guildQueue.songs[0], client);
 	}
 }
 
