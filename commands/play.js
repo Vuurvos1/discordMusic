@@ -8,7 +8,7 @@ import spotifyWebApi from 'spotify-web-api-node';
 const { spotifyKey, spotifyClient } = process.env;
 
 import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel, isValidUrl } from '../utils/utils.js';
-import { getSong as getSongUtil, getPlaylist } from '../utils/music.js';
+// import { getSong, getPlaylist } from '../utils/music.js';
 
 import {
 	joinVoiceChannel,
@@ -114,7 +114,28 @@ async function getAudioResource(song) {
 		// }
 	}
 
-	// return createAudioResource();
+	if (song.platform === 'spotify') {
+		// lookup song
+
+		// look for song on youtube
+		const video = await youtube.searchOne(song.title);
+
+		// preferibly only search youtube music/videos that are in the music categorie
+		// TODO add way to validate searched song
+		if (video?.title.toLowerCase().includes(song.title.toLowerCase())) {
+			console.log(video);
+
+			const stream = await ytdl(`https://youtu.be/${video.id}`, {
+				filter: 'audioonly',
+				quality: 'highestaudio',
+				highWaterMark: 1 << 25
+			});
+
+			return createAudioResource(stream);
+		} else {
+			return undefined;
+		}
+	}
 }
 
 /** @param {string[]} args  */
@@ -128,20 +149,17 @@ async function searchSong(args) {
 				/(www.youtube.com|youtube.com|www.youtu.be|youtu.be.be|www.music.youtube.com|music.youtube.com|m.youtube.com)/
 			)
 		) {
-			console.log('youtube match');
 			// youtube, video, music / playlist, live / shorts, m.youtube, short/share link
 
 			// playlist
 			if (url.searchParams.has('list')) {
-				console.log('youtube playlist');
-
 				try {
 					const playlist = await youtube.getPlaylist(args[0], { fetchAll: true });
 
 					/** @type {import('../index').Songs} */
 					const songs = [];
 					playlist.videos.forEach((video) => {
-						// TODO test for unlisted/private
+						// TODO: test for unlisted/private?
 						// This could be slow creating a bunch of new objects
 						songs.push({
 							title: video.title,
@@ -196,7 +214,6 @@ async function searchSong(args) {
 		}
 
 		if (url.host.match(/(www.twitch.tv|twitch.tv)/)) {
-			console.log('twitch match');
 			const slugs = url.pathname.match(/[^/]+/g);
 
 			// live/user
@@ -256,10 +273,9 @@ async function searchSong(args) {
 		// TODO: soundcloud
 
 		if (url.host.match(/(open.spotify.com)/)) {
-			console.log('spotify match');
+			// console.log('spotify match');
 			// spotify through youtube (music)
 			// playlist / track
-			// https://open.spotify.com/playlist/id
 
 			const slugs = url.pathname.match(/[^/]+/g);
 
@@ -272,21 +288,31 @@ async function searchSong(args) {
 
 					// look for song on youtube
 					const video = await youtube.searchOne(songData.body.name + songData.body.artists[0].name);
-					// what to do if not the music video, how to filter
-					console.log(video);
 
-					const song = {
-						title: video.title,
-						platform: 'youtube',
-						duration: video.durationFormatted,
-						id: video.id,
-						url: `https://youtu.be/${video.id}`
-					};
+					// preferibly only search youtube music/videos that are in the music categorie
+					// TODO add way to validate searched song
+					// console.log(video);
+
+					if (video.title?.includes(songData.body.name)) {
+						const song = {
+							title: video.title,
+							platform: 'youtube',
+							duration: video.durationFormatted,
+							id: video.id,
+							url: `https://youtu.be/${video.id}`
+						};
+
+						return {
+							message: '',
+							songs: [song],
+							error: false
+						};
+					}
 
 					return {
-						message: '',
-						songs: [song],
-						error: false
+						message: "Couldn't find song",
+						songs: [],
+						error: true
 					};
 				} catch (error) {
 					// console.error(error);
@@ -304,9 +330,33 @@ async function searchSong(args) {
 					const credentialData = await spotifyApi.clientCredentialsGrant();
 					spotifyApi.setAccessToken(credentialData.body['access_token']);
 
-					const playlistData = await spotifyApi.getPlaylist(slugs[1]);
-					// get names of tracks from playlist to lookup on youtube
+					// limited to 100 songs
+					const playlistData = await spotifyApi.getPlaylistTracks(slugs[1], {
+						offset: 0,
+						fields: 'items'
+					});
+
+					// TODO: add type
+					const songs = [];
+					for (let i = 0; i < playlistData.body.items.length; i++) {
+						const song = playlistData.body.items[i].track;
+
+						// TODO: add proper ms to hh:mm:ss formater funciton
+						songs.push({
+							title: song.name,
+							platform: 'spotify',
+							duration: new Date(song.duration_ms).toISOString().slice(11, 19),
+							url: `https://open.spotify.com/track/${song.id}`
+						});
+					}
+
+					return {
+						message: '',
+						songs: songs,
+						error: false
+					};
 				} catch (error) {
+					console.error(error);
 					return {
 						message: "Couldn't find playlist",
 						songs: [],
@@ -317,7 +367,6 @@ async function searchSong(args) {
 		}
 	}
 
-	console.log('search');
 	// search youtube
 	const searchString = args.join(' ');
 
@@ -461,6 +510,7 @@ async function play(guild, song, client) {
 
 	try {
 		const audioResource = await getAudioResource(song);
+		// if (!audioResource) { }
 		guildQueue.audioPlayer.play(audioResource);
 
 		const embed = new EmbedBuilder()
