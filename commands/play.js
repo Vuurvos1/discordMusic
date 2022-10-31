@@ -481,7 +481,7 @@ async function play(guild, song, client) {
 				}
 				leaveVoiceChannel(queue, guild.id);
 			}
-		}, 5 * MINUTES);
+		}, 10 * MINUTES);
 		return;
 	}
 
