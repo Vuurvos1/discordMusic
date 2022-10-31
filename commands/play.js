@@ -91,9 +91,17 @@ export default {
 // }
 
 async function getAudioResource(song) {
-	console.log(song);
-
 	if (song.platform === 'youtube') {
+		if (song.live) {
+			// filter: 'audioonly',
+			const stream = await ytdl(song.url, {
+				highWaterMark: 1 << 25,
+				filter: (format) => format.isHLS
+			});
+
+			return createAudioResource(stream);
+		}
+
 		const stream = await ytdl(song.url, {
 			filter: 'audioonly',
 			quality: 'highestaudio',
@@ -104,27 +112,19 @@ async function getAudioResource(song) {
 	}
 
 	if (song.platform === 'twitch') {
-		// try {
 		const streamLink = await twitch.getStream(song.title).then((data) => {
 			return data.at(-1).url;
 		});
 		return createAudioResource(streamLink);
-		// } catch (error) {
-		// 	console.error(error);
-		// }
 	}
 
 	if (song.platform === 'spotify') {
-		// lookup song
-
-		// look for song on youtube
+		// lookup song on youtube
 		const video = await youtube.searchOne(song.title);
 
 		// preferibly only search youtube music/videos that are in the music categorie
 		// TODO add way to validate searched song
 		if (video?.title.toLowerCase().includes(song.title.toLowerCase())) {
-			console.log(video);
-
 			const stream = await ytdl(`https://youtu.be/${video.id}`, {
 				filter: 'audioonly',
 				quality: 'highestaudio',
@@ -166,7 +166,8 @@ async function searchSong(args) {
 							platform: 'youtube',
 							duration: video.durationFormatted,
 							id: video.id,
-							url: `https://youtu.be/${video.id}`
+							url: `https://youtu.be/${video.id}`,
+							live: video.live
 						});
 					});
 
@@ -196,7 +197,8 @@ async function searchSong(args) {
 					platform: 'youtube',
 					duration: songData.durationFormatted,
 					id: songData.id,
-					url: `https://youtu.be/${songData.id}`
+					url: `https://youtu.be/${songData.id}`,
+					live: songData.live
 				};
 
 				return {
@@ -273,7 +275,6 @@ async function searchSong(args) {
 		// TODO: soundcloud
 
 		if (url.host.match(/(open.spotify.com)/)) {
-			// console.log('spotify match');
 			// spotify through youtube (music)
 			// playlist / track
 
@@ -291,8 +292,6 @@ async function searchSong(args) {
 
 					// preferibly only search youtube music/videos that are in the music categorie
 					// TODO add way to validate searched song
-					// console.log(video);
-
 					if (video.title?.includes(songData.body.name)) {
 						const song = {
 							title: video.title,
@@ -505,9 +504,6 @@ async function play(guild, song, client) {
 		guildQueue.connection.subscribe(guildQueue.audioPlayer);
 	}
 
-	// const audioResource = await probeAndCreateResource(info);
-	// const audioResource = createAudioResource(streamLink);
-
 	try {
 		const audioResource = await getAudioResource(song);
 		// if (!audioResource) { }
@@ -583,29 +579,3 @@ function sendErrorMessage(message, error) {
 		message.channel.send({ embeds: [errorEmbed(error)] });
 	}
 }
-
-// const stream = ytdl(song.url, {
-//   dlChunkSize: 0,
-//   isHLS: true,
-// });
-// console.log(info);
-// const format = ytdl.chooseFormat(info.formats, {
-//   isHLS: true,
-// });
-
-// if (song.duration === '0:00') {
-//   // is stream
-//   console.log('stream');
-//   stream = ytdl(song.url, {
-//     highWaterMark: 1 << 25,
-//     dlChunkSize: 0,
-//     isHLS: true,
-//   });
-// } else {
-//   // not a stream
-//   stream = ytdl(song.url, {
-//     filter: 'audioonly',
-//     quality: 'highestaudio',
-//     highWaterMark: 1 << 25,
-//   });
-// }
