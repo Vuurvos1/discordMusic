@@ -47,12 +47,17 @@ export function getVoiceUsers(queue) {
 /**
  * @param {import('discord.js').VoiceChannel} voiceChannel
  * @param {import('discord.js').User} user
+ * @returns {boolean} is user can join and speak inside a voice channel
  */
 export function canJoinVoiceChannel(voiceChannel, user) {
 	const permissions = voiceChannel.permissionsFor(user);
-	return permissions.has('CONNECT') && permissions.has('SPEAK');
+	if (permissions && permissions.has('CONNECT') && permissions.has('SPEAK')) {
+		return true;
+	}
+	return false;
 }
 
+/** @param {string} urlString */
 export function isValidUrl(urlString) {
 	try {
 		return Boolean(new URL(urlString));

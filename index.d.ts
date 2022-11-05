@@ -25,15 +25,22 @@ export type command = {
 	interaction: function; // Interaction, discord client
 };
 
+export type SearchSong = {
+	message: string;
+	songs: Songs;
+	error: bool;
+};
+
 // song might not be the best name, maybe change to "Audio"
 export type Song = {
 	title: string;
-	platform: 'search' | 'youtube' | 'twitch' | 'spotify' | 'soundcloud';
-	duration: string;
+	artist: string;
 	url: string;
 	id?: string;
+	platform: 'search' | 'youtube' | 'twitch' | 'spotify' | 'soundcloud';
+	duration: string;
 	user: string; // discord js user
-	message: strign;
+	message: string;
 };
 
 export type Songs = Song[];
