@@ -1,21 +1,21 @@
-import { TextChannel, VoiceChannel, Message, Interaction } from 'discord.js';
-import { AudioPlayer } from '@discordjs/voice';
+import type { TextChannel, VoiceChannel, Message, Interaction } from 'discord.js';
+import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
 
 // server queue, rename to servers?
-export type guildQueueItem = {
+export type GuildQueueItem = {
 	textChannel: TextChannel | null; // remove null?
 	voiceChannel: VoiceChannel | null; // remove null?
 	songMessage: Message | null;
-	connection: null; // get actual type from discord.js
+	connection: VoiceConnection; // get actual type from discord.js
 	player: AudioPlayer | null; // remove null?
-	songs: Songs; // create song type
+	songs: Song[]; // create song type
 	volume: 5;
 	playing: false;
 	paused: false;
 	looping: false;
 };
 
-export type command = {
+export type Command = {
 	name: string;
 	description: string;
 	alias: string[];
@@ -27,7 +27,7 @@ export type command = {
 
 export type SearchSong = {
 	message: string;
-	songs: Songs;
+	songs: Song[];
 	error: bool;
 };
 
@@ -43,4 +43,8 @@ export type Song = {
 	message: string;
 };
 
-export type Songs = Song[];
+export type PlatformInterface = {
+	name: string;
+	search: function; // string, discord client
+	getSong: function; // string, discord client
+};
