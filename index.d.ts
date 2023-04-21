@@ -1,5 +1,14 @@
-import type { TextChannel, VoiceChannel, Message, Interaction } from 'discord.js';
+import type {
+	TextChannel,
+	VoiceChannel,
+	Message,
+	Interaction,
+	Client,
+	ChatInputCommandInteraction
+} from 'discord.js';
 import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
+
+type CustomClient = Client & { queue: Map<string, GuildQueueItem> };
 
 // server queue, rename to servers?
 export type GuildQueueItem = {
@@ -18,11 +27,11 @@ export type GuildQueueItem = {
 export type Command = {
 	name: string;
 	description: string;
-	alias: string[];
-	interactionOptions: [];
-	permissions: { memberInVoice?: false };
-	command: function; // Message, string[], discord client
-	interaction: function; // Interaction, discord client
+	aliases: string[];
+	interactionOptions?: [];
+	permissions: { memberInVoice?: boolean };
+	command: (message: Message, args: string[], client: CustomClient) => any; // Message, string[], discord client
+	interaction: (interaction: ChatInputCommandInteraction, client: CustomClient) => any; // Interaction, discord client
 };
 
 export type SearchSong = {

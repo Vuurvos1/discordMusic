@@ -7,8 +7,17 @@ import * as fs from 'node:fs';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
 
+if (!botToken) {
+	throw new Error('Please provide a bot token!');
+}
+
+if (!guildId) {
+	throw new Error('Please provide a guild id!');
+}
+
 const commands = new Collection();
 
+/** @type {import('./index.js').CustomClient}  */
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -71,26 +80,30 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 	if (oldState.channelId && !newState.channelId) {
 		const guildQueue = client.queue.get(newState.guild.id);
 
+		if (!guildQueue || !client.user) return;
+
 		// bot was Disconnected
 		if (newState.id === client.user.id) {
+			if (!guildQueue.textChannel) return;
+
 			// bot gets disconnected from voice channel
-			if (guildQueue) {
-				guildQueue.textChannel.send('Left voice channel');
-				leaveVoiceChannel(client.queue, newState.guild.id);
-			}
-		} else {
-			// other user gets disconnected from voice channel
-			if (guildQueue) {
+			guildQueue.textChannel.send('Left voice channel');
+			leaveVoiceChannel(client.queue, newState.guild.id);
+
+			return;
+		}
+
+		// other user gets disconnected from voice channel
+		if (getVoiceUsers(guildQueue) < 2) {
+			setTimeout(() => {
 				if (getVoiceUsers(guildQueue) < 2) {
-					setTimeout(() => {
-						if (getVoiceUsers(guildQueue) < 2) {
-							// Left the voice channel
-							guildQueue.textChannel.send('No one in the voice channel');
-							leaveVoiceChannel(client.queue, newState.guild.id);
-						}
-					}, 5 * MINUTES);
+					if (!guildQueue.textChannel) return;
+
+					// Left the voice channel
+					guildQueue.textChannel.send('No one in the voice channel');
+					leaveVoiceChannel(client.queue, newState.guild.id);
 				}
-			}
+			}, 5 * MINUTES);
 		}
 	}
 });
