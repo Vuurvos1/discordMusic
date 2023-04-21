@@ -1,43 +1,43 @@
 import { errorEmbed } from '../utils/embeds.js';
 
 export default {
-  name: 'leave',
-  description: 'Leave voice channel',
-  aliases: ['dc', 'disconnect'],
-  permissions: {
-    memberInVoice: true,
-  },
-  command: (message, args, client) => {
-    const guildQueue = client.queue.get(message.guild.id);
+	name: 'leave',
+	description: 'Leave voice channel',
+	aliases: ['dc', 'disconnect'],
+	permissions: {
+		memberInVoice: true
+	},
+	command: (message, args, client) => {
+		const guildQueue = client.queue.get(message.guild.id);
 
-    if (!guildQueue) {
-      return message.channel.send({
-        embeds: [errorEmbed("I'm not in a voice channel")],
-      });
-    }
+		if (!guildQueue) {
+			return message.channel.send({
+				embeds: [errorEmbed("I'm not in a voice channel")]
+			});
+		}
 
-    guildQueue.connection.destroy();
-    client.queue.delete(message.guild.id);
+		guildQueue.connection.destroy();
+		client.queue.delete(message.guild.id);
 
-    message.react('👋');
-  },
+		message.react('👋');
+	},
 
-  interaction: async (interaction, client) => {
-    const guildQueue = client.queue.get(interaction.guild.id);
+	interaction: async (interaction, client) => {
+		const guildQueue = client.queue.get(interaction.guild.id);
 
-    if (!guildQueue) {
-      return interaction.reply({
-        embeds: [errorEmbed("I'm not in a voice channel")],
-        ephemeral: true,
-      });
-    }
+		if (!guildQueue) {
+			return interaction.reply({
+				embeds: [errorEmbed("I'm not in a voice channel")],
+				ephemeral: true
+			});
+		}
 
-    guildQueue.connection.destroy();
-    client.queue.delete(interaction.guild.id);
+		guildQueue.connection.destroy();
+		client.queue.delete(interaction.guild.id);
 
-    return interaction.reply({
-      content: "I've left the voice channel",
-      ephemeral: false,
-    });
-  },
+		return interaction.reply({
+			content: "I've left the voice channel",
+			ephemeral: false
+		});
+	}
 };

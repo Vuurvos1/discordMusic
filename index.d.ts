@@ -16,12 +16,12 @@ export type GuildQueueItem = {
 	voiceChannel: VoiceChannel | null; // remove null?
 	songMessage: Message | null;
 	connection: VoiceConnection; // get actual type from discord.js
-	player: AudioPlayer | null; // remove null?
+	audioPlayer: AudioPlayer | null; // remove null? rename to player?
 	songs: Song[]; // create song type
 	volume: 5;
-	playing: false;
-	paused: false;
-	looping: false;
+	playing: false; // not sure if this is needed, because paused is already there
+	paused: boolean;
+	looping: boolean;
 };
 
 export type Command = {
