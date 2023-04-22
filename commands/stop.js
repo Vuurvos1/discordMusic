@@ -1,5 +1,6 @@
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'stop',
 	description: 'Stop playback',
@@ -8,6 +9,8 @@ export default {
 		memberInVoice: true
 	},
 	command: (message, args, client) => {
+		if (!message.guild) return;
+
 		const guildQueue = client.queue.get(message.guild.id);
 
 		if (!guildQueue) {
@@ -26,6 +29,8 @@ export default {
 	},
 
 	interaction: async (interaction, client) => {
+		if (!interaction.guild) return;
+
 		const guildQueue = client.queue.get(interaction.guild.id);
 
 		if (!guildQueue) {

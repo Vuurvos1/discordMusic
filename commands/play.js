@@ -14,6 +14,7 @@ import {
 import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'play',
 	description: 'Play a song',
@@ -47,7 +48,11 @@ export default {
 	},
 
 	interaction: async (interaction, client) => {
-		const song = interaction.options.get('song').value;
+		const songOption = interaction.options.get('song');
+		if (!songOption) return;
+
+		const song = songOption.value?.toString();
+		if (!song) return;
 
 		// if no argument is given
 		if (song.trim().length < 1) {
@@ -56,6 +61,8 @@ export default {
 				ephemeral: true
 			});
 		}
+
+		if (!interaction.member) return;
 
 		const voiceChannel = interaction.member.voice.channel;
 		if (!canJoinVoiceChannel(voiceChannel, interaction.client.user)) {
@@ -117,6 +124,12 @@ async function getAudioResource(song) {
 	}
 }
 
+/**
+ * @param {string[]} args
+ * @param {import('discord.js').Message} message
+ * @param {import('discord.js').VoiceChannel} voiceChannel
+ * @param {import('discord.js').Client} client
+ */
 async function getSong(args, message, voiceChannel, client) {
 	// guildqueue creation logic
 	// TODO split
@@ -188,7 +201,6 @@ async function getSong(args, message, voiceChannel, client) {
  * @param {import('../index').Song} song
  * @param {import('discord.js').Client} client
  */
-
 async function play(guild, song, client) {
 	const queue = client.queue;
 	const guildQueue = queue.get(guild.id);
@@ -268,6 +280,10 @@ async function play(guild, song, client) {
 	}
 }
 
+/**
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {string} text
+ */
 function sendDefaultMessage(message, text) {
 	if (message.commandName) {
 		// slash command
@@ -283,6 +299,10 @@ function sendDefaultMessage(message, text) {
 	}
 }
 
+/**
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('../index.js').Song} song
+ */
 function sendQueueMessage(message, song) {
 	if (message.commandName) {
 		// slash command
@@ -296,6 +316,10 @@ function sendQueueMessage(message, song) {
 	}
 }
 
+/**
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {string} error
+ */
 function sendErrorMessage(message, error) {
 	if (message.commandName) {
 		// slash command

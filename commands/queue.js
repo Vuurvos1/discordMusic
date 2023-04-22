@@ -1,3 +1,4 @@
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'queue',
 	description: 'Show current queue',
@@ -6,6 +7,8 @@ export default {
 		memberInVoice: true
 	},
 	command: (message, args, client) => {
+		if (!message.guild) return;
+
 		const guildQueue = client.queue.get(message.guild.id);
 
 		if (!guildQueue || guildQueue?.songs.length < 1) {
@@ -16,6 +19,8 @@ export default {
 	},
 
 	interaction: async (interaction, client) => {
+		if (!interaction.guild) return;
+
 		const guildQueue = client.queue.get(interaction.guild.id);
 
 		if (!guildQueue || guildQueue?.songs.length < 1) {
@@ -32,6 +37,7 @@ export default {
 	}
 };
 
+/** @param {import('../index.js').Song[]} songs */
 function buildQueueMsg(songs) {
 	let queueMsg = '```nim\n';
 

@@ -1,5 +1,6 @@
 import { errorEmbed } from '../utils/embeds.js';
 
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'leave',
 	description: 'Leave voice channel',
@@ -8,6 +9,7 @@ export default {
 		memberInVoice: true
 	},
 	command: (message, args, client) => {
+		if (!message.guild) return;
 		const guildQueue = client.queue.get(message.guild.id);
 
 		if (!guildQueue) {
@@ -17,12 +19,14 @@ export default {
 		}
 
 		guildQueue.connection.destroy();
-		client.queue.delete(message.guild.id);
+		if (message.guild) client.queue.delete(message.guild.id);
 
 		message.react('👋');
 	},
 
 	interaction: async (interaction, client) => {
+		if (!interaction.guild) return;
+
 		const guildQueue = client.queue.get(interaction.guild.id);
 
 		if (!guildQueue) {

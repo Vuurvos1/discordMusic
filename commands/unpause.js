@@ -1,5 +1,6 @@
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'unpause',
 	description: 'Unpause playback',
@@ -8,6 +9,8 @@ export default {
 		memberInVoice: true
 	},
 	command: (message, args, client) => {
+		if (!message.guild) return;
+
 		const guildQueue = client.queue.get(message.guild.id);
 
 		if (!guildQueue) {
@@ -16,12 +19,16 @@ export default {
 			});
 		}
 
+		if (!guildQueue.audioPlayer) return;
+
 		guildQueue.audioPlayer.unpause();
 		guildQueue.paused = false;
 		message.react('👌');
 	},
 
 	interaction: async (interaction, client) => {
+		if (!interaction.guild) return;
+
 		const guildQueue = client.queue.get(interaction.guild.id);
 
 		if (!guildQueue) {
@@ -30,6 +37,8 @@ export default {
 				ephemeral: true
 			});
 		}
+
+		if (!guildQueue.audioPlayer) return;
 
 		guildQueue.audioPlayer.unpause();
 		guildQueue.paused = false;

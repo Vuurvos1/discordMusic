@@ -1,5 +1,6 @@
 import { errorEmbed } from '../utils/embeds.js';
 
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'shuffle',
 	description: 'Shuffle the song queueu',
@@ -8,6 +9,8 @@ export default {
 		memberInVoice: true
 	},
 	command: (message, args, client) => {
+		if (!message.guild) return;
+
 		const guildQueue = client.queue.get(message.guild.id);
 
 		if (!guildQueue) {
@@ -21,11 +24,9 @@ export default {
 		message.react('🔀');
 	},
 
-	/**
-	 * @param {import('discord.js').Interaction} interaction Discord js message object
-	 * @param {import('discord.js').Client} client Song info
-	 */
 	interaction: async (interaction, client) => {
+		if (!interaction.guild) return;
+
 		const guildQueue = client.queue.get(interaction.guild.id);
 
 		if (!guildQueue) {

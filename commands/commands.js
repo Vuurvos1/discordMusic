@@ -1,5 +1,6 @@
 import { commandsEmbed } from '../utils/embeds.js';
 
+/** @type {import('../index.js').Command} */
 export default {
 	name: 'commands',
 	description: 'List all supported commands',
