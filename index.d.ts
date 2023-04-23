@@ -6,7 +6,7 @@ import type {
 	Client,
 	ChatInputCommandInteraction
 } from 'discord.js';
-import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
+import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
 
 type CustomClient = Client & { queue: Map<string, GuildQueueItem> };
 
@@ -28,9 +28,10 @@ export type Command = {
 	name: string;
 	description: string;
 	aliases: string[];
-	interactionOptions?: [];
+	interactionOptions?: any[];
+	interactionOptions?: any[];
 	permissions: { memberInVoice?: boolean };
-	command: (message: Message, args: string[], client: CustomClient) => any; // Message, string[], discord client
+	command: (message: Message, args: string[], client: CustomClient) => any; // Message, string[], discord client // Change to take a params object?
 	interaction: (interaction: ChatInputCommandInteraction, client: CustomClient) => any; // Interaction, discord client
 };
 
@@ -46,6 +47,7 @@ export type Song = {
 	artist: string;
 	url: string;
 	id?: string;
+	live?: boolean;
 	platform: 'search' | 'youtube' | 'twitch' | 'spotify' | 'soundcloud';
 	duration: string;
 	user: string; // discord js user
@@ -54,6 +56,7 @@ export type Song = {
 
 export type PlatformInterface = {
 	name: string;
-	search: function; // string, discord client
-	getSong: function; // string, discord client
+	matcher: (string: string) => boolean;
+	getSong: () => Song | null; // string, discord client, // TODO: remove null
+	getResource: (song: Song) => AudioResource; // string, discord client
 };

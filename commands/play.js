@@ -37,7 +37,12 @@ export default {
 			return message.channel.send('Please enter a valid url');
 		}
 
+		if (!message.member) return;
+
 		const voiceChannel = message.member.voice.channel;
+
+		if (!voiceChannel) return;
+
 		if (!canJoinVoiceChannel(voiceChannel, message.client.user)) {
 			return message.channel.send(
 				'I need the permissions to join and speak in your voice channel!'
@@ -78,6 +83,11 @@ export default {
 
 /** @param {import('../index').Song} song  */
 async function getAudioResource(song) {
+	// platforms.get(song.platform).getResource(song)
+	// const platform = platforms.get(song.platform);
+	// if (!platform) return; // TODO: error handling
+	// return platform.getResource(song);
+
 	if (song.platform === 'youtube') {
 		if (song.live) {
 			// filter: 'audioonly',
