@@ -6,8 +6,9 @@ export const colors = {
 	hotpink: '#FF69B4'
 };
 
+/** Check if a user is in a voice channel */
 export function inVoiceChannel(message) {
-	// check if you are in a voice channel
+	// TODO: change to take a user instead of a message
 	const voiceChannel = message.member.voice.channel;
 	if (!voiceChannel) {
 		const embed = new EmbedBuilder()

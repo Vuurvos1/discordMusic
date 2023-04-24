@@ -38,7 +38,7 @@ export type Command = {
 export type SearchSong = {
 	message: string;
 	songs: Song[];
-	error: bool;
+	error?: boolean;
 };
 
 // song might not be the best name, maybe change to "Audio"
@@ -49,7 +49,7 @@ export type Song = {
 	id?: string;
 	live?: boolean;
 	platform: 'search' | 'youtube' | 'twitch' | 'spotify' | 'soundcloud';
-	duration: string;
+	duration?: string;
 	user: string; // discord js user
 	message: string;
 };
@@ -57,6 +57,10 @@ export type Song = {
 export type PlatformInterface = {
 	name: string;
 	matcher: (string: string) => boolean;
-	getSong: () => Song | null; // string, discord client, // TODO: remove null
-	getResource: (song: Song) => AudioResource; // string, discord client
+	getSong: (params: {
+		message?: Message;
+		args: string[];
+		client?: CustomClient;
+	}) => Promise<Song[] | null>; // string, discord client, // TODO: remove null
+	getResource: (song: Song) => Promise<AudioResource>; // string, discord client
 };

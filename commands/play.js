@@ -1,5 +1,4 @@
 import ytdl from 'ytdl-core';
-import twitch from 'twitch-m3u8';
 
 import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel } from '../utils/utils.js';
 import { searchSong, searchYtSong } from '../utils/music.js';
@@ -13,6 +12,8 @@ import {
 
 import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
+
+import twitchPlatform from '../platforms/twitch.js';
 
 /** @type {import('../index.js').Command} */
 export default {
@@ -109,10 +110,7 @@ async function getAudioResource(song) {
 	}
 
 	if (song.platform === 'twitch') {
-		const streamLink = await twitch.getStream(song.title).then((data) => {
-			return data.at(-1).url;
-		});
-		return createAudioResource(streamLink);
+		return await twitchPlatform.getResource(song);
 	}
 
 	if (song.platform === 'spotify') {

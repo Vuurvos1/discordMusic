@@ -4,7 +4,8 @@ import { demuxProbe, createAudioResource } from '@discordjs/voice';
 import { errorEmbed } from './embeds.js';
 import { isValidUrl } from './utils.js';
 
-import twitch from 'twitch-m3u8';
+import twitchPlatform from '../platforms/twitch.js';
+
 import SpotifyWebApi from 'spotify-web-api-node';
 const { spotifyKey, spotifyClient } = process.env;
 
@@ -24,7 +25,7 @@ export async function searchYtSong(query) {
 	const video = await youtube.searchOne(query);
 
 	return {
-		title: video.title,
+		title: video.title || 'No title',
 		platform: 'youtube',
 		duration: video.durationFormatted,
 		id: video.id,
@@ -161,61 +162,20 @@ export async function searchSong(args) {
 			}
 		}
 
-		if (url.host.match(/(www.twitch.tv|twitch.tv)/)) {
-			const slugs = url.pathname.match(/[^/]+/g);
-
-			// live/user
-			if (slugs.length === 1) {
-				// try catch for offline streams
-				try {
-					const streamData = await twitch.getStream(slugs[0]);
-					return {
-						message: 'Twitch stream',
-						songs: [
-							{
-								title: slugs[0],
-								platform: 'twitch',
-								url: args[0],
-								id: streamData.at(-1).url
-							}
-						]
-					};
-				} catch (error) {
-					return {
-						message: "Couldn't find user or stream is offline",
-						songs: [],
-						error: true
-					};
-				}
+		if (twitchPlatform.matcher(url.href)) {
+			try {
+				return {
+					message: 'Twitch stream',
+					songs: (await twitchPlatform.getSong({ args })) || [],
+					error: false
+				};
+			} catch (err) {
+				return {
+					message: err,
+					songs: [],
+					error: true
+				};
 			}
-
-			// vod
-			if (slugs[0] === 'videos') {
-				try {
-					const streamData = await twitch.getVod(slugs[1]);
-
-					return {
-						message: 'Twitch VOD',
-						songs: [
-							{
-								title: slugs[1],
-								platform: 'twitch',
-								url: args[0],
-								id: streamData.at(-1).url
-							}
-						]
-					};
-				} catch (error) {
-					console.error(error);
-					return {
-						message: "Couldn't find vod",
-						songs: [],
-						error: true
-					};
-				}
-			}
-
-			// clips
 		}
 
 		// TODO: soundcloud
