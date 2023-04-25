@@ -4,7 +4,7 @@ import { demuxProbe, createAudioResource } from '@discordjs/voice';
 import { errorEmbed } from './embeds.js';
 import { isValidUrl } from './utils.js';
 
-import twitchPlatform from '../platforms/twitch.js';
+import { twitchPlatform, youtubePlatform } from '../platforms/index.js';
 
 import SpotifyWebApi from 'spotify-web-api-node';
 const { spotifyKey, spotifyClient } = process.env;
@@ -91,71 +91,16 @@ export async function searchSong(args) {
 		// if url and possible special case
 		const url = new URL(args[0]);
 
-		if (
-			url.host.match(
-				/(www.youtube.com|youtube.com|www.youtu.be|youtu.be.be|www.music.youtube.com|music.youtube.com|m.youtube.com)/
-			)
-		) {
-			// youtube, video, music / playlist, live / shorts, m.youtube, short/share link
-
-			// playlist
-			if (url.searchParams.has('list')) {
-				try {
-					const playlist = await youtube.getPlaylist(args[0], { fetchAll: true });
-
-					/** @type {import('../index').Songs} */
-					const songs = [];
-					playlist.videos.forEach((video) => {
-						// TODO: test for unlisted/private?
-						// This could be slow creating a bunch of new objects
-						songs.push({
-							title: video.title,
-							platform: 'youtube',
-							duration: video.durationFormatted,
-							id: video.id,
-							url: `https://youtu.be/${video.id}`,
-							live: video.live
-						});
-					});
-
-					return {
-						message: `Queued **${songs.length}** songs`,
-						songs: songs,
-						error: false
-					};
-				} catch (error) {
-					console.error(error);
-					return {
-						message: "Couldn't find playlist",
-						songs: [],
-						error: true
-					};
-				}
-			}
-
-			// TODO: fix stream
-
-			// normal video
+		if (youtubePlatform.matcher(url.host)) {
 			try {
-				const songData = await youtube.getVideo(args[0]);
-
-				const song = {
-					title: songData.title,
-					platform: 'youtube',
-					duration: songData.durationFormatted,
-					id: songData.id,
-					url: `https://youtu.be/${songData.id}`,
-					live: songData.live
-				};
-
 				return {
-					message: `Queued ${song.title}`,
-					songs: [song],
+					message: 'Youtube stream',
+					songs: (await youtubePlatform.getSong({ args })) || [],
 					error: false
 				};
-			} catch (error) {
+			} catch (err) {
 				return {
-					message: "Couldn't find song",
+					message: err,
 					songs: [],
 					error: true
 				};

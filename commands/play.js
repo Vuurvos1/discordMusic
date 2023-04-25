@@ -13,7 +13,7 @@ import {
 import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 
-import twitchPlatform from '../platforms/twitch.js';
+import { twitchPlatform, youtubePlatform } from '../platforms/index.js';
 
 /** @type {import('../index.js').Command} */
 export default {
@@ -90,23 +90,7 @@ async function getAudioResource(song) {
 	// return platform.getResource(song);
 
 	if (song.platform === 'youtube') {
-		if (song.live) {
-			// filter: 'audioonly',
-			const stream = await ytdl(song.url, {
-				highWaterMark: 1 << 25,
-				filter: (format) => format.isHLS
-			});
-
-			return createAudioResource(stream);
-		}
-
-		const stream = await ytdl(song.url, {
-			filter: 'audioonly',
-			quality: 'highestaudio',
-			highWaterMark: 1 << 25
-		});
-
-		return createAudioResource(stream);
+		return await youtubePlatform.getResource(song);
 	}
 
 	if (song.platform === 'twitch') {

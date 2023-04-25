@@ -76,6 +76,8 @@ export default {
 	},
 
 	async getResource(song) {
+		// TODO: fix vod playback
+
 		const streamLink = await twitch.getStream(song.title).then((data) => {
 			return data.at(-1).url;
 		});

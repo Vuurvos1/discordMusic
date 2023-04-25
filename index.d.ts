@@ -28,8 +28,8 @@ export type Command = {
 	name: string;
 	description: string;
 	aliases: string[];
-	interactionOptions?: any[];
-	interactionOptions?: any[];
+	interactionOptions?: any[]; // TODO: add better typing
+	interactionOptions?: any[]; // TODO: add better typing
 	permissions: { memberInVoice?: boolean };
 	command: (message: Message, args: string[], client: CustomClient) => any; // Message, string[], discord client // Change to take a params object?
 	interaction: (interaction: ChatInputCommandInteraction, client: CustomClient) => any; // Interaction, discord client
@@ -61,6 +61,6 @@ export type PlatformInterface = {
 		message?: Message;
 		args: string[];
 		client?: CustomClient;
-	}) => Promise<Song[] | null>; // string, discord client, // TODO: remove null
-	getResource: (song: Song) => Promise<AudioResource>; // string, discord client
+	}) => Promise<Song[] | any[] | null>; // string, discord client, // TODO: remove null // Rename to getAudio?
+	getResource: (song: Song) => Promise<AudioResource>; // string, discord client // Rename to getAudioResource?
 };
