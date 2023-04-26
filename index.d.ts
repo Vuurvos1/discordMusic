@@ -61,6 +61,6 @@ export type PlatformInterface = {
 		message?: Message;
 		args: string[];
 		client?: CustomClient;
-	}) => Promise<Song[] | any[] | null>; // string, discord client, // TODO: remove null // Rename to getAudio?
-	getResource: (song: Song) => Promise<AudioResource>; // string, discord client // Rename to getAudioResource?
+	}) => Promise<Song[] | null>; // string, discord client, // TODO: remove null // Rename to getAudio?
+	getResource: (song: Song) => Promise<AudioResource | undefined>; // string, discord client // Rename to getAudioResource?
 };

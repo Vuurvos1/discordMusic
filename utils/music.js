@@ -4,17 +4,7 @@ import { demuxProbe, createAudioResource } from '@discordjs/voice';
 import { errorEmbed } from './embeds.js';
 import { isValidUrl } from './utils.js';
 
-import { twitchPlatform, youtubePlatform } from '../platforms/index.js';
-
-import SpotifyWebApi from 'spotify-web-api-node';
-const { spotifyKey, spotifyClient } = process.env;
-
-// credentials are optional
-const spotifyApi = new SpotifyWebApi({
-	clientId: spotifyClient,
-	clientSecret: spotifyKey,
-	redirectUri: 'http://www.example.com/callback'
-});
+import { spotifyPlatform, twitchPlatform, youtubePlatform } from '../platforms/index.js';
 
 /**
  * search youtube
@@ -123,91 +113,23 @@ export async function searchSong(args) {
 			}
 		}
 
-		// TODO: soundcloud
-
-		if (url.host.match(/(open.spotify.com)/)) {
-			// spotify through youtube (music), playlist / track
-			const slugs = url.pathname.match(/[^/]+/g);
-
-			if (slugs[0] === 'track' && slugs[1]) {
-				try {
-					const credentialData = await spotifyApi.clientCredentialsGrant();
-					spotifyApi.setAccessToken(credentialData.body['access_token']);
-
-					const songData = await spotifyApi.getTrack(slugs[1]);
-
-					// look for song on youtube
-					const ytSong = await searchYtSong(
-						`${songData.body.name} ${songData.body.artists[0].name}`
-					);
-
-					// preferibly only search youtube music/videos that are in the music categorie
-					// TODO add way to validate searched song
-					if (ytSong.title?.toLocaleLowerCase().includes(songData.body.name.toLocaleLowerCase())) {
-						return {
-							message: '',
-							songs: [ytSong],
-							error: false
-						};
-					}
-
-					return {
-						message: "Couldn't find song",
-						songs: [],
-						error: true
-					};
-				} catch (error) {
-					// console.error(error);
-					return {
-						message: "Couldn't find song",
-						songs: [],
-						error: true
-					};
-				}
-			}
-
-			if (slugs[0] === 'playlist' && slugs[1]) {
-				// looking for playlist
-				try {
-					const credentialData = await spotifyApi.clientCredentialsGrant();
-					spotifyApi.setAccessToken(credentialData.body['access_token']);
-
-					// limited to 100 songs
-					const playlistData = await spotifyApi.getPlaylistTracks(slugs[1], {
-						offset: 0,
-						fields: 'items'
-					});
-
-					// TODO: add type
-					const songs = [];
-					for (let i = 0; i < playlistData.body.items.length; i++) {
-						const song = playlistData.body.items[i].track;
-
-						// TODO: add proper ms to hh:mm:ss formater funciton
-						songs.push({
-							title: song.name,
-							artist: song?.artists[0].name,
-							platform: 'spotify',
-							duration: new Date(song.duration_ms).toISOString().slice(11, 19),
-							url: `https://open.spotify.com/track/${song.id}`
-						});
-					}
-
-					return {
-						message: '',
-						songs: songs,
-						error: false
-					};
-				} catch (error) {
-					console.error(error);
-					return {
-						message: "Couldn't find playlist",
-						songs: [],
-						error: true
-					};
-				}
+		if (spotifyPlatform.matcher(url.host)) {
+			try {
+				return {
+					message: 'Spotify stream',
+					songs: (await spotifyPlatform.getSong({ args })) || [],
+					error: false
+				};
+			} catch (err) {
+				return {
+					message: err,
+					songs: [],
+					error: true
+				};
 			}
 		}
+
+		// TODO: soundcloud
 	}
 
 	// search for video by title

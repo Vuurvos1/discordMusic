@@ -1,19 +1,14 @@
 import ytdl from 'ytdl-core';
 
 import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel } from '../utils/utils.js';
-import { searchSong, searchYtSong } from '../utils/music.js';
+import { searchSong } from '../utils/music.js';
 
-import {
-	joinVoiceChannel,
-	createAudioResource,
-	createAudioPlayer,
-	AudioPlayerStatus
-} from '@discordjs/voice';
+import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 
 import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 
-import { twitchPlatform, youtubePlatform } from '../platforms/index.js';
+import { twitchPlatform, youtubePlatform, spotifyPlatform } from '../platforms/index.js';
 
 /** @type {import('../index.js').Command} */
 export default {
@@ -98,21 +93,7 @@ async function getAudioResource(song) {
 	}
 
 	if (song.platform === 'spotify') {
-		const ytSong = await searchYtSong(`${song.title} ${song.artist}`);
-
-		// preferibly only search youtube music/videos that are in the music categorie
-		// TODO add better way to validate searched song
-		if (ytSong.title.toLowerCase().includes(song.title.toLowerCase())) {
-			const stream = await ytdl(`https://youtu.be/${ytSong.id}`, {
-				filter: 'audioonly',
-				quality: 'highestaudio',
-				highWaterMark: 1 << 25
-			});
-
-			return createAudioResource(stream);
-		} else {
-			return undefined;
-		}
+		return await spotifyPlatform.getResource(song);
 	}
 }
 
