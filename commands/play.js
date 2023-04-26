@@ -245,8 +245,8 @@ async function play(guild, song, client) {
 				embeds: [embed]
 			});
 		}
-	} catch (error) {
-		// console.error(error);
+	} catch (err) {
+		console.error(err);
 		// couldn't find song/problem getting audio, skip song
 		guildQueue.songs.shift();
 		play(guild, guildQueue.songs[0], client);

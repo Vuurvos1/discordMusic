@@ -28,12 +28,7 @@ export default {
 
 		if (!slugs) throw new Error('Invalid url');
 
-		// 	const ytSong = await searchYtSong(`${song.title} ${song.artist}`);
-
-		// 	// preferibly only search youtube music/videos that are in the music categorie
-		//
-		// 	if (ytSong.title.toLowerCase().includes(song.title.toLowerCase()))
-
+		// preferibly only search youtube music/videos that are in the music categorie
 		if (slugs[0] === 'track' && slugs[1]) {
 			try {
 				const credentialData = await spotifyApi.clientCredentialsGrant();
@@ -45,16 +40,8 @@ export default {
 					`${songData.body.name} ${songData.body.artists[0].name}`
 				);
 
-				// const ytSong = await searchYtSong(
-				// );
-
 				/** @type {import('../index').Song} */
 				const song = {
-					// title: video.title,
-					// url: video.url,
-					// artist: video.channel.name,
-					// duration
-
 					title: video.title || 'unkown',
 					id: video.id,
 					artist: 'unkown',
@@ -78,10 +65,10 @@ export default {
 			}
 		}
 
-		// TODO: crashes
+		// looking for playlist
 		if (slugs[0] === 'playlist' && slugs[1]) {
-			// 		// looking for playlist
 			try {
+				// do I need to do this every time?
 				const credentialData = await spotifyApi.clientCredentialsGrant();
 				spotifyApi.setAccessToken(credentialData.body['access_token']);
 				// limited to 100 songs
@@ -108,16 +95,14 @@ export default {
 						live: false
 					});
 				}
-				// return songs;
+				return songs;
 			} catch (error) {
 				console.error(error);
 				throw new Error("Couldn't find playlist");
 			}
 		}
 
-		throw new Error('Not implemented');
-
-		// return null;
+		throw new Error('Invalid url');
 	},
 	async getResource(song) {
 		const video = await youtube.searchOne(`${song.artist} ${song.title}`);
@@ -138,3 +123,5 @@ export default {
 		return undefined; // change to a throw?
 	}
 };
+
+// get spotify track function
