@@ -4,7 +4,7 @@ import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 export default {
 	name: 'unpause',
 	description: 'Unpause playback',
-	aliases: [],
+	aliases: ['resume'],
 	permissions: {
 		memberInVoice: true
 	},
