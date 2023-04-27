@@ -1,5 +1,3 @@
-import ytdl from 'ytdl-core';
-
 import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel } from '../utils/utils.js';
 import { searchSong } from '../utils/music.js';
 

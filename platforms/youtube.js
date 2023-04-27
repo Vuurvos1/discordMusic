@@ -7,7 +7,6 @@ import { createAudioResource } from '@discordjs/voice';
 /** @type {import('../index.js').PlatformInterface} */
 export default {
 	name: 'youtube',
-
 	matcher(string) {
 		// youtube, video, music / playlist, live / shorts, m.youtube, short/share link
 		return /(www.youtube.com|youtube.com|www.youtu.be|youtu.be.be|www.music.youtube.com|music.youtube.com|m.youtube.com)/.test(
@@ -19,58 +18,57 @@ export default {
 
 		if (!url) throw new Error('Invalid URL');
 
-		// if (false) {
-		// 	// search
-		// }
-
 		// playlist
 		if (url.searchParams.has('list')) {
 			try {
 				const playlist = await youtube.getPlaylist(args[0], { fetchAll: true });
 
 				/** @type {import('../index').Song[]} */
-				return playlist.videos.map((video) => {
+				const songs = [];
+
+				playlist.videos.forEach((video) => {
 					// TODO: test for unlisted/private?
 					// This could be slow creating a bunch of new objects
-					return {
+					songs.push({
 						title: video.title || 'unkown',
 						id: video.id,
 						artist: 'unkown',
+						user: 'unkown', // message.author.id
 						platform: 'youtube',
-						message: 'Twitch vod',
-						user: 'unkown',
+						message: 'Youtube video',
 						duration: video.durationFormatted,
 						url: `https://youtu.be/${video.id}`,
-						live: video.live
-						// user: message.author.id
-					};
+						live: false
+					});
 				});
-			} catch (error) {
-				console.error(error);
+				return songs;
+			} catch (err) {
+				console.error(err);
 				throw new Error("Couldn't find playlist");
 			}
 		}
 
 		// TODO: fix stream
-
 		// normal video
 		try {
 			const songData = await youtube.getVideo(args[0]);
 
+			/** @type {import('../index').Song} */
 			const song = {
-				title: songData.title,
+				title: songData.title || 'unkown',
 				platform: 'youtube',
 				duration: songData.durationFormatted,
 				id: songData.id,
 				url: `https://youtu.be/${songData.id}`,
-				live: songData.live
+				live: songData.live,
+				artist: 'unkown',
+				message: 'Youtube video',
+				user: 'unkown' // message.author.id
 			};
-
 			return [song];
 		} catch (error) {
 			throw new Error("Couldn't find song");
 		}
-
 		// throw new Error('Not implemented');
 	},
 	async getResource(song) {

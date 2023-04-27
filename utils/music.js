@@ -36,7 +36,7 @@ export async function getPlaylist(message, args) {
 	const playlist = await playlistPart.fetch();
 
 	if (playlist.videos.length > 0) {
-		/** @type {import('../index').Songs} */
+		/** @type {import('../index').Song[]} */
 		const songs = [];
 		playlist.videos.forEach((video) => {
 			songs.push({
