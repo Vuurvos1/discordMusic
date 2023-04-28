@@ -6,7 +6,7 @@ import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discord
 import { EmbedBuilder } from 'discord.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 
-import { twitchPlatform, youtubePlatform, spotifyPlatform } from '../platforms/index.js';
+import * as platforms from '../platforms/index.js';
 
 /** @type {import('../index.js').Command} */
 export default {
@@ -77,22 +77,11 @@ export default {
 
 /** @param {import('../index').Song} song  */
 async function getAudioResource(song) {
-	// platforms.get(song.platform).getResource(song)
-	// const platform = platforms.get(song.platform);
-	// if (!platform) return; // TODO: error handling
-	// return platform.getResource(song);
+	const platform = platforms[song.platform + 'Platform']; // TODO: make nicer
 
-	if (song.platform === 'youtube') {
-		return await youtubePlatform.getResource(song);
-	}
+	if (!platform) return; // TODO: error handling
 
-	if (song.platform === 'twitch') {
-		return await twitchPlatform.getResource(song);
-	}
-
-	if (song.platform === 'spotify') {
-		return await spotifyPlatform.getResource(song);
-	}
+	return await platform.getResource(song);
 }
 
 /**
