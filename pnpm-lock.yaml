@@ -16,7 +16,7 @@ specifiers:
   twitch-m3u8: ^1.1.5
   typescript: ^4.9.5
   youtube-sr: ^4.3.4
-  ytdl-core: ^4.11.4
+  ytdl-core: git+https://github.com/dim4ik1106/node-ytdl-core.git#master
 
 dependencies:
   '@discordjs/opus': 0.9.0
@@ -29,7 +29,7 @@ dependencies:
   spotify-web-api-node: 5.0.2
   twitch-m3u8: 1.1.5
   youtube-sr: 4.3.4
-  ytdl-core: 4.11.4
+  ytdl-core: github.com/dim4ik1106/node-ytdl-core/ba74a24daa1c29965673a600285274845b11ce77
 
 devDependencies:
   eslint: 8.39.0
@@ -1637,8 +1637,10 @@ packages:
     resolution: {integrity: sha512-olSYcR80XigutCrePEXBX3/RJJrWfonJQj7+/ggBiWU0CzTDLE1q8+lpWTWCG0JpzhzILp/IB/Bq/glGqqr1TQ==}
     dev: false
 
-  /ytdl-core/4.11.4:
-    resolution: {integrity: sha512-tsVvqt++B5LSTMnCKQb4H/PFBewKj7gGPJ6KIM5gOFGMKNZj4qglGAl4QGFG8cNPP6wY54P80FDID5eN2di0GQ==}
+  github.com/dim4ik1106/node-ytdl-core/ba74a24daa1c29965673a600285274845b11ce77:
+    resolution: {tarball: https://codeload.github.com/dim4ik1106/node-ytdl-core/tar.gz/ba74a24daa1c29965673a600285274845b11ce77}
+    name: ytdl-core
+    version: 0.0.0-development
     engines: {node: '>=12'}
     dependencies:
       m3u8stream: 0.8.6

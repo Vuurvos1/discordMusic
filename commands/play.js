@@ -219,9 +219,11 @@ async function play(guild, song, client) {
 
 	try {
 		const audioResource = await getAudioResource(song);
+
 		if (!audioResource) {
 			throw 'No audio';
 		}
+
 		guildQueue.audioPlayer.play(audioResource);
 
 		const embed = new EmbedBuilder()
