@@ -5,18 +5,17 @@ import twitch from 'twitch-m3u8';
 export default {
 	name: 'twitch',
 	matcher(string) {
-		return /https?:\/\/(www\.)?twitch\.tv\/.+/.test(string);
+		return /twitch.tv/.test(string);
 	},
 
 	async getSong({ args }) {
 		const url = new URL(args[0]);
-		console.log(url);
 
 		const slugs = url.pathname.match(/[^/]+/g); // get url slugs, by splitting the pathname by /
 
 		if (!slugs) return null; // please enter a valid url
 
-		// TODO: add twitch meta data
+		// TODO: properly add twitch meta data
 
 		// live/user
 		try {
@@ -24,15 +23,14 @@ export default {
 				const streamData = await twitch.getStream(slugs[0]);
 				return [
 					{
-						title: 'Twitch stream',
-						// title: streamData.at(-1).title,
+						title: 'Twitch stream', // streamData.at(-1).title
 						id: streamData.at(-1).url,
-						artist: url.pathname.split('/')[1],
+						artist: slugs[0],
 						platform: 'twitch',
 						message: 'Twitch stream',
 						url: args[0],
-						// user: message.author.id
-						user: 'unkown'
+						user: 'unkown', // message.author.id
+						live: true
 						// duration: 'unkown',
 					}
 				];
@@ -47,20 +45,16 @@ export default {
 			try {
 				const streamData = await twitch.getVod(slugs[1]);
 
-				console.log('stream vod');
-
 				return [
 					{
-						title: 'Twitch vod',
-						// title: streamData.at(-1).title,
+						title: 'Twitch vod', // streamData.at(-1).title
 						id: streamData.at(-1).url,
-						artist: 'unkown',
-						// artist: streamData.at(-1).channel.display_name,
+						artist: 'unkown', // streamData.at(-1).channel.display_name
 						platform: 'twitch',
 						message: 'Twitch vod',
 						url: args[0],
-						user: 'unkown'
-						// user: message.author.id
+						user: 'unkown', // message.author.id
+						live: false
 						// duration: 'unkown',
 					}
 				];
@@ -76,12 +70,11 @@ export default {
 	},
 
 	async getResource(song) {
-		// TODO: fix vod playback
+		// TODO: fix vod playback, and streams getting cut short
+		if (!song.live) return;
 
-		const streamLink = await twitch.getStream(song.title).then((data) => {
-			return data.at(-1).url;
-		});
-
+		const streamData = await twitch.getStream(song.artist);
+		const streamLink = streamData.at(-1).url;
 		return createAudioResource(streamLink);
 	}
 };

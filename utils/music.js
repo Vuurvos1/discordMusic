@@ -4,7 +4,7 @@ import { demuxProbe, createAudioResource } from '@discordjs/voice';
 import { errorEmbed } from './embeds.js';
 import { isValidUrl } from './utils.js';
 
-import { spotifyPlatform, twitchPlatform, youtubePlatform } from '../platforms/index.js';
+import * as platforms from '../platforms/index.js';
 
 /**
  * search youtube
@@ -78,58 +78,27 @@ export async function getPlaylist(message, args) {
  */
 export async function searchSong(args) {
 	if (args.length === 1 && isValidUrl(args[0])) {
-		// if url and possible special case
 		const url = new URL(args[0]);
 
-		if (youtubePlatform.matcher(url.host)) {
-			try {
-				return {
-					message: 'Youtube stream',
-					songs: (await youtubePlatform.getSong({ args })) || [],
-					error: false
-				};
-			} catch (err) {
-				return {
-					message: err,
-					songs: [],
-					error: true
-				};
-			}
-		}
-
-		if (twitchPlatform.matcher(url.href)) {
-			try {
-				return {
-					message: 'Twitch stream',
-					songs: (await twitchPlatform.getSong({ args })) || [],
-					error: false
-				};
-			} catch (err) {
-				return {
-					message: err,
-					songs: [],
-					error: true
-				};
-			}
-		}
-
-		if (spotifyPlatform.matcher(url.host)) {
-			try {
-				return {
-					message: 'Spotify stream',
-					songs: (await spotifyPlatform.getSong({ args })) || [],
-					error: false
-				};
-			} catch (err) {
-				return {
-					message: err,
-					songs: [],
-					error: true
-				};
-			}
-		}
-
 		// TODO: soundcloud
+		for (let [key, platform] of Object.entries(platforms)) {
+			if (platform.matcher(url.host)) {
+				// console.log(key);
+				try {
+					return {
+						message: key,
+						songs: (await platform.getSong({ args })) || [],
+						error: false
+					};
+				} catch (err) {
+					return {
+						message: err,
+						songs: [],
+						error: true
+					};
+				}
+			}
+		}
 	}
 
 	// search for video by title
@@ -137,12 +106,10 @@ export async function searchSong(args) {
 		const song = await searchYtSong(args.join(' '));
 
 		return {
-			message: '',
+			message: '', // added ... to the queue
 			songs: [song],
 			error: false
 		};
-
-		// added ... to the queue
 	} catch (error) {
 		console.error(error);
 	}
