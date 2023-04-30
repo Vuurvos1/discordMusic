@@ -44,6 +44,7 @@ client.on('ready', async () => {
 	}
 
 	for (const file of commandFiles) {
+		/** @type {{default: import('./index').Command}} */
 		const { default: command } = await import(`./commands/${file}`);
 
 		// text commands

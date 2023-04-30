@@ -3,6 +3,7 @@ import { URL } from 'node:url';
 import { default as youtube } from 'youtube-sr';
 
 import { createAudioResource } from '@discordjs/voice';
+import { isValidUrl } from '../utils/utils.js';
 
 /** @type {import('../index.js').PlatformInterface} */
 export default {
@@ -14,14 +15,13 @@ export default {
 		);
 	},
 	async getSong({ args }) {
-		const url = new URL(args[0]);
-
-		if (!url) throw new Error('Invalid URL');
+		const isUrl = isValidUrl(args[0]);
+		const searchArg = isUrl ? args[0] : args.join(' ');
 
 		// playlist
-		if (url.searchParams.has('list')) {
+		if (isUrl && new URL(searchArg).searchParams.has('list')) {
 			try {
-				const playlist = await youtube.getPlaylist(args[0], { fetchAll: true });
+				const playlist = await youtube.getPlaylist(searchArg, { fetchAll: true });
 
 				/** @type {import('../index').Song[]} */
 				const songs = [];
@@ -51,17 +51,17 @@ export default {
 		// TODO: fix stream
 		// normal video
 		try {
-			const songData = await youtube.getVideo(args[0]);
+			const video = isUrl ? await youtube.getVideo(searchArg) : await youtube.searchOne(searchArg);
 
 			/** @type {import('../index').Song} */
 			const song = {
-				title: songData.title || 'unkown',
+				title: video.title || 'unkown',
 				platform: 'youtube',
-				duration: songData.durationFormatted,
-				id: songData.id,
-				url: `https://youtu.be/${songData.id}`,
-				live: songData.live,
-				artist: 'unkown',
+				duration: video.durationFormatted,
+				id: video.id,
+				url: `https://youtu.be/${video.id}`,
+				live: video.live,
+				artist: video.channel?.name || 'unkown',
 				message: 'Youtube video',
 				user: 'unkown' // message.author.id
 			};

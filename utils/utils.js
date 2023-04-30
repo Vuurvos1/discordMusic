@@ -1,9 +1,9 @@
 import { EmbedBuilder } from 'discord.js';
 
 export const colors = {
-	error: '#FF1155',
-	default: '#11FFAA',
-	hotpink: '#FF69B4'
+	error: 0xff1155,
+	default: 0x11ffaa,
+	hotpink: 0xff69b4
 };
 
 /** Check if a user is in a voice channel */

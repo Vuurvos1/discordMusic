@@ -25,7 +25,9 @@ export function errorEmbed(errText) {
 	return new EmbedBuilder().setColor(colors.error).setDescription(errText);
 }
 
+/** @param {import('../index').Command[]} commands  */
 export async function commandsEmbed(commands) {
+	console.log(commands);
 	let msg = '';
 	for (const command of commands) {
 		const { name, description, aliases } = command[1];

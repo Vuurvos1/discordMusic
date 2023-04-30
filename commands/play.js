@@ -116,7 +116,7 @@ async function getSong(args, message, voiceChannel, client) {
 	guildQueue.textChannel = message.channel; // updated each time a song is added
 
 	// get song data
-	const songsData = await searchSong(args);
+	const songsData = await searchSong(args); // TODO: inline
 
 	if (songsData.error) {
 		sendErrorMessage(message, songsData.message);

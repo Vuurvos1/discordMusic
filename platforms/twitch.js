@@ -70,7 +70,7 @@ export default {
 	},
 
 	async getResource(song) {
-		// TODO: fix vod playback, and streams getting cut short
+		// TODO: fix vod playback
 		if (!song.live) return;
 
 		const streamData = await twitch.getStream(song.artist);

@@ -19,7 +19,7 @@ export type GuildQueueItem = {
 	audioPlayer: AudioPlayer | null; // remove null? rename to player?
 	songs: Song[]; // create song type
 	volume: 5;
-	playing: false; // not sure if this is needed, because paused is already there
+	playing: boolean; // not sure if this is needed, because paused is already there
 	paused: boolean;
 	looping: boolean;
 };
@@ -28,7 +28,6 @@ export type Command = {
 	name: string;
 	description: string;
 	aliases: string[];
-	interactionOptions?: any[]; // TODO: add better typing
 	interactionOptions?: any[]; // TODO: add better typing
 	permissions: { memberInVoice?: boolean };
 	command: (message: Message, args: string[], client: CustomClient) => any; // Message, string[], discord client // Change to take a params object?
