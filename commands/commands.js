@@ -1,4 +1,7 @@
-import { commandsEmbed } from '../utils/embeds.js';
+import { EmbedBuilder } from 'discord.js';
+import { colors } from '../utils/utils.js';
+import { prefix } from '../index.js';
+import * as commands from './index.js';
 
 /** @type {import('../index.js').Command} */
 export default {
@@ -10,14 +13,32 @@ export default {
 	},
 	command: async (message, args, client) => {
 		return message.channel.send({
-			embeds: [await commandsEmbed(client.commands)]
+			embeds: [commandsEmbed()]
 		});
 	},
 
 	interaction: async (interaction, client) => {
 		return interaction.reply({
-			embeds: [await commandsEmbed(client.commands)],
+			embeds: [commandsEmbed()],
 			ephemeral: true
 		});
 	}
 };
+
+function commandsEmbed() {
+	let msg = '';
+	for (const [key, command] of Object.entries(commands)) {
+		const { name, description, aliases } = command;
+
+		if (description) {
+			msg += `${prefix}${name} - ${description} ${
+				aliases?.length > 0 ? '`(Alias: ' + aliases.join(', ') + ')`' : ''
+			} \n`;
+		}
+	}
+
+	return new EmbedBuilder()
+		.setColor(colors.default)
+		.setTitle('Music Bot Commands')
+		.setDescription(msg);
+}

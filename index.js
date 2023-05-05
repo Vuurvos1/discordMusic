@@ -1,11 +1,10 @@
 import 'dotenv/config';
 const { botToken, guildId } = process.env;
-const prefix = process.env.prefix || '-';
-
-import * as fs from 'node:fs';
+export const prefix = process.env.prefix || '-';
 
 import { Client, GatewayIntentBits } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
+import * as comms from './index.js';
 
 if (!botToken) {
 	throw new Error('Please provide a bot token!');
@@ -15,8 +14,8 @@ if (!guildId) {
 	throw new Error('Please provide a guild id!');
 }
 
-/** @type {import('./').Commands} */
-const commands = new Map();
+/** @type {Map<string, import('./').Command>} */
+export let commands = new Map();
 
 /** @type {import('./').CustomClient}  */
 const client = new Client({
@@ -33,16 +32,11 @@ client.on('ready', async () => {
 
 	const guild = client.guilds.cache.get(guildId);
 
-	// setup text commands
-	const commandFiles = fs.readdirSync('./commands/').filter((file) => file.endsWith('.js'));
-
 	// setup slash commands scope
 	const slashCommands = guild ? guild.commands : client.application?.commands;
 
-	for (const file of commandFiles) {
-		/** @type {{default: import('./').Command}} */
-		const { default: command } = await import(`./commands/${file}`);
-
+	// setup  commands
+	for (const [key, command] of Object.entries(comms)) {
 		// text commands
 		commands.set(command.name, command);
 
