@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, PermissionsBitField } from 'discord.js';
 
 export const colors = {
 	error: 0xff1155,
@@ -6,9 +6,14 @@ export const colors = {
 	hotpink: 0xff69b4
 };
 
-/** Check if a user is in a voice channel */
+/**
+ * Check if a user is in a voice channel
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * */
 export function inVoiceChannel(message) {
-	// TODO: change to take a user instead of a message
+	if (!message.member) return false;
+
+	// TODO: change to take a user instead of a message, also don't have message logic in here
 	const voiceChannel = message.member.voice.channel;
 	if (!voiceChannel) {
 		const embed = new EmbedBuilder()
@@ -21,7 +26,7 @@ export function inVoiceChannel(message) {
 				ephemeral: false
 			});
 		} else {
-			message.channel.send({ embeds: [embed] });
+			message.channel?.send({ embeds: [embed] });
 		}
 
 		return false;
@@ -30,17 +35,26 @@ export function inVoiceChannel(message) {
 	return true;
 }
 
+/**
+ * get the amount of users in a voice channel
+ * @param {import('../').GuildQueue} queue
+ * @param {string} id
+ */
 export function leaveVoiceChannel(queue, id) {
 	// destroy connection and delete queue
 	const guildQueue = queue.get(id);
 
-	guildQueue.audioPlayer.stop();
-	guildQueue.connection.destroy();
+	guildQueue?.audioPlayer?.stop();
+	guildQueue?.connection.destroy();
 	queue.delete(id);
 }
 
+/**
+ * get the amount of users in a voice channel
+ * @param {import('../').GuildQueueItem} queue
+ */
 export function getVoiceUsers(queue) {
-	// get the amount of users in a voice channel
+	//
 	return queue?.voiceChannel?.members?.size;
 }
 
@@ -52,7 +66,11 @@ export function getVoiceUsers(queue) {
  */
 export function canJoinVoiceChannel(voiceChannel, user) {
 	const permissions = voiceChannel.permissionsFor(user);
-	if (permissions && permissions.has('CONNECT') && permissions.has('SPEAK')) {
+
+	if (
+		permissions &&
+		permissions.has([PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak])
+	) {
 		return true;
 	}
 	return false;

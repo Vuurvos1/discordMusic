@@ -8,7 +8,13 @@ import type {
 } from 'discord.js';
 import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
 
-type CustomClient = Client & { queue: Map<string, GuildQueueItem> };
+export type GuildQueue = Map<string, GuildQueueItem>;
+export type Commands = Map<string, Command>;
+
+type CustomClient = Client & {
+	commands?: Map<string, Command>;
+	queue?: GuildQueue;
+};
 
 // server queue, rename to servers?
 export type GuildQueueItem = {

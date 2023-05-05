@@ -4,7 +4,7 @@ const prefix = process.env.prefix || '-';
 
 import * as fs from 'node:fs';
 
-import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
 
 if (!botToken) {
@@ -15,9 +15,10 @@ if (!guildId) {
 	throw new Error('Please provide a guild id!');
 }
 
-const commands = new Collection();
+/** @type {import('./').Commands} */
+const commands = new Map();
 
-/** @type {import('./index.js').CustomClient}  */
+/** @type {import('./').CustomClient}  */
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -36,15 +37,10 @@ client.on('ready', async () => {
 	const commandFiles = fs.readdirSync('./commands/').filter((file) => file.endsWith('.js'));
 
 	// setup slash commands scope
-	let slashCommands;
-	if (guild) {
-		slashCommands = guild.commands;
-	} else {
-		slashCommands = client.application?.commands;
-	}
+	const slashCommands = guild ? guild.commands : client.application?.commands;
 
 	for (const file of commandFiles) {
-		/** @type {{default: import('./index').Command}} */
+		/** @type {{default: import('./').Command}} */
 		const { default: command } = await import(`./commands/${file}`);
 
 		// text commands
@@ -53,12 +49,11 @@ client.on('ready', async () => {
 		// slash commands
 		const commandOptions = {
 			name: command.name,
-			description: command.description
+			description: command.description,
+			options: command.interactionOptions || command.interactionOptions
 		};
 
-		if (command.interactionOptions) {
-			commandOptions.options = command.interactionOptions;
-		}
+		if (!slashCommands) return;
 
 		slashCommands.create(commandOptions);
 	}
@@ -66,7 +61,7 @@ client.on('ready', async () => {
 	client.commands = commands;
 });
 
-client.queue = new Map();
+client.queue = new Map(); // TODO: rename
 
 client.on('reconnecting', () => {
 	console.log('Reconnecting!');
@@ -79,9 +74,13 @@ client.on('disconnect', () => {
 client.on('voiceStateUpdate', (oldState, newState) => {
 	// disconnect
 	if (oldState.channelId && !newState.channelId) {
+		if (!client.queue || !client.user) return;
+
 		const guildQueue = client.queue.get(newState.guild.id);
 
-		if (!guildQueue || !client.user) return;
+		if (!guildQueue) return;
+
+		// guildqueue can't be empty here????
 
 		// bot was Disconnected
 		if (newState.id === client.user.id) {
@@ -95,7 +94,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 		}
 
 		// other user gets disconnected from voice channel
-		if (getVoiceUsers(guildQueue) < 2) {
+		if (guildQueue && getVoiceUsers(guildQueue) < 2) {
 			setTimeout(() => {
 				if (getVoiceUsers(guildQueue) < 2) {
 					if (!guildQueue.textChannel) return;
@@ -114,17 +113,18 @@ client.on('messageCreate', (message) => {
 	const tokens = message.content.split(' ');
 	let cmd = tokens.shift();
 
-	if (!message.author.bot && cmd[0] === prefix) {
-		// remove prefix from command
-		cmd = cmd.substring(1);
+	if (!cmd) return;
 
-		const command = commands.get(cmd) || commands.find((a) => a.aliases && a.aliases.includes(cmd));
+	if (!message.author.bot && cmd[0] === prefix) {
+		cmd = cmd.substring(1); // remove prefix from command
+
+		const command =
+			commands.get(cmd) ||
+			Array.from(commands.values()).find((command) => command.aliases.includes(cmd || ''));
 
 		if (command) {
-			if (command.permissions?.memberInVoice) {
-				if (!inVoiceChannel(message)) {
-					return;
-				}
+			if (command.permissions?.memberInVoice && !inVoiceChannel(message)) {
+				return;
 			}
 
 			command.command(message, tokens, client);
@@ -134,23 +134,19 @@ client.on('messageCreate', (message) => {
 	}
 });
 
-client.on('interactionCreate', async (interaction) => {
-	if (!interaction.isCommand()) {
-		return;
-	}
+client.on('interactionCreate', (interaction) => {
+	if (!interaction.isCommand()) return;
 
 	const { commandName } = interaction;
 	const command = commands.get(commandName);
 
-	if (command.permissions?.memberInVoice) {
-		if (!inVoiceChannel(interaction)) {
-			return;
-		}
-	}
+	if (!command || !interaction.isCommand()) return;
 
-	if (!command || !command?.interaction) {
+	if (command.permissions?.memberInVoice && !inVoiceChannel(interaction)) {
 		return;
 	}
+
+	if (interaction.isCommand()) return;
 
 	command.interaction(interaction, client);
 });
