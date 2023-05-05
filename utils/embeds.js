@@ -1,10 +1,8 @@
 import { EmbedBuilder } from 'discord.js';
 import { colors } from './utils.js';
 
-const prefix = process.env.prefix || '-';
-
 /**
- * @param {import('discord.js').Message} message Discord js message object
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message Discord js message object
  * @param {import('../index').Song} song Song info
  */
 export function queuedEmbed(message, song) {
@@ -23,23 +21,4 @@ export function defaultEmbed(text) {
 /** @param {string} errText  */
 export function errorEmbed(errText) {
 	return new EmbedBuilder().setColor(colors.error).setDescription(errText);
-}
-
-/** @param {import('../index').Commands} commands  */
-export async function commandsEmbed(commands) {
-	let msg = '';
-	for (const [key, command] of commands) {
-		const { name, description, aliases } = command;
-
-		if (description) {
-			msg += `${prefix}${name} - ${description} ${
-				aliases?.length > 0 ? '`(Alias: ' + aliases.join(', ') + ')`' : ''
-			} \n`;
-		}
-	}
-
-	return new EmbedBuilder()
-		.setColor(colors.default)
-		.setTitle('Music Bot Commands')
-		.setDescription(msg);
 }

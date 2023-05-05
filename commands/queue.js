@@ -6,24 +6,20 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
-		const guildQueue = client.queue.get(message.guild.id);
-
-		if (!guildQueue || guildQueue?.songs.length < 1) {
+		if (!server || server?.songs.length < 1) {
 			return message.channel.send('```nim\nThe queue is empty ;-;\n```');
 		}
 
-		return message.channel.send(buildQueueMsg(guildQueue.songs.slice(0, 5)));
+		return message.channel.send(buildQueueMsg(server.songs.slice(0, 5)));
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue || guildQueue?.songs.length < 1) {
+		if (!server || server.songs.length < 1) {
 			return interaction.reply({
 				content: '```nim\nThe queue is empty ;-;\n```',
 				ephemeral: true
@@ -31,7 +27,7 @@ export default {
 		}
 
 		return interaction.reply({
-			content: buildQueueMsg(guildQueue.songs.slice(0, 10)),
+			content: buildQueueMsg(server.songs.slice(0, 10)),
 			ephemeral: true
 		});
 	}

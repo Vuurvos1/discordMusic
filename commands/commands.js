@@ -11,13 +11,13 @@ export default {
 	permissions: {
 		memberInVoice: false
 	},
-	command: async (message, args, client) => {
+	command: async ({ message }) => {
 		return message.channel.send({
 			embeds: [commandsEmbed()]
 		});
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction }) => {
 		return interaction.reply({
 			embeds: [commandsEmbed()],
 			ephemeral: true

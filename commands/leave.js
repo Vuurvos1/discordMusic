@@ -8,36 +8,34 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
+	command: ({ message, server, servers }) => {
 		if (!message.guild) return;
-		const guildQueue = client.queue.get(message.guild.id);
 
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({
 				embeds: [errorEmbed("I'm not in a voice channel")]
 			});
 		}
 
-		guildQueue.connection.destroy();
-		if (message.guild) client.queue.delete(message.guild.id);
+		// TODO: create a function to handle this
+		server.connection.destroy();
+		if (message.guild) servers.delete(message.guild.id);
 
 		message.react('👋');
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server, servers }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed("I'm not in a voice channel")],
 				ephemeral: true
 			});
 		}
 
-		guildQueue.connection.destroy();
-		client.queue.delete(interaction.guild.id);
+		server.connection.destroy();
+		servers.delete(interaction.guild.id);
 
 		return interaction.reply({
 			content: "I've left the voice channel",

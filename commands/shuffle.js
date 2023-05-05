@@ -8,32 +8,28 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
-		const guildQueue = client.queue.get(message.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({
 				embeds: [errorEmbed('Nothing to shuffle!')]
 			});
 		}
 
-		guildQueue.songs.sort(() => Math.random() - 0.5);
+		server.songs.sort(() => Math.random() - 0.5);
 
 		message.react('🔀');
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({ embeds: [errorEmbed('Nothing to shuffle')] });
 		}
 
-		guildQueue.songs.sort(() => Math.random() - 0.5);
+		server.songs.sort(() => Math.random() - 0.5);
 
 		return interaction.reply({
 			content: 'Shuffled queue',

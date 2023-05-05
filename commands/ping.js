@@ -6,11 +6,11 @@ export default {
 	permissions: {
 		memberInVoice: false
 	},
-	command: (message) => {
+	command: ({ message }) => {
 		return message.channel.send('pong!');
 	},
 
-	interaction: async (interaction) => {
+	interaction: async ({ interaction }) => {
 		return interaction.reply({
 			content: 'pong!',
 			ephemeral: true

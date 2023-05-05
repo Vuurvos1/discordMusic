@@ -8,41 +8,37 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
-		const guildQueue = client.queue.get(message.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({
 				embeds: [errorEmbed('Nothing to skip!')]
 			});
 		}
 
-		if (guildQueue.audioPlayer) {
-			guildQueue.audioPlayer.stop(); // stop song to trigger next song
+		if (server.audioPlayer) {
+			server.audioPlayer.stop(); // stop song to trigger next song
 		}
 
 		message.react('👌');
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to skip!')],
 				ephemeral: true
 			});
 		}
 
-		if (guildQueue.audioPlayer) {
-			guildQueue.audioPlayer.stop(); // stop song to trigger next song
+		if (server.audioPlayer) {
+			server.audioPlayer.stop(); // stop song to trigger next song
 		}
 
-		const songTitle = guildQueue.songs[0].title; // get current song title
+		const songTitle = server.songs[0].title; // get current song title
 		return interaction.reply({
 			embeds: [defaultEmbed(`Skipped \`${songTitle}\``)],
 			ephemeral: false

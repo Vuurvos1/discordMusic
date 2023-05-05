@@ -1,5 +1,6 @@
 import type {
 	TextChannel,
+	Channel,
 	VoiceChannel,
 	Message,
 	Interaction,
@@ -9,23 +10,16 @@ import type {
 import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
 
 export type GuildQueue = Map<string, GuildQueueItem>;
-export type Commands = Map<string, Command>;
-
-type CustomClient = Client & {
-	commands?: Map<string, Command>;
-	queue?: GuildQueue;
-};
 
 // server queue, rename to servers?
 export type GuildQueueItem = {
-	textChannel: TextChannel | null; // remove null?
-	voiceChannel: VoiceChannel | null; // remove null?
+	textChannel: Channel | null;
+	voiceChannel: VoiceChannel | null;
 	songMessage: Message | null;
-	connection: VoiceConnection; // get actual type from discord.js
-	audioPlayer: AudioPlayer | null; // remove null? rename to player?
+	connection: VoiceConnection | null;
+	audioPlayer: AudioPlayer | null; // rename to player?
 	songs: Song[]; // create song type
 	volume: 5;
-	playing: boolean; // not sure if this is needed, because paused is already there
 	paused: boolean;
 	looping: boolean;
 };
@@ -36,8 +30,19 @@ export type Command = {
 	aliases: string[];
 	interactionOptions?: any[]; // TODO: add better typing
 	permissions: { memberInVoice?: boolean };
-	command: (message: Message, args: string[], client: CustomClient) => any; // Message, string[], discord client // Change to take a params object?
-	interaction: (interaction: ChatInputCommandInteraction, client: CustomClient) => any; // Interaction, discord client
+	command: (params: {
+		message: Message;
+		args: string[];
+		client: Client;
+		server: GuildQueueItem | undefined;
+		servers: GuildQueue;
+	}) => any; // Message, string[], discord client // Change to take a params object?
+	interaction: (params: {
+		interaction: ChatInputCommandInteraction;
+		client: Client;
+		server: GuildQueueItem | undefined;
+		servers: GuildQueue;
+	}) => any; // Interaction, discord client
 };
 
 export type SearchSong = {
@@ -65,7 +70,7 @@ export type PlatformInterface = {
 	getSong: (params: {
 		message?: Message;
 		args: string[];
-		client?: CustomClient;
+		client?: Client;
 	}) => Promise<Song[] | null>; // string, discord client, // TODO: remove null // Rename to getAudio?
 	getResource: (song: Song) => Promise<AudioResource | undefined>; // string, discord client // Rename to getAudioResource?
 };

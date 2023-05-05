@@ -1,6 +1,5 @@
 import { URL } from 'node:url';
 // import { demuxProbe, createAudioResource } from '@discordjs/voice';
-// import { errorEmbed } from './embeds.js';
 import { isValidUrl } from './utils.js';
 
 import * as platforms from '../platforms/index.js';
@@ -16,7 +15,6 @@ export async function searchSong(args) {
 		// TODO: soundcloud
 		for (let [key, platform] of Object.entries(platforms)) {
 			if (platform.matcher(url.host)) {
-				// console.log(key);
 				try {
 					return {
 						message: key,

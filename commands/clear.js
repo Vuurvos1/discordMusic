@@ -9,27 +9,23 @@ export default {
 		memberInVoice: true
 	},
 
-	command: (message, args, client) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
-		const guildQueue = client.queue.get(message.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({ embeds: [errorEmbed('Nothing to clear')] });
 		}
 
 		// remove all items from queue except first (this song might be playing)
-		guildQueue.songs = [guildQueue.songs[0]];
+		server.songs = [server.songs[0]];
 
 		message.react('👌');
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to clear')],
 				ephemeral: true
@@ -37,7 +33,7 @@ export default {
 		}
 
 		// remove all items from queue except first (this song might be playing)
-		guildQueue.songs = [guildQueue.songs[0]];
+		server.songs = [server.songs[0]];
 
 		return interaction.reply({
 			embeds: [defaultEmbed('Cleared the queue')],

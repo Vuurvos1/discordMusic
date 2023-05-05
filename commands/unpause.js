@@ -8,40 +8,36 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
-		const guildQueue = client.queue.get(message.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({
 				embeds: [errorEmbed('Nothing to unpause')]
 			});
 		}
 
-		if (!guildQueue.audioPlayer) return;
+		if (!server.audioPlayer) return;
 
-		guildQueue.audioPlayer.unpause();
-		guildQueue.paused = false;
+		server.audioPlayer.unpause();
+		server.paused = false;
 		message.react('👌');
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to unpause')],
 				ephemeral: true
 			});
 		}
 
-		if (!guildQueue.audioPlayer) return;
+		if (!server.audioPlayer) return;
 
-		guildQueue.audioPlayer.unpause();
-		guildQueue.paused = false;
+		server.audioPlayer.unpause();
+		server.paused = false;
 		return interaction.reply({
 			embeds: [defaultEmbed('Unpaused music')],
 			ephemeral: false

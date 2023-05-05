@@ -8,42 +8,38 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
-		const guildQueue = client.queue.get(message.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({
 				embeds: [errorEmbed('Nothing to stop!')]
 			});
 		}
 
-		guildQueue.songs = [];
+		server.songs = [];
 
-		if (guildQueue.audioPlayer) {
-			guildQueue.audioPlayer.stop();
+		if (server.audioPlayer) {
+			server.audioPlayer.stop();
 		}
 
 		return message.react('🛑');
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
-		const guildQueue = client.queue.get(interaction.guild.id);
-
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to stop!')],
 				ephemeral: false
 			});
 		}
 
-		guildQueue.songs = [];
+		server.songs = [];
 
-		if (guildQueue.audioPlayer) {
-			guildQueue.audioPlayer.stop();
+		if (server.audioPlayer) {
+			server.audioPlayer.stop();
 		}
 
 		return interaction.reply({

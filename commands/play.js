@@ -25,7 +25,7 @@ export default {
 		memberInVoice: true
 	},
 
-	command: async (message, args, client) => {
+	command: async ({ message, args, servers }) => {
 		// if no argument is given
 		if (args.length < 1) {
 			return message.channel.send('Please enter a valid url');
@@ -43,10 +43,10 @@ export default {
 			);
 		}
 
-		getSong(args, message, voiceChannel, client);
+		getSong(args, message, voiceChannel, servers);
 	},
 
-	interaction: async (interaction, client) => {
+	interaction: async ({ interaction, servers }) => {
 		const songOption = interaction.options.get('song');
 		if (!songOption) return;
 
@@ -71,7 +71,7 @@ export default {
 			});
 		}
 
-		getSong([song], interaction, voiceChannel, client);
+		getSong([song], interaction, voiceChannel, servers);
 	}
 };
 
@@ -88,15 +88,14 @@ async function getAudioResource(song) {
  * @param {string[]} args
  * @param {import('discord.js').Message} message
  * @param {import('discord.js').VoiceChannel} voiceChannel
- * @param {import('discord.js').Client} client
+ * @param {import('../').GuildQueue} servers
  */
-async function getSong(args, message, voiceChannel, client) {
-	// guildqueue creation logic
-	// TODO split
-	let guildQueue = client.queue.get(message.guild.id);
+async function getSong(args, message, voiceChannel, servers) {
+	if (!message.guild) return;
 
-	if (!guildQueue) {
-		const queueContruct = {
+	// guildqueue creation logic
+	if (!servers.has(message.guild.id)) {
+		servers.set(message.guild.id, {
 			textChannel: message.channel,
 			voiceChannel: voiceChannel,
 			songMessage: null,
@@ -104,16 +103,15 @@ async function getSong(args, message, voiceChannel, client) {
 			audioPlayer: null,
 			songs: [],
 			volume: 5,
-			playing: false,
 			paused: false,
 			looping: false
-		};
-
-		client.queue.set(message.guild.id, queueContruct);
-		guildQueue = client.queue.get(message.guild.id);
+		});
 	}
 
-	guildQueue.textChannel = message.channel; // updated each time a song is added
+	const server = servers.get(message.guild.id);
+	if (!server) return;
+
+	server.textChannel = message.channel; // updated each time a song is added
 
 	// get song data
 	const songsData = await searchSong(args); // TODO: inline
@@ -132,7 +130,7 @@ async function getSong(args, message, voiceChannel, client) {
 	}
 
 	// add songs to queue
-	guildQueue.songs.push(...songsData.songs);
+	server.songs.push(...songsData.songs);
 
 	// join vc logic
 	try {
@@ -142,44 +140,44 @@ async function getSong(args, message, voiceChannel, client) {
 			adapterCreator: message.guild.voiceAdapterCreator
 		});
 
-		guildQueue.connection = connection;
+		server.connection = connection;
 
-		if (!guildQueue.playing) {
+		if (!server.paused) {
 			// play song
-			guildQueue.playing = true;
-			play(message.guild, guildQueue.songs[0], client);
+			server.paused = false;
+			play(message.guild, server.songs[0], server);
 		}
 	} catch (error) {
 		console.error(error);
-		client.queue.delete(message.guild.id);
+		servers.delete(message.guild.id);
 		return message.channel.send(error);
 	}
 }
 
 /**
  * @param {import('discord.js').Guild} guild
- * @param {import('../index').Song} song
- * @param {import('discord.js').Client} client
+ * @param {import('../').Song} song
+ * @param {import('../').GuildQueueItem} server
  */
-async function play(guild, song, client) {
-	const queue = client.queue;
-	const guildQueue = queue.get(guild.id);
+async function play(guild, song, server) {
+	// const queue = client.queue;
+	// const guildQueue = queue.get(guild.id);
 
 	if (!song) {
-		if (guildQueue.songMessage) {
-			guildQueue.songMessage.delete();
-			guildQueue.songMessage = undefined;
+		if (server.songMessage) {
+			server.songMessage.delete();
+			server.songMessage = null;
 		}
 
-		guildQueue.playing = false;
+		// server.playing = false;
 
 		setTimeout(() => {
 			// if still no songs in queue
-			if (guildQueue.songs.length < 1) {
+			if (server.songs.length < 1) {
 				// leave voice channel
-				if (guildQueue.textChannel) {
+				if (server.textChannel) {
 					// TODO bug send not a function?
-					guildQueue.textChannel.send('No more songs to play');
+					server.textChannel.send('No more songs to play');
 				}
 				leaveVoiceChannel(queue, guild.id);
 			}
@@ -187,23 +185,23 @@ async function play(guild, song, client) {
 		return;
 	}
 
-	if (!guildQueue.audioPlayer) {
-		guildQueue.audioPlayer = createAudioPlayer();
+	if (!server.audioPlayer) {
+		server.audioPlayer = createAudioPlayer();
 
 		// once song finished playing, play next song in queue
-		guildQueue.audioPlayer.on(AudioPlayerStatus.Idle, () => {
-			guildQueue.songs.shift();
-			play(guild, guildQueue.songs[0], client);
+		server.audioPlayer.on(AudioPlayerStatus.Idle, () => {
+			server.songs.shift();
+			play(guild, server.songs[0], server);
 		});
 
-		guildQueue.audioPlayer.on('error', (error) => {
+		server.audioPlayer.on('error', (error) => {
 			console.error(error);
 			// play next song
-			guildQueue.songs.shift();
-			play(guild, guildQueue.songs[0], client);
+			server.songs.shift();
+			play(guild, server.songs[0], server);
 		});
 
-		guildQueue.connection.subscribe(guildQueue.audioPlayer);
+		server.connection.subscribe(server.audioPlayer);
 	}
 
 	try {
@@ -213,7 +211,7 @@ async function play(guild, song, client) {
 			throw 'No audio';
 		}
 
-		guildQueue.audioPlayer.play(audioResource);
+		server.audioPlayer.play(audioResource);
 
 		const embed = new EmbedBuilder()
 			.setTitle('Now Playing')
@@ -224,21 +222,21 @@ async function play(guild, song, client) {
 			);
 
 		// delete old song message
-		if (guildQueue.songMessage) {
-			await guildQueue.songMessage.delete();
+		if (server.songMessage) {
+			await server.songMessage.delete();
 		}
 
 		// TODO bug send not a function?
-		if (guildQueue.textChannel) {
-			guildQueue.songMessage = await guildQueue.textChannel.send({
+		if (server.textChannel) {
+			server.songMessage = await server.textChannel.send({
 				embeds: [embed]
 			});
 		}
 	} catch (err) {
 		console.error(err);
 		// couldn't find song/problem getting audio, skip song
-		guildQueue.songs.shift();
-		play(guild, guildQueue.songs[0], client);
+		server.songs.shift();
+		play(guild, server.songs[0], server);
 	}
 }
 

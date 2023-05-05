@@ -41,6 +41,8 @@ export function inVoiceChannel(message) {
  * @param {string} id
  */
 export function leaveVoiceChannel(queue, id) {
+	// TODO: take server instead of id and queue
+
 	// destroy connection and delete queue
 	const guildQueue = queue.get(id);
 
@@ -54,8 +56,7 @@ export function leaveVoiceChannel(queue, id) {
  * @param {import('../').GuildQueueItem} queue
  */
 export function getVoiceUsers(queue) {
-	//
-	return queue?.voiceChannel?.members?.size;
+	return queue?.voiceChannel?.members?.size || 0;
 }
 
 // check if bot has premission to join vc

@@ -1,10 +1,11 @@
 import 'dotenv/config';
 const { botToken, guildId } = process.env;
-export const prefix = process.env.prefix || '-';
 
 import { Client, GatewayIntentBits } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
-import * as comms from './index.js';
+import * as comms from './commands/index.js';
+
+export const prefix = process.env.prefix || '-';
 
 if (!botToken) {
 	throw new Error('Please provide a bot token!');
@@ -17,7 +18,6 @@ if (!guildId) {
 /** @type {Map<string, import('./').Command>} */
 export let commands = new Map();
 
-/** @type {import('./').CustomClient}  */
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -26,6 +26,9 @@ const client = new Client({
 		GatewayIntentBits.GuildVoiceStates
 	]
 });
+
+/** @type {Map<string, import('./').GuildQueueItem>} */
+const servers = new Map();
 
 client.on('ready', async () => {
 	console.log('Ready!');
@@ -40,6 +43,8 @@ client.on('ready', async () => {
 		// text commands
 		commands.set(command.name, command);
 
+		if (!slashCommands) return;
+
 		// slash commands
 		const commandOptions = {
 			name: command.name,
@@ -47,15 +52,9 @@ client.on('ready', async () => {
 			options: command.interactionOptions || command.interactionOptions
 		};
 
-		if (!slashCommands) return;
-
 		slashCommands.create(commandOptions);
 	}
-
-	client.commands = commands;
 });
-
-client.queue = new Map(); // TODO: rename
 
 client.on('reconnecting', () => {
 	console.log('Reconnecting!');
@@ -68,13 +67,10 @@ client.on('disconnect', () => {
 client.on('voiceStateUpdate', (oldState, newState) => {
 	// disconnect
 	if (oldState.channelId && !newState.channelId) {
-		if (!client.queue || !client.user) return;
+		if (!client.user) return;
 
-		const guildQueue = client.queue.get(newState.guild.id);
-
+		const guildQueue = servers.get(newState.guild.id);
 		if (!guildQueue) return;
-
-		// guildqueue can't be empty here????
 
 		// bot was Disconnected
 		if (newState.id === client.user.id) {
@@ -82,7 +78,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
 			// bot gets disconnected from voice channel
 			guildQueue.textChannel.send('Left voice channel');
-			leaveVoiceChannel(client.queue, newState.guild.id);
+			leaveVoiceChannel(servers, newState.guild.id);
 
 			return;
 		}
@@ -95,7 +91,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
 					// Left the voice channel
 					guildQueue.textChannel.send('No one in the voice channel');
-					leaveVoiceChannel(client.queue, newState.guild.id);
+					leaveVoiceChannel(servers, newState.guild.id);
 				}
 			}, 5 * MINUTES);
 		}
@@ -121,7 +117,11 @@ client.on('messageCreate', (message) => {
 				return;
 			}
 
-			command.command(message, tokens, client);
+			if (!message.guild) return;
+
+			const server = servers.get(message.guild.id);
+
+			command.command({ message, args: tokens, client, server, servers });
 		} else {
 			message.channel.send('Please enter a valid command!');
 		}
@@ -142,7 +142,7 @@ client.on('interactionCreate', (interaction) => {
 
 	if (interaction.isCommand()) return;
 
-	command.interaction(interaction, client);
+	command.interaction({ interaction, client });
 });
 
 client.login(botToken);
