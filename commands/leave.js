@@ -18,7 +18,7 @@ export default {
 		}
 
 		// TODO: create a function to handle this
-		server.connection.destroy();
+		if (server.connection) server.connection.destroy();
 		if (message.guild) servers.delete(message.guild.id);
 
 		message.react('👋');
@@ -34,7 +34,7 @@ export default {
 			});
 		}
 
-		server.connection.destroy();
+		if (server.connection) server.connection.destroy();
 		servers.delete(interaction.guild.id);
 
 		return interaction.reply({

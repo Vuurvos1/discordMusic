@@ -6,10 +6,11 @@ import { colors } from './utils.js';
  * @param {import('../index').Song} song Song info
  */
 export function queuedEmbed(message, song) {
+	// change to always send the author?
 	return new EmbedBuilder().setDescription(
 		`Queued [${song.title.length > 60 ? song.title.substring(0, 60 - 1) + '…' : song.title}](${
 			song.url
-		})${message.commandName ? '' : ' [<@' + message.author.id + '>]'}`
+		})${message?.isCommand() ? '' : ' [<@' + message.author.id + '>]'}`
 	);
 }
 

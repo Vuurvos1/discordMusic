@@ -86,8 +86,8 @@ async function getAudioResource(song) {
 
 /**
  * @param {string[]} args
- * @param {import('discord.js').Message} message
- * @param {import('discord.js').VoiceChannel} voiceChannel
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  * @param {import('../').GuildQueue} servers
  */
 async function getSong(args, message, voiceChannel, servers) {
@@ -134,6 +134,8 @@ async function getSong(args, message, voiceChannel, servers) {
 
 	// join vc logic
 	try {
+		if (!message.member) return;
+
 		const connection = joinVoiceChannel({
 			channelId: message.member.voice.channel.id,
 			guildId: message.guild.id,
@@ -179,7 +181,7 @@ async function play(guild, song, server) {
 					// TODO bug send not a function?
 					server.textChannel.send('No more songs to play');
 				}
-				leaveVoiceChannel(queue, guild.id);
+				leaveVoiceChannel(server, guild.id);
 			}
 		}, 10 * MINUTES);
 		return;

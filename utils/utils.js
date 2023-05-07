@@ -37,18 +37,20 @@ export function inVoiceChannel(message) {
 
 /**
  * get the amount of users in a voice channel
- * @param {import('../').GuildQueue} queue
+ * @param {import('../').GuildQueue} servers
  * @param {string} id
  */
-export function leaveVoiceChannel(queue, id) {
+export function leaveVoiceChannel(servers, id) {
 	// TODO: take server instead of id and queue
+	// TODO: change to be part of a delete function?
 
 	// destroy connection and delete queue
-	const guildQueue = queue.get(id);
+	const server = servers.get(id);
+	if (!server) return;
 
-	guildQueue?.audioPlayer?.stop();
-	guildQueue?.connection.destroy();
-	queue.delete(id);
+	server.audioPlayer?.stop();
+	server.connection?.destroy();
+	servers.delete(id);
 }
 
 /**
