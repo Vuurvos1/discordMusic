@@ -93,8 +93,8 @@ async function getAudioResource(song) {
 
 /**
  * @param {string[]} args
- * @param {import('discord.js').Message} message
- * @param {import('discord.js').VoiceChannel} voiceChannel
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  */
 async function getSong(args, message, voiceChannel) {
 	if (!message.guild) return;
@@ -141,6 +141,8 @@ async function getSong(args, message, voiceChannel) {
 
 	// join vc logic
 	try {
+		if (!message.member) return;
+
 		const connection = joinVoiceChannel({
 			channelId: voiceChannel.id,
 			guildId: message.guild.id,
