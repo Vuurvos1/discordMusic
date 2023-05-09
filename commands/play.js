@@ -4,6 +4,8 @@ import { searchSong } from '../utils/music.js';
 import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 
 import { EmbedBuilder } from 'discord.js';
+
+import { servers } from '../utils/utils.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 
 import * as platforms from '../platforms/index.js';
@@ -25,7 +27,7 @@ export default {
 		memberInVoice: true
 	},
 
-	command: async ({ message, args, servers }) => {
+	command: async ({ message, args }) => {
 		// if no argument is given
 		if (args.length < 1) {
 			return message.channel.send('Please enter a valid url');
@@ -43,10 +45,10 @@ export default {
 			);
 		}
 
-		getSong(args, message, voiceChannel, servers);
+		getSong(args, message, voiceChannel);
 	},
 
-	interaction: async ({ interaction, servers }) => {
+	interaction: async ({ interaction }) => {
 		const songOption = interaction.options.get('song');
 		if (!songOption) return;
 
@@ -63,7 +65,12 @@ export default {
 
 		if (!interaction.member) return;
 
-		const voiceChannel = interaction.member.voice.channel;
+		/** @type {import('../').GuildMemberWithVoice} */
+		const member = interaction.member;
+		/** @type {import('discord.js').VoiceState} */
+		const voice = member?.voice;
+		const voiceChannel = voice.channel;
+
 		if (!canJoinVoiceChannel(voiceChannel, interaction.client.user)) {
 			return interaction.reply({
 				embeds: [errorEmbed('I need the permissions to join and speak in your voice channel!')],
@@ -71,7 +78,7 @@ export default {
 			});
 		}
 
-		getSong([song], interaction, voiceChannel, servers);
+		getSong([song], interaction, voiceChannel);
 	}
 };
 
@@ -88,14 +95,14 @@ async function getAudioResource(song) {
  * @param {string[]} args
  * @param {import('discord.js').Message} message
  * @param {import('discord.js').VoiceChannel} voiceChannel
- * @param {import('../').GuildQueue} servers
  */
-async function getSong(args, message, voiceChannel, servers) {
+async function getSong(args, message, voiceChannel) {
 	if (!message.guild) return;
 
 	// guildqueue creation logic
 	if (!servers.has(message.guild.id)) {
 		servers.set(message.guild.id, {
+			id: message.guild.id,
 			textChannel: message.channel,
 			voiceChannel: voiceChannel,
 			songMessage: null,
@@ -114,7 +121,7 @@ async function getSong(args, message, voiceChannel, servers) {
 	server.textChannel = message.channel; // updated each time a song is added
 
 	// get song data
-	const songsData = await searchSong(args); // TODO: inline
+	const songsData = await searchSong(args); // TODO: inline?
 
 	if (songsData.error) {
 		sendErrorMessage(message, songsData.message);
@@ -135,7 +142,7 @@ async function getSong(args, message, voiceChannel, servers) {
 	// join vc logic
 	try {
 		const connection = joinVoiceChannel({
-			channelId: message.member.voice.channel.id,
+			channelId: voiceChannel.id,
 			guildId: message.guild.id,
 			adapterCreator: message.guild.voiceAdapterCreator
 		});
@@ -149,7 +156,7 @@ async function getSong(args, message, voiceChannel, servers) {
 		}
 	} catch (error) {
 		console.error(error);
-		servers.delete(message.guild.id);
+		leaveVoiceChannel(message.guild.id);
 		return message.channel.send(error);
 	}
 }
@@ -179,7 +186,7 @@ async function play(guild, song, server) {
 					// TODO bug send not a function?
 					server.textChannel.send('No more songs to play');
 				}
-				leaveVoiceChannel(queue, guild.id);
+				leaveVoiceChannel(guild.id);
 			}
 		}, 10 * MINUTES);
 		return;
@@ -201,7 +208,7 @@ async function play(guild, song, server) {
 			play(guild, server.songs[0], server);
 		});
 
-		server.connection.subscribe(server.audioPlayer);
+		server.connection?.subscribe(server.audioPlayer);
 	}
 
 	try {
@@ -245,7 +252,7 @@ async function play(guild, song, server) {
  * @param {string} text
  */
 function sendDefaultMessage(message, text) {
-	if (message.commandName) {
+	if (message.isCommand()) {
 		// slash command
 		message.reply({
 			embeds: [defaultEmbed(text)],
@@ -253,7 +260,7 @@ function sendDefaultMessage(message, text) {
 		});
 	} else {
 		// text command
-		message.channel.send({
+		message.channel?.send({
 			embeds: [defaultEmbed(text)]
 		});
 	}

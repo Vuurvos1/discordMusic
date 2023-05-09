@@ -4,6 +4,7 @@ const { botToken, guildId } = process.env;
 import { Client, GatewayIntentBits } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
 import * as comms from './commands/index.js';
+import { servers } from './utils/utils.js';
 
 export const prefix = process.env.prefix || '-';
 
@@ -26,9 +27,6 @@ const client = new Client({
 		GatewayIntentBits.GuildVoiceStates
 	]
 });
-
-/** @type {Map<string, import('./').GuildQueueItem>} */
-const servers = new Map();
 
 client.on('ready', async () => {
 	console.log('Ready!');
@@ -78,7 +76,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
 			// bot gets disconnected from voice channel
 			guildQueue.textChannel.send('Left voice channel');
-			leaveVoiceChannel(servers, newState.guild.id);
+			leaveVoiceChannel(newState.guild.id);
 
 			return;
 		}
@@ -91,7 +89,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
 					// Left the voice channel
 					guildQueue.textChannel.send('No one in the voice channel');
-					leaveVoiceChannel(servers, newState.guild.id);
+					leaveVoiceChannel(newState.guild.id);
 				}
 			}, 5 * MINUTES);
 		}
@@ -121,7 +119,7 @@ client.on('messageCreate', (message) => {
 
 			const server = servers.get(message.guild.id);
 
-			command.command({ message, args: tokens, client, server, servers });
+			command.command({ message, args: tokens, client, server });
 		} else {
 			message.channel.send('Please enter a valid command!');
 		}
@@ -139,8 +137,6 @@ client.on('interactionCreate', (interaction) => {
 	if (command.permissions?.memberInVoice && !inVoiceChannel(interaction)) {
 		return;
 	}
-
-	if (interaction.isCommand()) return;
 
 	command.interaction({ interaction, client });
 });

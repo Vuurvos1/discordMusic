@@ -2,6 +2,7 @@ import type {
 	TextChannel,
 	Channel,
 	VoiceChannel,
+	VoiceState,
 	Message,
 	Interaction,
 	Client,
@@ -11,8 +12,11 @@ import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voi
 
 export type GuildQueue = Map<string, GuildQueueItem>;
 
+export type GuildMemberWithVoice = GuildMember & { voice: VoiceState };
+
 // server queue, rename to servers?
 export type GuildQueueItem = {
+	id: string;
 	textChannel: Channel | null;
 	voiceChannel: VoiceChannel | null;
 	songMessage: Message | null;
@@ -35,13 +39,11 @@ export type Command = {
 		args: string[];
 		client: Client;
 		server: GuildQueueItem | undefined;
-		servers: GuildQueue;
 	}) => any; // Message, string[], discord client // Change to take a params object?
 	interaction: (params: {
 		interaction: ChatInputCommandInteraction;
 		client: Client;
 		server: GuildQueueItem | undefined;
-		servers: GuildQueue;
 	}) => any; // Interaction, discord client
 };
 

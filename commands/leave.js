@@ -1,4 +1,5 @@
 import { errorEmbed } from '../utils/embeds.js';
+import { leaveVoiceChannel } from '../utils/utils.js';
 
 /** @type {import('../index.js').Command} */
 export default {
@@ -8,7 +9,7 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: ({ message, server, servers }) => {
+	command: ({ message, server }) => {
 		if (!message.guild) return;
 
 		if (!server) {
@@ -17,14 +18,12 @@ export default {
 			});
 		}
 
-		// TODO: create a function to handle this
-		server.connection.destroy();
-		if (message.guild) servers.delete(message.guild.id);
+		leaveVoiceChannel(message.guild.id);
 
 		message.react('👋');
 	},
 
-	interaction: async ({ interaction, server, servers }) => {
+	interaction: async ({ interaction, server }) => {
 		if (!interaction.guild) return;
 
 		if (!server) {
@@ -34,8 +33,7 @@ export default {
 			});
 		}
 
-		server.connection.destroy();
-		servers.delete(interaction.guild.id);
+		leaveVoiceChannel(interaction.guild.id);
 
 		return interaction.reply({
 			content: "I've left the voice channel",

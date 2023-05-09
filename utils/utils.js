@@ -1,10 +1,21 @@
 import { EmbedBuilder, PermissionsBitField } from 'discord.js';
 
+/** @type {Map<string, import('../').GuildQueueItem>} */
+export const servers = new Map();
+
 export const colors = {
 	error: 0xff1155,
 	default: 0x11ffaa,
 	hotpink: 0xff69b4
 };
+
+/**
+ * Check if a user is in a voice channel
+ * @param {string} id
+ * */
+export function deleteServer(id) {
+	servers.delete(id);
+}
 
 /**
  * Check if a user is in a voice channel
@@ -36,19 +47,14 @@ export function inVoiceChannel(message) {
 }
 
 /**
- * get the amount of users in a voice channel
- * @param {import('../').GuildQueue} queue
+ * destroy connection and delete queue
  * @param {string} id
  */
-export function leaveVoiceChannel(queue, id) {
-	// TODO: take server instead of id and queue
-
-	// destroy connection and delete queue
-	const guildQueue = queue.get(id);
-
+export function leaveVoiceChannel(id) {
+	const guildQueue = servers.get(id);
 	guildQueue?.audioPlayer?.stop();
-	guildQueue?.connection.destroy();
-	queue.delete(id);
+	guildQueue?.connection?.destroy();
+	servers.delete(id);
 }
 
 /**
