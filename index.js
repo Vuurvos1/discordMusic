@@ -119,7 +119,7 @@ client.on('messageCreate', (message) => {
 
 			const server = servers.get(message.guild.id);
 
-			command.command({ message, args: tokens, client, server });
+			command.command({ message, args: tokens, server });
 		} else {
 			message.channel.send('Please enter a valid command!');
 		}
@@ -141,7 +141,7 @@ client.on('interactionCreate', (interaction) => {
 	if (!interaction.guild) return;
 	const server = servers.get(interaction.guild.id);
 
-	command.interaction({ interaction, client, server });
+	command.interaction({ interaction, server });
 });
 
 client.login(botToken);

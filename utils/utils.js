@@ -67,7 +67,7 @@ export function getVoiceUsers(queue) {
 
 // check if bot has premission to join vc
 /**
- * @param {import('discord.js').VoiceChannel} voiceChannel
+ * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  * @param {import('discord.js').User} user
  * @returns {boolean} is user can join and speak inside a voice channel
  */

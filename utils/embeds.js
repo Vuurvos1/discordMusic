@@ -2,15 +2,18 @@ import { EmbedBuilder } from 'discord.js';
 import { colors } from './utils.js';
 
 /**
- * @param {import('discord.js').Message | import('discord.js').Interaction} message Discord js message object
- * @param {import('../index').Song} song Song info
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @param {import('../index').Song} song
  */
 export function queuedEmbed(message, song) {
+	// @ts-ignore
+	const user = message?.author ? `[<@${message.author.id}>]` : '';
+
 	// change to always send the author?
 	return new EmbedBuilder().setDescription(
 		`Queued [${song.title.length > 60 ? song.title.substring(0, 60 - 1) + '…' : song.title}](${
 			song.url
-		})${message?.isCommand() ? '' : ' [<@' + message.author.id + '>]'}`
+		})${user}`
 	);
 }
 

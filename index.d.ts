@@ -10,6 +10,7 @@ import type {
 	VoiceBasedChannel
 } from 'discord.js';
 import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
+import { TextBasedChannel } from 'discord.js';
 
 export type GuildQueue = Map<string, GuildQueueItem>;
 
@@ -18,7 +19,7 @@ export type GuildMemberWithVoice = GuildMember & { voice: VoiceState };
 // server queue, rename to servers?
 export type GuildQueueItem = {
 	id: string;
-	textChannel: Channel | null;
+	textChannel: TextChannel | TextBasedChannel | null;
 	voiceChannel: VoiceChannel | VoiceBasedChannel | null;
 	songMessage: Message | null;
 	connection: VoiceConnection | null;
@@ -38,12 +39,10 @@ export type Command = {
 	command: (params: {
 		message: Message;
 		args: string[];
-		client: Client;
 		server: GuildQueueItem | undefined; // TODO: remove undefined?
 	}) => any; // Message, string[], discord client
 	interaction: (params: {
 		interaction: Interaction;
-		client: Client;
 		server: GuildQueueItem | undefined; // TODO: remove undefined?
 	}) => any; // Interaction, discord client
 };

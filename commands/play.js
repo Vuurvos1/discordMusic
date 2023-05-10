@@ -49,6 +49,7 @@ export default {
 	},
 
 	interaction: async ({ interaction }) => {
+		if (!interaction.isCommand()) return;
 		const songOption = interaction.options.get('song');
 		if (!songOption) return;
 
@@ -70,6 +71,7 @@ export default {
 		/** @type {import('discord.js').VoiceState} */
 		const voice = member?.voice;
 		const voiceChannel = voice.channel;
+		if (!voiceChannel) return;
 
 		if (!canJoinVoiceChannel(voiceChannel, interaction.client.user)) {
 			return interaction.reply({
@@ -93,7 +95,7 @@ async function getAudioResource(song) {
 
 /**
  * @param {string[]} args
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message
  * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  */
 async function getSong(args, message, voiceChannel) {
@@ -159,7 +161,7 @@ async function getSong(args, message, voiceChannel) {
 	} catch (error) {
 		console.error(error);
 		leaveVoiceChannel(message.guild.id);
-		return message.channel.send(error);
+		return message.channel?.send(error);
 	}
 }
 
@@ -169,9 +171,6 @@ async function getSong(args, message, voiceChannel) {
  * @param {import('../').GuildQueueItem} server
  */
 async function play(guild, song, server) {
-	// const queue = client.queue;
-	// const guildQueue = queue.get(guild.id);
-
 	if (!song) {
 		if (server.songMessage) {
 			server.songMessage.delete();
@@ -250,11 +249,11 @@ async function play(guild, song, server) {
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message
  * @param {string} text
  */
 function sendDefaultMessage(message, text) {
-	if (message.isCommand()) {
+	if (message?.isCommand) {
 		// slash command
 		message.reply({
 			embeds: [defaultEmbed(text)],
@@ -269,11 +268,11 @@ function sendDefaultMessage(message, text) {
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message
  * @param {import('../index.js').Song} song
  */
 function sendQueueMessage(message, song) {
-	if (message.commandName) {
+	if (message?.isCommand) {
 		// slash command
 		message.reply({
 			embeds: [queuedEmbed(message, song)],
@@ -281,16 +280,16 @@ function sendQueueMessage(message, song) {
 		});
 	} else {
 		// text command
-		message.channel.send({ embeds: [queuedEmbed(message, song)] });
+		message.channel?.send({ embeds: [queuedEmbed(message, song)] });
 	}
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message
  * @param {string} error
  */
 function sendErrorMessage(message, error) {
-	if (message.commandName) {
+	if (message?.isCommand) {
 		// slash command
 		message.reply({
 			embeds: [queuedEmbed(message, errorEmbed(error))],
@@ -298,6 +297,6 @@ function sendErrorMessage(message, error) {
 		});
 	} else {
 		// text command
-		message.channel.send({ embeds: [errorEmbed(error)] });
+		message.channel?.send({ embeds: [errorEmbed(error)] });
 	}
 }
