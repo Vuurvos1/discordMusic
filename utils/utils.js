@@ -19,18 +19,18 @@ export function deleteServer(id) {
 
 /**
  * Check if a user is in a voice channel
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').Message | import('discord.js').Interaction} message
  * */
 export function inVoiceChannel(message) {
 	if (!message.member) return false;
 
 	// TODO: change to take a user instead of a message, also don't have message logic in here
-	const voiceChannel = message.member.voice.channel;
+	const voiceChannel = message.member?.voice.channel; // this does exist
 	if (!voiceChannel) {
 		const embed = new EmbedBuilder()
 			.setColor(colors.error)
 			.setDescription('You have to be in a voice channel to use this command!');
-		if (message.commandName) {
+		if (message?.isCommand()) {
 			// command interacton
 			message.reply({
 				embeds: [embed],

@@ -24,6 +24,8 @@ export default {
 	},
 
 	interaction: async ({ interaction, server }) => {
+		console.log(server);
+
 		if (!interaction.guild) return;
 
 		if (!server) {

@@ -138,7 +138,10 @@ client.on('interactionCreate', (interaction) => {
 		return;
 	}
 
-	command.interaction({ interaction, client });
+	if (!interaction.guild) return;
+	const server = servers.get(interaction.guild.id);
+
+	command.interaction({ interaction, client, server });
 });
 
 client.login(botToken);

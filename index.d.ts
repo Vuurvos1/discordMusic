@@ -6,7 +6,8 @@ import type {
 	Message,
 	Interaction,
 	Client,
-	ChatInputCommandInteraction
+	ChatInputCommandInteraction,
+	VoiceBasedChannel
 } from 'discord.js';
 import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
 
@@ -18,7 +19,7 @@ export type GuildMemberWithVoice = GuildMember & { voice: VoiceState };
 export type GuildQueueItem = {
 	id: string;
 	textChannel: Channel | null;
-	voiceChannel: VoiceChannel | null;
+	voiceChannel: VoiceChannel | VoiceBasedChannel | null;
 	songMessage: Message | null;
 	connection: VoiceConnection | null;
 	audioPlayer: AudioPlayer | null; // rename to player?
@@ -38,12 +39,12 @@ export type Command = {
 		message: Message;
 		args: string[];
 		client: Client;
-		server: GuildQueueItem | undefined;
-	}) => any; // Message, string[], discord client // Change to take a params object?
+		server: GuildQueueItem | undefined; // TODO: remove undefined?
+	}) => any; // Message, string[], discord client
 	interaction: (params: {
-		interaction: ChatInputCommandInteraction;
+		interaction: Interaction;
 		client: Client;
-		server: GuildQueueItem | undefined;
+		server: GuildQueueItem | undefined; // TODO: remove undefined?
 	}) => any; // Interaction, discord client
 };
 
