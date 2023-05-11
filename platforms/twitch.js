@@ -70,11 +70,15 @@ export default {
 	},
 
 	async getResource(song) {
-		// TODO: fix vod playback
-		if (!song.live) return;
+		if (!song.live) {
+			return createAudioResource(song.id);
+		}
 
+		// TODO: fix stream playback
 		const streamData = await twitch.getStream(song.artist);
-		const streamLink = streamData.at(-1).url;
+		const filtered = streamData.filter((stream) => stream.quality === 'audio_only');
+		const streamLink = filtered[0].url;
+
 		return createAudioResource(streamLink);
 	}
 };

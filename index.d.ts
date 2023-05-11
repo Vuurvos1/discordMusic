@@ -58,8 +58,8 @@ export type Song = {
 	title: string;
 	artist: string;
 	url: string;
-	id?: string;
-	live?: boolean;
+	id: string;
+	live: boolean;
 	platform: 'search' | 'youtube' | 'twitch' | 'spotify' | 'soundcloud';
 	duration?: string;
 	user: string; // discord js user

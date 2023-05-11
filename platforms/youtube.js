@@ -31,7 +31,7 @@ export default {
 					// This could be slow creating a bunch of new objects
 					songs.push({
 						title: video.title || 'unkown',
-						id: video.id,
+						id: video.id || 'unkown',
 						artist: 'unkown',
 						user: 'unkown', // message.author.id
 						platform: 'youtube',
@@ -48,7 +48,6 @@ export default {
 			}
 		}
 
-		// TODO: fix stream
 		// normal video
 		try {
 			const video = isUrl ? await youtube.getVideo(searchArg) : await youtube.searchOne(searchArg);
@@ -58,7 +57,7 @@ export default {
 				title: video.title || 'unkown',
 				platform: 'youtube',
 				duration: video.durationFormatted,
-				id: video.id,
+				id: video.id || '',
 				url: `https://youtu.be/${video.id}`,
 				live: video.live,
 				artist: video.channel?.name || 'unkown',
@@ -73,13 +72,17 @@ export default {
 	},
 	async getResource(song) {
 		if (song.live) {
-			// filter: 'audioonly',
-			const stream = await ytdl(song.url, {
-				highWaterMark: 1 << 25,
-				filter: (format) => format.isHLS
+			const info = await ytdl.getInfo(song.url);
+			const formats = ytdl.filterFormats(info.formats, (format) => {
+				return format.isHLS && format.itag === 95;
 			});
 
-			return createAudioResource(stream);
+			// const stream = await ytdl(song.url, {
+			// 	highWaterMark: 1 << 25,
+			// 	filter: (format) => format.isHLS && format.itag === 95
+			// });
+
+			return createAudioResource(formats[0].url);
 		}
 
 		const stream = await ytdl(song.url, {

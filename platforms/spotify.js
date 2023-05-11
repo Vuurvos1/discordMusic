@@ -43,7 +43,7 @@ export default {
 				/** @type {import('../index').Song} */
 				const song = {
 					title: video.title || 'unkown',
-					id: video.id,
+					id: video.id || 'unkown',
 					artist: 'unkown',
 					platform: 'spotify',
 					message: 'Spotify song',
@@ -86,6 +86,7 @@ export default {
 					// TODO: add proper ms to hh:mm:ss formater funciton
 					songs.push({
 						title: song.name,
+						id: '',
 						artist: song?.artists[0].name, // consider adding all artists
 						platform: 'spotify',
 						user: 'unkown',
