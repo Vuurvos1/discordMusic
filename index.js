@@ -1,7 +1,7 @@
 import 'dotenv/config';
 const { botToken, guildId } = process.env;
 
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, SlashCommandBuilder } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
 import * as comms from './commands/index.js';
 import { servers } from './utils/utils.js';
@@ -43,14 +43,17 @@ client.on('ready', async () => {
 
 		if (!slashCommands) return;
 
-		// slash commands
-		const commandOptions = {
-			name: command.name,
-			description: command.description,
-			options: command.interactionOptions || command.interactionOptions
-		};
+		if (command.interactionOptions) {
+			command.interactionOptions.setName(command.name).setDescription(command.description);
+			slashCommands.create(command.interactionOptions);
+			continue;
+		}
 
-		slashCommands.create(commandOptions);
+		const data = new SlashCommandBuilder()
+			.setName(command.name)
+			.setDescription(command.description);
+
+		slashCommands.create(data);
 	}
 });
 
@@ -118,6 +121,7 @@ client.on('messageCreate', (message) => {
 			if (!message.guild) return;
 
 			const server = servers.get(message.guild.id);
+			if (!server) return;
 
 			command.command({ message, args: tokens, server });
 		} else {
@@ -132,14 +136,15 @@ client.on('interactionCreate', (interaction) => {
 	const { commandName } = interaction;
 	const command = commands.get(commandName);
 
-	if (!command || !interaction.isCommand()) return;
-
-	if (command.permissions?.memberInVoice && !inVoiceChannel(interaction)) {
+	if (
+		!command ||
+		(command.permissions?.memberInVoice && !inVoiceChannel(interaction)) ||
+		!interaction.guild
+	)
 		return;
-	}
 
-	if (!interaction.guild) return;
 	const server = servers.get(interaction.guild.id);
+	if (!server) return;
 
 	command.interaction({ interaction, server });
 });

@@ -7,7 +7,9 @@ import type {
 	Interaction,
 	Client,
 	ChatInputCommandInteraction,
-	VoiceBasedChannel
+	VoiceBasedChannel,
+	SlashCommandBuilder,
+	ApplicationCommandDataResolvable
 } from 'discord.js';
 import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
 import { TextBasedChannel } from 'discord.js';
@@ -34,17 +36,10 @@ export type Command = {
 	name: string;
 	description: string;
 	aliases: string[];
-	interactionOptions?: any[]; // TODO: add better typing
+	interactionOptions?: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>; // TODO: unsure if this is the correct type
 	permissions: { memberInVoice?: boolean };
-	command: (params: {
-		message: Message;
-		args: string[];
-		server: GuildQueueItem | undefined; // TODO: remove undefined?
-	}) => any; // Message, string[], discord client
-	interaction: (params: {
-		interaction: Interaction;
-		server: GuildQueueItem | undefined; // TODO: remove undefined?
-	}) => any; // Interaction, discord client
+	command: (params: { message: Message; args: string[]; server: GuildQueueItem }) => any; // Message, string[], discord client
+	interaction: (params: { interaction: Interaction; server: GuildQueueItem }) => any; // Interaction, discord client
 };
 
 export type SearchSong = {

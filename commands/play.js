@@ -3,7 +3,7 @@ import { searchSong } from '../utils/music.js';
 
 import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 
 import { servers } from '../utils/utils.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
@@ -15,14 +15,9 @@ export default {
 	name: 'play',
 	description: 'Play a song',
 	aliases: ['p', 'sr'],
-	interactionOptions: [
-		{
-			name: 'song',
-			description: 'song name or url',
-			type: 3, // type STRING
-			required: true
-		}
-	],
+	interactionOptions: new SlashCommandBuilder().addStringOption((option) =>
+		option.setName('song').setDescription('song name or url').setRequired(true)
+	),
 	permissions: {
 		memberInVoice: true
 	},
