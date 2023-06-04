@@ -1,16 +1,14 @@
-import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel } from '../utils/utils.js';
+import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel, servers } from '../utils/utils.js';
+import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 import { searchSong } from '../utils/music.js';
 
 import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 
 import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 
-import { servers } from '../utils/utils.js';
-import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
+import { platforms } from '../platforms/index.js';
 
-import * as platforms from '../platforms/index.js';
-
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'play',
 	description: 'Play a song',
@@ -25,7 +23,7 @@ export default {
 	command: async ({ message, args }) => {
 		// if no argument is given
 		if (args.length < 1) {
-			return message.channel.send('Please enter a valid url');
+			return message.channel.send('Please enter a valid url or search query');
 		}
 
 		if (!message.member) return;
@@ -44,7 +42,6 @@ export default {
 	},
 
 	interaction: async ({ interaction }) => {
-		if (!interaction.isCommand()) return;
 		const songOption = interaction.options.get('song');
 		if (!songOption) return;
 
@@ -81,7 +78,7 @@ export default {
 
 /** @param {import('../index').Song} song  */
 async function getAudioResource(song) {
-	const platform = platforms[song.platform + 'Platform']; // TODO: make nicer
+	const platform = platforms.get(song.platform);
 
 	if (!platform) return; // TODO: error handling
 
@@ -172,8 +169,6 @@ async function play(guild, song, server) {
 			server.songMessage = null;
 		}
 
-		// server.playing = false;
-
 		setTimeout(() => {
 			// if still no songs in queue
 			if (server.songs.length < 1) {
@@ -208,6 +203,8 @@ async function play(guild, song, server) {
 	}
 
 	try {
+		if (server.audioPlayer.state.status === AudioPlayerStatus.Playing) return;
+
 		const audioResource = await getAudioResource(song);
 
 		if (!audioResource) {
@@ -229,7 +226,6 @@ async function play(guild, song, server) {
 			await server.songMessage.delete();
 		}
 
-		// TODO bug send not a function?
 		if (server.textChannel) {
 			server.songMessage = await server.textChannel.send({
 				embeds: [embed]
@@ -244,54 +240,49 @@ async function play(guild, song, server) {
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
  * @param {string} text
  */
 function sendDefaultMessage(message, text) {
-	if (message?.isCommand) {
-		// slash command
-		message.reply({
-			embeds: [defaultEmbed(text)],
-			ephemeral: false
-		});
-	} else {
-		// text command
-		message.channel?.send({
+	sendMessage(
+		message,
+		{
 			embeds: [defaultEmbed(text)]
-		});
-	}
+		},
+		false
+	);
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
  * @param {import('../index.js').Song} song
  */
 function sendQueueMessage(message, song) {
-	if (message?.isCommand) {
-		// slash command
-		message.reply({
-			embeds: [queuedEmbed(message, song)],
-			ephemeral: false
-		});
-	} else {
-		// text command
-		message.channel?.send({ embeds: [queuedEmbed(message, song)] });
-	}
+	sendMessage(message, { embeds: [queuedEmbed(message, song)] }, false);
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
  * @param {string} error
  */
 function sendErrorMessage(message, error) {
+	sendMessage(message, { embeds: [errorEmbed(error)] }, false);
+}
+
+/**
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').MessageCreateOptions } messagePayload
+ * @param {boolean} ephemeral
+ */
+function sendMessage(message, messagePayload, ephemeral = false) {
+	// Switch this so ephemeral is default, and just pass it to channel send where it should be ignored
+
 	if (message?.isCommand) {
 		// slash command
-		message.reply({
-			embeds: [queuedEmbed(message, errorEmbed(error))],
-			ephemeral: false
-		});
+		// @ts-ignore funky type conversion
+		message.reply({ ...messagePayload, ephemeral });
 	} else {
 		// text command
-		message.channel?.send({ embeds: [errorEmbed(error)] });
+		message.channel?.send(messagePayload);
 	}
 }

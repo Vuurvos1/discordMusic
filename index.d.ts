@@ -9,10 +9,10 @@ import type {
 	ChatInputCommandInteraction,
 	VoiceBasedChannel,
 	SlashCommandBuilder,
-	ApplicationCommandDataResolvable
+	ApplicationCommandDataResolvable,
+	TextBasedChannel
 } from 'discord.js';
 import type { AudioPlayer, AudioResource, VoiceConnection } from '@discordjs/voice';
-import { TextBasedChannel } from 'discord.js';
 
 export type GuildQueue = Map<string, GuildQueueItem>;
 
@@ -26,8 +26,8 @@ export type GuildQueueItem = {
 	songMessage: Message | null;
 	connection: VoiceConnection | null;
 	audioPlayer: AudioPlayer | null; // rename to player?
-	songs: Song[]; // create song type
-	volume: 5;
+	songs: Song[];
+	volume: number; // not used
 	paused: boolean;
 	looping: boolean;
 };
@@ -37,9 +37,16 @@ export type Command = {
 	description: string;
 	aliases: string[];
 	interactionOptions?: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>; // TODO: unsure if this is the correct type
-	permissions: { memberInVoice?: boolean };
-	command: (params: { message: Message; args: string[]; server: GuildQueueItem }) => any; // Message, string[], discord client
-	interaction: (params: { interaction: Interaction; server: GuildQueueItem }) => any; // Interaction, discord client
+	permissions?: { memberInVoice?: boolean }; // TODO: change to a boolean array?
+	command: (params: {
+		message: Message;
+		args: string[];
+		server: GuildQueueItem | undefined;
+	}) => any; // Message, string[], discord client
+	interaction: (params: {
+		interaction: ChatInputCommandInteraction;
+		server: GuildQueueItem | undefined;
+	}) => any; // Interaction, discord client
 };
 
 export type SearchSong = {

@@ -20,6 +20,7 @@ export function deleteServer(id) {
 /**
  * Check if a user is in a voice channel
  * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @returns {boolean}
  * */
 export function inVoiceChannel(message) {
 	if (!message.member) return false;

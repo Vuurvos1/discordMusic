@@ -1,3 +1,11 @@
-export { default as twitchPlatform } from './twitch.js';
-export { default as youtubePlatform } from './youtube.js';
-export { default as spotifyPlatform } from './spotify.js';
+import { default as twitchPlatform } from './twitch.js';
+import { default as youtubePlatform } from './youtube.js';
+import { default as spotifyPlatform } from './spotify.js';
+
+export const platforms = new Map(
+	Object.entries({
+		twitch: twitchPlatform,
+		youtube: youtubePlatform,
+		spotify: spotifyPlatform
+	})
+);

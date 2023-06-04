@@ -2,7 +2,7 @@ import { URL } from 'node:url';
 // import { demuxProbe, createAudioResource } from '@discordjs/voice';
 import { isValidUrl } from './utils.js';
 
-import * as platforms from '../platforms/index.js';
+import { platforms } from '../platforms/index.js';
 
 /**
  *  @param {string[]} args
@@ -13,7 +13,7 @@ export async function searchSong(args) {
 		const url = new URL(args[0]);
 
 		// TODO: soundcloud
-		for (let [key, platform] of Object.entries(platforms)) {
+		for (const [key, platform] of Object.entries(platforms)) {
 			if (platform.matcher(url.host)) {
 				try {
 					return {
@@ -34,7 +34,10 @@ export async function searchSong(args) {
 
 	// search for video on youtube
 	try {
-		const song = await platforms.youtubePlatform.getSong({ args });
+		const youtubePlatform = platforms.get('youtube');
+		if (!youtubePlatform) throw new Error('youtube platform not found');
+
+		const song = await youtubePlatform.getSong({ args });
 
 		return {
 			message: '', // added ... to the queue

@@ -104,47 +104,44 @@ client.on('messageCreate', (message) => {
 	const tokens = message.content.split(' ');
 	let cmd = tokens.shift();
 
-	if (!cmd) return;
+	if (message.author.bot || !cmd || cmd[0] !== prefix) return;
 
-	if (!message.author.bot && cmd[0] === prefix) {
-		cmd = cmd.substring(1); // remove prefix from command
+	cmd = cmd.substring(1); // remove prefix from command
 
-		const command =
-			commands.get(cmd) ||
-			Array.from(commands.values()).find((command) => command.aliases.includes(cmd || ''));
+	const command =
+		commands.get(cmd) ||
+		Array.from(commands.values()).find((command) => command.aliases.includes(cmd || ''));
 
-		if (command) {
-			if (command.permissions?.memberInVoice && !inVoiceChannel(message)) {
-				return;
-			}
-
-			if (!message.guild) return;
-
-			const server = servers.get(message.guild.id);
-			if (!server) return;
-
-			command.command({ message, args: tokens, server });
-		} else {
-			message.channel.send('Please enter a valid command!');
-		}
+	if (!command) {
+		message.channel.send('Please enter a valid command!');
+		return;
 	}
+
+	if (command.permissions?.memberInVoice && !inVoiceChannel(message)) {
+		return;
+	}
+
+	if (!message.guild) return;
+
+	const server = servers.get(message.guild.id);
+
+	command.command({ message, args: tokens, server });
 });
 
 client.on('interactionCreate', (interaction) => {
-	if (!interaction.isCommand()) return;
+	if (!interaction.isChatInputCommand()) return;
 
 	const { commandName } = interaction;
 	const command = commands.get(commandName);
+	if (!command) return;
 
-	if (
-		!command ||
-		(command.permissions?.memberInVoice && !inVoiceChannel(interaction)) ||
-		!interaction.guild
-	)
+	if (command.permissions?.memberInVoice && !inVoiceChannel(interaction)) {
 		return;
+	}
 
-	const server = servers.get(interaction.guild.id);
-	if (!server) return;
+	if (!interaction.guildId) return;
+
+	const server = servers.get(interaction.guildId);
 
 	command.interaction({ interaction, server });
 });
