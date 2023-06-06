@@ -13,7 +13,7 @@ const spotifyApi = new SpotifyWebApi({
 	redirectUri: 'http://www.example.com/callback'
 });
 
-/** @type {import('../index.js').PlatformInterface} */
+/** @type {import('../').PlatformInterface} */
 export default {
 	name: 'spotify',
 	matcher(string) {
@@ -40,7 +40,7 @@ export default {
 					`${songData.body.name} ${songData.body.artists[0].name}`
 				);
 
-				/** @type {import('../index').Song} */
+				/** @type {import('../').Song} */
 				const song = {
 					title: video.title || 'unkown',
 					id: video.id || 'unkown',
@@ -53,8 +53,8 @@ export default {
 					live: false
 					// user: message.author.id
 				};
-				// 			// preferibly only search youtube music/videos that are in the music categorie
-				// 			// TODO add way to validate searched song
+				// preferibly only search youtube music/videos that are in the music categorie
+				// TODO add way to validate searched song
 				if (song.title?.toLocaleLowerCase().includes(songData.body.name.toLocaleLowerCase())) {
 					return [song];
 				}

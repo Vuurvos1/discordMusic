@@ -87,7 +87,7 @@ async function getAudioResource(song) {
 
 /**
  * @param {string[]} args
- * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
  * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  */
 async function getSong(args, message, voiceChannel) {
@@ -118,16 +118,22 @@ async function getSong(args, message, voiceChannel) {
 	const songsData = await searchSong(args); // TODO: inline?
 
 	if (songsData.error) {
-		sendErrorMessage(message, songsData.message);
 		// send error message
+		sendMessage(message, { embeds: [errorEmbed(songsData.message)] }, false);
 		return;
 	}
 
 	// send message
 	if (songsData.songs.length > 1) {
-		sendDefaultMessage(message, `Queued **${songsData.songs.length}** songs`);
+		sendMessage(
+			message,
+			{
+				embeds: [defaultEmbed(`Queued **${songsData.songs.length}** songs`)]
+			},
+			false
+		);
 	} else {
-		sendQueueMessage(message, songsData.songs[0]);
+		sendMessage(message, { embeds: [queuedEmbed(message, songsData.songs[0])] }, false);
 	}
 
 	// add songs to queue
@@ -237,36 +243,6 @@ async function play(guild, song, server) {
 		server.songs.shift();
 		play(guild, server.songs[0], server);
 	}
-}
-
-/**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
- * @param {string} text
- */
-function sendDefaultMessage(message, text) {
-	sendMessage(
-		message,
-		{
-			embeds: [defaultEmbed(text)]
-		},
-		false
-	);
-}
-
-/**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
- * @param {import('../index.js').Song} song
- */
-function sendQueueMessage(message, song) {
-	sendMessage(message, { embeds: [queuedEmbed(message, song)] }, false);
-}
-
-/**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
- * @param {string} error
- */
-function sendErrorMessage(message, error) {
-	sendMessage(message, { embeds: [errorEmbed(error)] }, false);
 }
 
 /**

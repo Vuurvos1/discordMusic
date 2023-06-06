@@ -10,7 +10,7 @@ export default {
 	name: 'youtube',
 	matcher(string) {
 		// youtube, video, music / playlist, live / shorts, m.youtube, short/share link
-		return /(www.youtube.com|youtube.com|www.youtu.be|youtu.be.be|www.music.youtube.com|music.youtube.com|m.youtube.com)/.test(
+		return /(www.youtube.com|youtube.com|www.youtu.be|youtu.be|www.music.youtube.com|music.youtube.com|m.youtube.com)/.test(
 			string
 		);
 	},

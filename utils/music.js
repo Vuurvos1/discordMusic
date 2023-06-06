@@ -13,7 +13,7 @@ export async function searchSong(args) {
 		const url = new URL(args[0]);
 
 		// TODO: soundcloud
-		for (const [key, platform] of Object.entries(platforms)) {
+		for (const [key, platform] of platforms) {
 			if (platform.matcher(url.host)) {
 				try {
 					return {

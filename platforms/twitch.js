@@ -74,7 +74,8 @@ export default {
 			return createAudioResource(song.id);
 		}
 
-		// TODO: fix stream playback
+		// TODO: fix stream playback randomly stopping
+		/** @type {{quality: string; resolution: string; url: string}[]} */
 		const streamData = await twitch.getStream(song.artist);
 		const filtered = streamData.filter((stream) => stream.quality === 'audio_only');
 		const streamLink = filtered[0].url;
