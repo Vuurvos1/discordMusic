@@ -23,7 +23,7 @@ export default {
 			try {
 				const playlist = await youtube.getPlaylist(searchArg, { fetchAll: true });
 
-				/** @type {import('../index').Song[]} */
+				/** @type {import('../').Song[]} */
 				const songs = [];
 
 				playlist.videos.forEach((video) => {

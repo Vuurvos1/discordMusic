@@ -13,7 +13,7 @@ export default {
 
 		const slugs = url.pathname.match(/[^/]+/g); // get url slugs, by splitting the pathname by /
 
-		if (!slugs) return null; // please enter a valid url
+		if (!slugs) throw new Error('Invalid url'); // please enter a valid url
 
 		// TODO: properly add twitch meta data
 

@@ -71,10 +71,6 @@ export type Song = {
 export type PlatformInterface = {
 	name: string;
 	matcher: (string: string) => boolean;
-	getSong: (params: {
-		message?: Message;
-		args: string[];
-		client?: Client;
-	}) => Promise<Song[] | null>; // string, discord client, // TODO: remove null // Rename to getAudio?
-	getResource: (song: Song) => Promise<AudioResource | undefined>; // string, discord client // Rename to getAudioResource?
+	getSong: (params: { message?: Message; args: string[]; client?: Client }) => Promise<Song[]>; // TODO: rename to getAudio?
+	getResource: (song: Song) => Promise<AudioResource | undefined>; // TODO: rename to getAudioResource?
 };
