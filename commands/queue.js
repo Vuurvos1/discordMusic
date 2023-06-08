@@ -1,4 +1,4 @@
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'queue',
 	description: 'Show current queue',
@@ -33,7 +33,7 @@ export default {
 	}
 };
 
-/** @param {import('../index.js').Song[]} songs */
+/** @param {import('../').Song[]} songs */
 function buildQueueMsg(songs) {
 	let queueMsg = '```nim\n';
 

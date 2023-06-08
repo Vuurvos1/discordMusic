@@ -6,7 +6,7 @@ import { platforms } from '../platforms/index.js';
 
 /**
  *  @param {string[]} args
- * 	@returns {Promise<import('../index').SearchSong>}
+ * 	@returns {Promise<import('../').SearchSong>}
  */
 export async function searchSong(args) {
 	if (args.length === 1 && isValidUrl(args[0])) {

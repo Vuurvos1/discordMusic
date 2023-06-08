@@ -3,7 +3,7 @@ import { colors } from '../utils/utils.js';
 import { prefix } from '../index.js';
 import * as commands from './index.js';
 
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'commands',
 	description: 'List all supported commands',

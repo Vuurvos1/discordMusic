@@ -1,6 +1,6 @@
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'skip',
 	description: 'Skip the current song',

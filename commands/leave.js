@@ -1,7 +1,7 @@
 import { errorEmbed } from '../utils/embeds.js';
 import { leaveVoiceChannel } from '../utils/utils.js';
 
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'leave',
 	description: 'Leave voice channel',

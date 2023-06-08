@@ -77,7 +77,7 @@ export default {
 					fields: 'items'
 				});
 
-				/** @type {import('../index').Song[]} */
+				/** @type {import('../').Song[]} */
 				const songs = [];
 				for (let i = 0; i < playlistData.body.items.length; i++) {
 					const song = playlistData.body.items[i].track;

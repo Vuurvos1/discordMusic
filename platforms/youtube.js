@@ -5,7 +5,7 @@ import { default as youtube } from 'youtube-sr';
 import { createAudioResource } from '@discordjs/voice';
 import { isValidUrl } from '../utils/utils.js';
 
-/** @type {import('../index.js').PlatformInterface} */
+/** @type {import('../').PlatformInterface} */
 export default {
 	name: 'youtube',
 	matcher(string) {
@@ -52,7 +52,7 @@ export default {
 		try {
 			const video = isUrl ? await youtube.getVideo(searchArg) : await youtube.searchOne(searchArg);
 
-			/** @type {import('../index').Song} */
+			/** @type {import('../').Song} */
 			const song = {
 				title: video.title || 'unkown',
 				platform: 'youtube',

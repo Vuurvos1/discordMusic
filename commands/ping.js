@@ -1,4 +1,4 @@
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'ping',
 	description: 'Pong!',

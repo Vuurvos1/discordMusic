@@ -1,6 +1,6 @@
 import { errorEmbed } from '../utils/embeds.js';
 
-/** @type {import('../index.js').Command} */
+/** @type {import('../').Command} */
 export default {
 	name: 'shuffle',
 	description: 'Shuffle the song queueu',

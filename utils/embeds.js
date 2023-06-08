@@ -2,8 +2,8 @@ import { EmbedBuilder } from 'discord.js';
 import { colors } from './utils.js';
 
 /**
- * @param {import('discord.js').Message | import('discord.js').Interaction} message
- * @param {import('../index').Song} song
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('../').Song} song
  */
 export function queuedEmbed(message, song) {
 	// @ts-ignore
