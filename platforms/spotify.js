@@ -42,12 +42,12 @@ export default {
 
 				/** @type {import('../').Song} */
 				const song = {
-					title: video.title || 'unkown',
-					id: video.id || 'unkown',
-					artist: 'unkown',
+					title: video.title || 'unknown',
+					id: video.id || 'unknown',
+					artist: 'unknown',
 					platform: 'spotify',
 					message: 'Spotify song',
-					user: 'unkown',
+					user: 'unknown',
 					duration: video.durationFormatted,
 					url: url.href,
 					live: false
@@ -89,7 +89,7 @@ export default {
 						id: '',
 						artist: song?.artists[0].name, // consider adding all artists
 						platform: 'spotify',
-						user: 'unkown',
+						user: 'unknown',
 						message: 'Spotify song',
 						duration: new Date(song.duration_ms).toISOString().slice(11, 19),
 						url: `https://open.spotify.com/track/${song.id}`,

@@ -1,7 +1,7 @@
 import { createAudioResource } from '@discordjs/voice';
 import twitch from 'twitch-m3u8';
 
-/** @type {import('../index.js').PlatformInterface} */
+/** @type {import('../').PlatformInterface} */
 export default {
 	name: 'twitch',
 	matcher(string) {
@@ -29,9 +29,9 @@ export default {
 						platform: 'twitch',
 						message: 'Twitch stream',
 						url: args[0],
-						user: 'unkown', // message.author.id
+						user: 'unknown', // message.author.id
 						live: true
-						// duration: 'unkown',
+						// duration: 'unknown',
 					}
 				];
 			}
@@ -49,13 +49,13 @@ export default {
 					{
 						title: 'Twitch vod', // streamData.at(-1).title
 						id: streamData.at(-1).url,
-						artist: 'unkown', // streamData.at(-1).channel.display_name
+						artist: 'unknown', // streamData.at(-1).channel.display_name
 						platform: 'twitch',
 						message: 'Twitch vod',
 						url: args[0],
-						user: 'unkown', // message.author.id
+						user: 'unknown', // message.author.id
 						live: false
-						// duration: 'unkown',
+						// duration: 'unknown',
 					}
 				];
 			} catch (err) {

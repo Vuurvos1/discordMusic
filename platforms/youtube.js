@@ -30,10 +30,10 @@ export default {
 					// TODO: test for unlisted/private?
 					// This could be slow creating a bunch of new objects
 					songs.push({
-						title: video.title || 'unkown',
-						id: video.id || 'unkown',
-						artist: 'unkown',
-						user: 'unkown', // message.author.id
+						title: video.title || 'unknown',
+						id: video.id || 'unknown',
+						artist: 'unknown',
+						user: 'unknown', // message.author.id
 						platform: 'youtube',
 						message: 'Youtube video',
 						duration: video.durationFormatted,
@@ -54,15 +54,15 @@ export default {
 
 			/** @type {import('../').Song} */
 			const song = {
-				title: video.title || 'unkown',
+				title: video.title || 'unknown',
 				platform: 'youtube',
 				duration: video.durationFormatted,
 				id: video.id || '',
 				url: `https://youtu.be/${video.id}`,
 				live: video.live,
-				artist: video.channel?.name || 'unkown',
+				artist: video.channel?.name || 'unknown',
 				message: 'Youtube video',
-				user: 'unkown' // message.author.id
+				user: 'unknown' // message.author.id
 			};
 			return [song];
 		} catch (error) {

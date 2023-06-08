@@ -8,7 +8,8 @@ describe('message handler', () => {
 		},
 		channel: {
 			send: vi.fn()
-		}
+		},
+		react: vi.fn()
 	};
 
 	it('should not handle bot messages', () => {

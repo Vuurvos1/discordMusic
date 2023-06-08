@@ -11,15 +11,7 @@ export const colors = {
 
 /**
  * Check if a user is in a voice channel
- * @param {string} id
- * */
-export function deleteServer(id) {
-	servers.delete(id);
-}
-
-/**
- * Check if a user is in a voice channel
- * @param {import('discord.js').Message | import('discord.js').Interaction} message
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
  * @returns {boolean}
  * */
 export function inVoiceChannel(message) {
@@ -31,15 +23,14 @@ export function inVoiceChannel(message) {
 		const embed = new EmbedBuilder()
 			.setColor(colors.error)
 			.setDescription('You have to be in a voice channel to use this command!');
-		if (message?.isCommand()) {
-			// command interacton
-			message.reply({
-				embeds: [embed],
-				ephemeral: false
-			});
-		} else {
-			message.channel?.send({ embeds: [embed] });
-		}
+
+		sendMessage(
+			message,
+			{
+				embeds: [embed]
+			},
+			false
+		);
 
 		return false;
 	}
@@ -90,6 +81,24 @@ export function isValidUrl(urlString) {
 		return Boolean(new URL(urlString));
 	} catch (e) {
 		return false;
+	}
+}
+
+/**
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').MessageCreateOptions } messagePayload
+ * @param {boolean} ephemeral
+ */
+export function sendMessage(message, messagePayload, ephemeral = false) {
+	// Switch this so ephemeral is default, and just pass it to channel send where it should be ignored
+
+	if (message?.isCommand) {
+		// slash command
+		// @ts-ignore funky type conversion
+		message.reply({ ...messagePayload, ephemeral });
+	} else {
+		// text command
+		message.channel?.send(messagePayload);
 	}
 }
 

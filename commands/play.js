@@ -1,4 +1,10 @@
-import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel, servers } from '../utils/utils.js';
+import {
+	MINUTES,
+	leaveVoiceChannel,
+	canJoinVoiceChannel,
+	servers,
+	sendMessage
+} from '../utils/utils.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 import { searchSong } from '../utils/music.js';
 
@@ -76,7 +82,7 @@ export default {
 	}
 };
 
-/** @param {import('../index').Song} song  */
+/** @param {import('../').Song} song  */
 async function getAudioResource(song) {
 	const platform = platforms.get(song.platform);
 
@@ -242,23 +248,5 @@ async function play(guild, song, server) {
 		// couldn't find song/problem getting audio, skip song
 		server.songs.shift();
 		play(guild, server.songs[0], server);
-	}
-}
-
-/**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
- * @param {import('discord.js').MessageCreateOptions } messagePayload
- * @param {boolean} ephemeral
- */
-function sendMessage(message, messagePayload, ephemeral = false) {
-	// Switch this so ephemeral is default, and just pass it to channel send where it should be ignored
-
-	if (message?.isCommand) {
-		// slash command
-		// @ts-ignore funky type conversion
-		message.reply({ ...messagePayload, ephemeral });
-	} else {
-		// text command
-		message.channel?.send(messagePayload);
 	}
 }
