@@ -165,7 +165,7 @@ async function getSong(args, message, voiceChannel) {
 	} catch (error) {
 		console.error(error);
 		leaveVoiceChannel(message.guild.id);
-		return message.channel?.send(error);
+		return message.channel?.send(typeof error === 'string' ? error : 'Error joining voice channel');
 	}
 }
 

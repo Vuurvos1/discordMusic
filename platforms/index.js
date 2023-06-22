@@ -3,7 +3,7 @@ import { default as youtubePlatform } from './youtube.js';
 import { default as spotifyPlatform } from './spotify.js';
 
 export const platforms = new Map(
-	Object.entries({
+	/** @type {const} */ Object.entries({
 		twitch: twitchPlatform,
 		youtube: youtubePlatform,
 		spotify: spotifyPlatform

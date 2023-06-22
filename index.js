@@ -3,7 +3,7 @@ const { botToken, guildId } = process.env;
 
 import { Client, GatewayIntentBits, SlashCommandBuilder } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
-import * as comms from './commands/index.js';
+import commands from './commands/index.js';
 import { servers } from './utils/utils.js';
 
 export const prefix = process.env.prefix || '-';
@@ -15,9 +15,6 @@ if (!botToken) {
 if (!guildId) {
 	throw new Error('Please provide a guild id!');
 }
-
-/** @type {Map<string, import('./').Command>} */
-export let commands = new Map();
 
 const client = new Client({
 	intents: [
@@ -37,10 +34,7 @@ client.on('ready', async () => {
 	const slashCommands = guild ? guild.commands : client.application?.commands;
 
 	// setup  commands
-	for (const [key, command] of Object.entries(comms)) {
-		// text commands
-		commands.set(command.name, command);
-
+	for (const [key, command] of Object.entries(commands)) {
 		if (!slashCommands) return;
 
 		if (command.interactionOptions) {
