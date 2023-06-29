@@ -53,7 +53,7 @@ export function leaveVoiceChannel(id) {
  * get the amount of users in a voice channel
  * @param {import('../').GuildQueueItem} queue
  */
-export function getVoiceUsers(queue) {
+export function getUsersInVoice(queue) {
 	return queue?.voiceChannel?.members?.size || 0;
 }
 

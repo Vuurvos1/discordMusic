@@ -2,7 +2,7 @@ import 'dotenv/config';
 const { botToken, guildId } = process.env;
 
 import { Client, GatewayIntentBits, SlashCommandBuilder } from 'discord.js';
-import { inVoiceChannel, leaveVoiceChannel, getVoiceUsers, MINUTES } from './utils/utils.js';
+import { inVoiceChannel, leaveVoiceChannel, getUsersInVoice, MINUTES } from './utils/utils.js';
 import commands from './commands/index.js';
 import { servers } from './utils/utils.js';
 
@@ -79,9 +79,9 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 		}
 
 		// other user gets disconnected from voice channel
-		if (guildQueue && getVoiceUsers(guildQueue) < 2) {
+		if (guildQueue && getUsersInVoice(guildQueue) < 2) {
 			setTimeout(() => {
-				if (getVoiceUsers(guildQueue) < 2) {
+				if (getUsersInVoice(guildQueue) < 2) {
 					if (!guildQueue.textChannel) return;
 
 					// Left the voice channel
