@@ -1,53 +1,58 @@
-import ytdl from 'ytdl-core';
-import twitch from 'twitch-m3u8';
-
-import { MINUTES, leaveVoiceChannel, canJoinVoiceChannel } from '../utils/utils.js';
-import { searchSong, searchYtSong } from '../utils/music.js';
-
 import {
-	joinVoiceChannel,
-	createAudioResource,
-	createAudioPlayer,
-	AudioPlayerStatus
-} from '@discordjs/voice';
-
-import { EmbedBuilder } from 'discord.js';
+	MINUTES,
+	leaveVoiceChannel,
+	canJoinVoiceChannel,
+	servers,
+	sendMessage
+} from '../utils/utils.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
+import { searchSong } from '../utils/music.js';
 
+import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
+
+import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+
+import { platforms } from '../platforms/index.js';
+
+/** @type {import('../').Command} */
 export default {
 	name: 'play',
 	description: 'Play a song',
 	aliases: ['p', 'sr'],
-	interactionOptions: [
-		{
-			name: 'song',
-			description: 'song name or url',
-			type: 3, // type STRING
-			required: true
-		}
-	],
+	interactionOptions: new SlashCommandBuilder().addStringOption((option) =>
+		option.setName('song').setDescription('song name or url').setRequired(true)
+	),
 	permissions: {
 		memberInVoice: true
 	},
 
-	command: async (message, args, client) => {
+	command: async ({ message, args }) => {
 		// if no argument is given
 		if (args.length < 1) {
-			return message.channel.send('Please enter a valid url');
+			return message.channel.send('Please enter a valid url or search query');
 		}
 
+		if (!message.member) return;
+
 		const voiceChannel = message.member.voice.channel;
+
+		if (!voiceChannel) return;
+
 		if (!canJoinVoiceChannel(voiceChannel, message.client.user)) {
 			return message.channel.send(
 				'I need the permissions to join and speak in your voice channel!'
 			);
 		}
 
-		getSong(args, message, voiceChannel, client);
+		getSong(args, message, voiceChannel);
 	},
 
-	interaction: async (interaction, client) => {
-		const song = interaction.options.get('song').value;
+	interaction: async ({ interaction }) => {
+		const songOption = interaction.options.get('song');
+		if (!songOption) return;
+
+		const song = songOption.value?.toString();
+		if (!song) return;
 
 		// if no argument is given
 		if (song.trim().length < 1) {
@@ -57,7 +62,15 @@ export default {
 			});
 		}
 
-		const voiceChannel = interaction.member.voice.channel;
+		if (!interaction.member) return;
+
+		/** @type {import('../').GuildMemberWithVoice} */
+		const member = interaction.member;
+		/** @type {import('discord.js').VoiceState} */
+		const voice = member?.voice;
+		const voiceChannel = voice.channel;
+		if (!voiceChannel) return;
+
 		if (!canJoinVoiceChannel(voiceChannel, interaction.client.user)) {
 			return interaction.reply({
 				embeds: [errorEmbed('I need the permissions to join and speak in your voice channel!')],
@@ -65,65 +78,31 @@ export default {
 			});
 		}
 
-		getSong([song], interaction, voiceChannel, client);
+		getSong([song], interaction, voiceChannel);
 	}
 };
 
-/** @param {import('../index').Song} song  */
+/** @param {import('../').Song} song  */
 async function getAudioResource(song) {
-	if (song.platform === 'youtube') {
-		if (song.live) {
-			// filter: 'audioonly',
-			const stream = await ytdl(song.url, {
-				highWaterMark: 1 << 25,
-				filter: (format) => format.isHLS
-			});
+	const platform = platforms.get(song.platform);
 
-			return createAudioResource(stream);
-		}
+	if (!platform) return; // TODO: error handling
 
-		const stream = await ytdl(song.url, {
-			filter: 'audioonly',
-			quality: 'highestaudio',
-			highWaterMark: 1 << 25
-		});
-
-		return createAudioResource(stream);
-	}
-
-	if (song.platform === 'twitch') {
-		const streamLink = await twitch.getStream(song.title).then((data) => {
-			return data.at(-1).url;
-		});
-		return createAudioResource(streamLink);
-	}
-
-	if (song.platform === 'spotify') {
-		const ytSong = await searchYtSong(`${song.title} ${song.artist}`);
-
-		// preferibly only search youtube music/videos that are in the music categorie
-		// TODO add better way to validate searched song
-		if (ytSong.title.toLowerCase().includes(song.title.toLowerCase())) {
-			const stream = await ytdl(`https://youtu.be/${ytSong.id}`, {
-				filter: 'audioonly',
-				quality: 'highestaudio',
-				highWaterMark: 1 << 25
-			});
-
-			return createAudioResource(stream);
-		} else {
-			return undefined;
-		}
-	}
+	return await platform.getResource(song);
 }
 
-async function getSong(args, message, voiceChannel, client) {
-	// guildqueue creation logic
-	// TODO split
-	let guildQueue = client.queue.get(message.guild.id);
+/**
+ * @param {string[]} args
+ * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
+ */
+async function getSong(args, message, voiceChannel) {
+	if (!message.guild) return;
 
-	if (!guildQueue) {
-		const queueContruct = {
+	// guildqueue creation logic
+	if (!servers.has(message.guild.id)) {
+		servers.set(message.guild.id, {
+			id: message.guild.id,
 			textChannel: message.channel,
 			voiceChannel: voiceChannel,
 			songMessage: null,
@@ -131,115 +110,120 @@ async function getSong(args, message, voiceChannel, client) {
 			audioPlayer: null,
 			songs: [],
 			volume: 5,
-			playing: false,
 			paused: false,
 			looping: false
-		};
-
-		client.queue.set(message.guild.id, queueContruct);
-		guildQueue = client.queue.get(message.guild.id);
+		});
 	}
 
-	guildQueue.textChannel = message.channel; // updated each time a song is added
+	const server = servers.get(message.guild.id);
+	if (!server) return;
+
+	server.textChannel = message.channel; // updated each time a song is added
 
 	// get song data
-	const songsData = await searchSong(args);
+	const songsData = await searchSong(args); // TODO: inline?
 
 	if (songsData.error) {
-		sendErrorMessage(message, songsData.message);
 		// send error message
+		sendMessage(message, { embeds: [errorEmbed(songsData.message)] }, false);
 		return;
 	}
 
 	// send message
 	if (songsData.songs.length > 1) {
-		sendDefaultMessage(message, `Queued **${songsData.songs.length}** songs`);
+		sendMessage(
+			message,
+			{
+				embeds: [defaultEmbed(`Queued **${songsData.songs.length}** songs`)]
+			},
+			false
+		);
 	} else {
-		sendQueueMessage(message, songsData.songs[0]);
+		sendMessage(message, { embeds: [queuedEmbed(message, songsData.songs[0])] }, false);
 	}
 
 	// add songs to queue
-	guildQueue.songs.push(...songsData.songs);
+	server.songs.push(...songsData.songs);
 
 	// join vc logic
 	try {
+		if (!message.member) return;
+
 		const connection = joinVoiceChannel({
-			channelId: message.member.voice.channel.id,
+			channelId: voiceChannel.id,
 			guildId: message.guild.id,
 			adapterCreator: message.guild.voiceAdapterCreator
 		});
 
-		guildQueue.connection = connection;
+		server.connection = connection;
 
-		if (!guildQueue.playing) {
+		if (!server.paused) {
 			// play song
-			guildQueue.playing = true;
-			play(message.guild, guildQueue.songs[0], client);
+			server.paused = false;
+			play(message.guild, server.songs[0], server);
 		}
 	} catch (error) {
 		console.error(error);
-		client.queue.delete(message.guild.id);
-		return message.channel.send(error);
+		leaveVoiceChannel(message.guild.id);
+		return message.channel?.send(typeof error === 'string' ? error : 'Error joining voice channel');
 	}
 }
 
 /**
  * @param {import('discord.js').Guild} guild
- * @param {import('../index').Song} song
- * @param {import('discord.js').Client} client
+ * @param {import('../').Song} song
+ * @param {import('../').GuildQueueItem} server
  */
-
-async function play(guild, song, client) {
-	const queue = client.queue;
-	const guildQueue = queue.get(guild.id);
-
+async function play(guild, song, server) {
 	if (!song) {
-		if (guildQueue.songMessage) {
-			guildQueue.songMessage.delete();
-			guildQueue.songMessage = undefined;
+		if (server.songMessage) {
+			server.songMessage.delete();
+			server.songMessage = null;
 		}
-
-		guildQueue.playing = false;
 
 		setTimeout(() => {
 			// if still no songs in queue
-			if (guildQueue.songs.length < 1) {
+			if (server.songs.length < 1) {
 				// leave voice channel
-				if (guildQueue.textChannel) {
+				if (server.textChannel) {
 					// TODO bug send not a function?
-					guildQueue.textChannel.send('No more songs to play');
+					server.textChannel.send('No more songs to play');
 				}
-				leaveVoiceChannel(queue, guild.id);
+				leaveVoiceChannel(guild.id);
 			}
 		}, 10 * MINUTES);
 		return;
 	}
 
-	if (!guildQueue.audioPlayer) {
-		guildQueue.audioPlayer = createAudioPlayer();
+	if (!server.audioPlayer) {
+		server.audioPlayer = createAudioPlayer();
 
 		// once song finished playing, play next song in queue
-		guildQueue.audioPlayer.on(AudioPlayerStatus.Idle, () => {
-			guildQueue.songs.shift();
-			play(guild, guildQueue.songs[0], client);
+		server.audioPlayer.on(AudioPlayerStatus.Idle, () => {
+			server.songs.shift();
+			play(guild, server.songs[0], server);
 		});
 
-		guildQueue.audioPlayer.on('error', (error) => {
+		server.audioPlayer.on('error', (error) => {
 			console.error(error);
 			// play next song
-			guildQueue.songs.shift();
-			play(guild, guildQueue.songs[0], client);
+			server.songs.shift();
+			play(guild, server.songs[0], server);
 		});
 
-		guildQueue.connection.subscribe(guildQueue.audioPlayer);
+		server.connection?.subscribe(server.audioPlayer);
 	}
 
 	try {
+		if (server.audioPlayer.state.status === AudioPlayerStatus.Playing) return;
+
 		const audioResource = await getAudioResource(song);
+
 		if (!audioResource) {
 			throw 'No audio';
 		}
-		guildQueue.audioPlayer.play(audioResource);
+
+		server.audioPlayer.play(audioResource);
 
 		const embed = new EmbedBuilder()
 			.setTitle('Now Playing')
@@ -250,61 +234,19 @@ async function play(guild, song, client) {
 			);
 
 		// delete old song message
-		if (guildQueue.songMessage) {
-			await guildQueue.songMessage.delete();
+		if (server.songMessage) {
+			await server.songMessage.delete();
 		}
 
-		// TODO bug send not a function?
-		if (guildQueue.textChannel) {
-			guildQueue.songMessage = await guildQueue.textChannel.send({
+		if (server.textChannel) {
+			server.songMessage = await server.textChannel.send({
 				embeds: [embed]
 			});
 		}
-	} catch (error) {
-		// console.error(error);
+	} catch (err) {
+		console.error(err);
 		// couldn't find song/problem getting audio, skip song
-		guildQueue.songs.shift();
-		play(guild, guildQueue.songs[0], client);
-	}
-}
-
-function sendDefaultMessage(message, text) {
-	if (message.commandName) {
-		// slash command
-		message.reply({
-			embeds: [defaultEmbed(text)],
-			ephemeral: false
-		});
-	} else {
-		// text command
-		message.channel.send({
-			embeds: [defaultEmbed(text)]
-		});
-	}
-}
-
-function sendQueueMessage(message, song) {
-	if (message.commandName) {
-		// slash command
-		message.reply({
-			embeds: [queuedEmbed(message, song)],
-			ephemeral: false
-		});
-	} else {
-		// text command
-		message.channel.send({ embeds: [queuedEmbed(message, song)] });
-	}
-}
-
-function sendErrorMessage(message, error) {
-	if (message.commandName) {
-		// slash command
-		message.reply({
-			embeds: [queuedEmbed(message, errorEmbed(error))],
-			ephemeral: false
-		});
-	} else {
-		// text command
-		message.channel.send({ embeds: [errorEmbed(error)] });
+		server.songs.shift();
+		play(guild, server.songs[0], server);
 	}
 }

@@ -1,41 +1,46 @@
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
+/** @type {import('../').Command} */
 export default {
-  name: 'unpause',
-  description: 'Unpause playback',
-  aliases: [],
-  permissions: {
-    memberInVoice: true,
-  },
-  command: (message, args, client) => {
-    const guildQueue = client.queue.get(message.guild.id);
+	name: 'unpause',
+	description: 'Unpause playback',
+	aliases: ['resume'],
+	permissions: {
+		memberInVoice: true
+	},
+	command: ({ message, server }) => {
+		if (!message.guild) return;
 
-    if (!guildQueue) {
-      return message.channel.send({
-        embeds: [errorEmbed('Nothing to unpause')],
-      });
-    }
+		if (!server) {
+			return message.channel.send({
+				embeds: [errorEmbed('Nothing to unpause')]
+			});
+		}
 
-    guildQueue.audioPlayer.unpause();
-    guildQueue.paused = false;
-    message.react('👌');
-  },
+		if (!server.audioPlayer) return;
 
-  interaction: async (interaction, client) => {
-    const guildQueue = client.queue.get(interaction.guild.id);
+		server.audioPlayer.unpause();
+		server.paused = false;
+		message.react('👌');
+	},
 
-    if (!guildQueue) {
-      return interaction.reply({
-        embeds: [errorEmbed('Nothing to unpause')],
-        ephemeral: true,
-      });
-    }
+	interaction: async ({ interaction, server }) => {
+		if (!interaction.guild) return;
 
-    guildQueue.audioPlayer.unpause();
-    guildQueue.paused = false;
-    return interaction.reply({
-      embeds: [defaultEmbed('Unpaused music')],
-      ephemeral: false,
-    });
-  },
+		if (!server) {
+			return interaction.reply({
+				embeds: [errorEmbed('Nothing to unpause')],
+				ephemeral: true
+			});
+		}
+
+		if (!server.audioPlayer) return;
+
+		server.audioPlayer.unpause();
+		server.paused = false;
+		return interaction.reply({
+			embeds: [defaultEmbed('Unpaused music')],
+			ephemeral: false
+		});
+	}
 };

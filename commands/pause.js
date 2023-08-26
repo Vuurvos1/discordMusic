@@ -1,41 +1,44 @@
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
+/** @type {import('../').Command} */
 export default {
-  name: 'pause',
-  description: 'Pause playback',
-  aliases: [],
-  permissions: {
-    memberInVoice: true,
-  },
-  command: (message, args, client) => {
-    const guildQueue = client.queue.get(message.guild.id);
+	name: 'pause',
+	description: 'Pause playback',
+	aliases: [],
+	permissions: {
+		memberInVoice: true
+	},
+	command: ({ message, server }) => {
+		if (!message.guild) return;
 
-    if (!guildQueue) {
-      return message.channel.send({ embeds: [errorEmbed('Nothing to pause')] });
-    }
+		if (!server) {
+			return message.channel.send({ embeds: [errorEmbed('Nothing to pause')] });
+		}
 
-    guildQueue.audioPlayer.pause();
-    guildQueue.paused = true;
-    message.react('⏸');
-  },
+		if (!server.audioPlayer) return;
 
-  interaction: async (interaction, client) => {
-    const guildQueue = client.queue.get(interaction.guild.id);
+		server.audioPlayer.pause();
+		server.paused = true;
+		message.react('⏸');
+	},
 
-    if (!guildQueue || guildQueue.paused) {
-      console.log('Nothing to pause');
+	interaction: async ({ interaction, server }) => {
+		if (!interaction.guild) return;
 
-      return interaction.reply({
-        embeds: [errorEmbed('Nothing to pause')],
-        ephemeral: true,
-      });
-    }
+		if (!server || server.paused) {
+			return interaction.reply({
+				embeds: [errorEmbed('Nothing to pause')],
+				ephemeral: true
+			});
+		}
 
-    guildQueue.audioPlayer.pause();
-    guildQueue.paused = true;
-    return interaction.reply({
-      embeds: [defaultEmbed('Paused music')],
-      ephemeral: false,
-    });
-  },
+		if (!server.audioPlayer) return;
+
+		server.audioPlayer.pause();
+		server.paused = true;
+		return interaction.reply({
+			embeds: [defaultEmbed('Paused music')],
+			ephemeral: false
+		});
+	}
 };

@@ -1,5 +1,6 @@
 import { errorEmbed } from '../utils/embeds.js';
 
+/** @type {import('../').Command} */
 export default {
 	name: 'shuffle',
 	description: 'Shuffle the song queueu',
@@ -7,32 +8,28 @@ export default {
 	permissions: {
 		memberInVoice: true
 	},
-	command: (message, args, client) => {
-		const guildQueue = client.queue.get(message.guild.id);
+	command: ({ message, server }) => {
+		if (!message.guild) return;
 
-		if (!guildQueue) {
+		if (!server) {
 			return message.channel.send({
 				embeds: [errorEmbed('Nothing to shuffle!')]
 			});
 		}
 
-		guildQueue.songs.sort(() => Math.random() - 0.5);
+		server.songs.sort(() => Math.random() - 0.5);
 
 		message.react('🔀');
 	},
 
-	/**
-	 * @param {import('discord.js').Interaction} interaction Discord js message object
-	 * @param {import('discord.js').Client} client Song info
-	 */
-	interaction: async (interaction, client) => {
-		const guildQueue = client.queue.get(interaction.guild.id);
+	interaction: async ({ interaction, server }) => {
+		if (!interaction.guild) return;
 
-		if (!guildQueue) {
+		if (!server) {
 			return interaction.reply({ embeds: [errorEmbed('Nothing to shuffle')] });
 		}
 
-		guildQueue.songs.sort(() => Math.random() - 0.5);
+		server.songs.sort(() => Math.random() - 0.5);
 
 		return interaction.reply({
 			content: 'Shuffled queue',

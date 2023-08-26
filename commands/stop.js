@@ -1,49 +1,50 @@
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
+/** @type {import('../').Command} */
 export default {
-  name: 'stop',
-  description: 'Stop playback',
-  aliases: [],
-  permissions: {
-    memberInVoice: true,
-  },
-  command: (message, args, client) => {
-    const guildQueue = client.queue.get(message.guild.id);
+	name: 'stop',
+	description: 'Stop playback',
+	aliases: [],
+	permissions: {
+		memberInVoice: true
+	},
+	command: ({ message, server }) => {
+		if (!message.guild) return;
 
-    if (!guildQueue) {
-      return message.channel.send({
-        embeds: [errorEmbed('Nothing to stop!')],
-      });
-    }
+		if (!server) {
+			return message.channel.send({
+				embeds: [errorEmbed('Nothing to stop!')]
+			});
+		}
 
-    guildQueue.songs = [];
+		server.songs = [];
 
-    if (guildQueue.audioPlayer) {
-      guildQueue.audioPlayer.stop();
-    }
+		if (server.audioPlayer) {
+			server.audioPlayer.stop();
+		}
 
-    return message.react('🛑');
-  },
+		return message.react('🛑');
+	},
 
-  interaction: async (interaction, client) => {
-    const guildQueue = client.queue.get(interaction.guild.id);
+	interaction: async ({ interaction, server }) => {
+		if (!interaction.guild) return;
 
-    if (!guildQueue) {
-      return interaction.reply({
-        embeds: [errorEmbed('Nothing to stop!')],
-        ephemeral: false,
-      });
-    }
+		if (!server) {
+			return interaction.reply({
+				embeds: [errorEmbed('Nothing to stop!')],
+				ephemeral: false
+			});
+		}
 
-    guildQueue.songs = [];
+		server.songs = [];
 
-    if (guildQueue.audioPlayer) {
-      guildQueue.audioPlayer.stop();
-    }
+		if (server.audioPlayer) {
+			server.audioPlayer.stop();
+		}
 
-    return interaction.reply({
-      embeds: [defaultEmbed('Stopped music')],
-      ephemeral: false,
-    });
-  },
+		return interaction.reply({
+			embeds: [defaultEmbed('Stopped music')],
+			ephemeral: false
+		});
+	}
 };
