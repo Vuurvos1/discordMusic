@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { colors } from '../utils/utils.js';
-import { prefix } from '../index.js';
+import { prefix } from '../constants.js';
 import commands from './index.js';
 
 /** @type {import('../').Command} */

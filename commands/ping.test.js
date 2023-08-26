@@ -30,7 +30,7 @@ describe('ping', () => {
 	};
 
 	it('should return pong (interaction)', async () => {
-		// @ts-ignore
+		// @ts-expect-error
 		await command.interaction({ interaction });
 		expect(reply).toHaveBeenCalledWith({
 			content: 'pong!',

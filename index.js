@@ -5,8 +5,7 @@ import { Client, GatewayIntentBits, SlashCommandBuilder } from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getUsersInVoice, MINUTES } from './utils/utils.js';
 import commands from './commands/index.js';
 import { servers } from './utils/utils.js';
-
-export const prefix = process.env.prefix || '-';
+import { prefix } from './constants.js';
 
 if (!botToken) {
 	throw new Error('Please provide a bot token!');
@@ -33,7 +32,7 @@ client.on('ready', async () => {
 	// setup slash commands scope
 	const slashCommands = guild ? guild.commands : client.application?.commands;
 
-	// setup  commands
+	// setup commands
 	for (const [key, command] of Object.entries(commands)) {
 		if (!slashCommands) return;
 

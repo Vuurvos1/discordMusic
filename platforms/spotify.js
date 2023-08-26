@@ -21,6 +21,9 @@ export default {
 	},
 	async getSong({ args }) {
 		// spotify through youtube (music), playlist / track
+		if (!spotifyApi || !spotifyKey) {
+			throw new Error('Spotify not configured');
+		}
 
 		const url = new URL(args[0]);
 
