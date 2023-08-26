@@ -11,10 +11,6 @@ if (!botToken) {
 	throw new Error('Please provide a bot token!');
 }
 
-if (!guildId) {
-	throw new Error('Please provide a guild id!');
-}
-
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
