@@ -19,17 +19,19 @@ export default {
 	matcher(string) {
 		return /(open.spotify.com)/.test(string);
 	},
-	async getSong({ args }) {
+	async getAudio({ args }) {
 		// spotify through youtube (music), playlist / track
 		if (!spotifyApi || !spotifyKey) {
-			throw new Error('Spotify not configured');
+			return {
+				data: [],
+				error: 'Spotify not configured'
+			};
 		}
 
 		const url = new URL(args[0]);
-
 		const slugs = url.pathname.match(/[^/]+/g);
 
-		if (!slugs) throw new Error('Invalid url');
+		if (!slugs) return { data: [], error: 'Invalid url' };
 
 		// preferibly only search youtube music/videos that are in the music categorie
 		if (slugs[0] === 'track' && slugs[1]) {
@@ -59,12 +61,18 @@ export default {
 				// preferibly only search youtube music/videos that are in the music categorie
 				// TODO add way to validate searched song
 				if (song.title?.toLocaleLowerCase().includes(songData.body.name.toLocaleLowerCase())) {
-					return [song];
+					return { data: [song] };
 				}
 
-				throw new Error("Couldn't find song");
+				return {
+					data: [],
+					error: "Couldn't find song"
+				};
 			} catch (error) {
-				throw new Error("Couldn't find song");
+				return {
+					data: [],
+					error: "Couldn't find song"
+				};
 			}
 		}
 
@@ -99,14 +107,20 @@ export default {
 						live: false
 					});
 				}
-				return songs;
+				return { data: songs };
 			} catch (error) {
 				console.error(error);
-				throw new Error("Couldn't find playlist");
+				return {
+					data: [],
+					error: "Couldn't find playlist"
+				};
 			}
 		}
 
-		throw new Error('Invalid url');
+		return {
+			data: [],
+			error: "Couldn't find playlist"
+		};
 	},
 	async getResource(song) {
 		const video = await youtube.searchOne(`${song.artist} ${song.title}`);

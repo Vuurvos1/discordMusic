@@ -1,9 +1,8 @@
 import ytdl from 'ytdl-core';
 import { URL } from 'node:url';
-import { default as youtube } from 'youtube-sr';
-
 import { createAudioResource } from '@discordjs/voice';
 import { isValidUrl } from '../utils/utils.js';
+import { YouTube } from 'youtube-sr';
 
 /** @type {import('../').PlatformInterface} */
 export default {
@@ -14,20 +13,22 @@ export default {
 			string
 		);
 	},
-	async getSong({ args }) {
+	async getAudio({ args }) {
 		const isUrl = isValidUrl(args[0]);
 		const searchArg = isUrl ? args[0] : args.join(' ');
 
 		// playlist
 		if (isUrl && new URL(searchArg).searchParams.has('list')) {
 			try {
-				const playlist = await youtube.getPlaylist(searchArg, { fetchAll: true });
+				const playlist = await YouTube.getPlaylist(searchArg, { fetchAll: true });
+
+				// no playlist found / private
+				if (!playlist) return { data: [], error: "Couldn't find playlist" };
 
 				/** @type {import('../').Song[]} */
 				const songs = [];
 
 				playlist.videos.forEach((video) => {
-					// TODO: test for unlisted/private?
 					// This could be slow creating a bunch of new objects
 					songs.push({
 						title: video.title || 'unknown',
@@ -41,16 +42,19 @@ export default {
 						live: false
 					});
 				});
-				return songs;
-			} catch (err) {
-				console.error(err);
-				throw new Error("Couldn't find playlist");
+				return { data: songs };
+			} catch (error) {
+				// console.error(error);
+				return {
+					data: [],
+					error: "Couldn't find playlist"
+				};
 			}
 		}
 
 		// normal video
 		try {
-			const video = isUrl ? await youtube.getVideo(searchArg) : await youtube.searchOne(searchArg);
+			const video = isUrl ? await YouTube.getVideo(searchArg) : await YouTube.searchOne(searchArg);
 
 			/** @type {import('../').Song} */
 			const song = {
@@ -64,11 +68,14 @@ export default {
 				message: 'Youtube video',
 				user: 'unknown' // message.author.id
 			};
-			return [song];
+			return { data: [song] };
 		} catch (error) {
-			throw new Error("Couldn't find song");
+			console.error(error);
+			return {
+				data: [],
+				error: "Couldn't find song"
+			};
 		}
-		// throw new Error('Not implemented');
 	},
 	async getResource(song) {
 		if (song.live) {

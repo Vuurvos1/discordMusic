@@ -19,40 +19,70 @@ describe('youtube', () => {
 		expect(youtube.matcher('www.spotify.com')).toBe(false);
 	});
 
-	it('should get resource', async () => {});
+	it.skip('should get resource', async () => {});
+
+	it.concurrent('should get song data from video', async () => {
+		const data = await youtube.getAudio({
+			args: ['https://www.youtube.com/watch?v=Iczqotmm5sk']
+		});
+
+		expect(data.data).toBeInstanceOf(Array);
+		expect(data.data).toHaveLength(1);
+
+		const song = data.data?.at(0);
+		expect(song).toHaveProperty('platform', 'youtube');
+		expect(song).toHaveProperty('live', false);
+	});
 
 	it.concurrent('should get song data from playlist', async () => {
-		const songData = await youtube.getSong({
+		const data = await youtube.getAudio({
 			args: ['https://www.youtube.com/watch?v=Iczqotmm5sk&list=PLwVziAzt2oDIEg3jRtJDFq22HVaj8PgkE']
 		});
 
-		expect(songData).toBeInstanceOf(Array);
-		expect(songData?.length).toBeGreaterThan(1);
-
-		expect(songData.every((song) => song.platform === 'youtube')).toBe(true);
+		expect(data.data).toBeInstanceOf(Array);
+		expect(data.data?.length).toBeGreaterThan(1);
+		expect(data.data?.every((song) => song.platform === 'youtube')).toBe(true);
 	});
 
 	it.concurrent('should get song data from stream', async () => {
-		const songData = await youtube.getSong({
+		const data = await youtube.getAudio({
 			args: ['https://www.youtube.com/watch?v=5qap5aO4i9A']
 		});
 
-		expect(songData).toBeInstanceOf(Array);
+		expect(data.data).toBeInstanceOf(Array);
+		expect(data.data).toHaveLength(1);
 
-		expect(songData).toHaveLength(1);
-
-		expect(songData[0]).toHaveProperty('platform', 'youtube');
-		expect(songData[0]).toHaveProperty('live', true);
-		expect(songData[0]).toHaveProperty('artist', 'Lofi Girl');
+		const song = data.data?.at(0);
+		expect(song).toHaveProperty('platform', 'youtube');
+		expect(song).toHaveProperty('live', true);
+		expect(song).toHaveProperty('artist', 'Lofi Girl');
 	});
 
 	it.concurrent('should get song data from search', async () => {
-		const songData = await youtube.getSong({
+		const data = await youtube.getAudio({
 			args: ['lofi']
 		});
 
-		expect(songData).toBeInstanceOf(Array);
-		expect(songData).toHaveLength(1);
-		expect(songData[0]).toHaveProperty('platform', 'youtube');
+		expect(data.data).toBeInstanceOf(Array);
+		expect(data.data).toHaveLength(1);
+
+		const song = data.data?.at(0);
+		expect(song).toHaveProperty('platform', 'youtube');
+	});
+
+	it.concurrent('should error on private playlist url', async () => {
+		const data = await youtube.getAudio({
+			args: ['https://www.youtube.com/playlist?list=WL']
+		});
+
+		expect(data.error).toBeTypeOf('string');
+	});
+
+	it.concurrent('should error on non existent video', async () => {
+		const data = await youtube.getAudio({
+			args: ['https://www.youtube.com/watch?v=aaa']
+		});
+
+		expect(data.error).toBeTypeOf('string');
 	});
 });

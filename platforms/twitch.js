@@ -8,12 +8,12 @@ export default {
 		return /twitch.tv/.test(string);
 	},
 
-	async getSong({ args }) {
+	async getAudio({ args }) {
 		const url = new URL(args[0]);
 
 		const slugs = url.pathname.match(/[^/]+/g); // get url slugs, by splitting the pathname by /
 
-		if (!slugs) throw new Error('Invalid url'); // please enter a valid url
+		if (!slugs) return { data: [], error: 'Invalid url' };
 
 		// TODO: properly add twitch meta data
 
@@ -21,23 +21,28 @@ export default {
 		try {
 			if (slugs.length === 1) {
 				const streamData = await twitch.getStream(slugs[0]);
-				return [
-					{
-						title: 'Twitch stream', // streamData.at(-1).title
-						id: streamData.at(-1).url,
-						artist: slugs[0],
-						platform: 'twitch',
-						message: 'Twitch stream',
-						url: args[0],
-						user: 'unknown', // message.author.id
-						live: true
-						// duration: 'unknown',
-					}
-				];
+				return {
+					data: [
+						{
+							title: 'Twitch stream', // streamData.at(-1).title
+							id: streamData.at(-1).url,
+							artist: slugs[0],
+							platform: 'twitch',
+							message: 'Twitch stream',
+							url: args[0],
+							user: 'unknown', // message.author.id
+							live: true
+							// duration: 'unknown',
+						}
+					]
+				};
 			}
-		} catch (err) {
-			console.error(err);
-			throw new Error("Couldn't find user or stream is offline");
+		} catch (error) {
+			console.error(error);
+			return {
+				data: [],
+				error: "Couldn't user or stream"
+			};
 		}
 
 		// vod
@@ -45,28 +50,36 @@ export default {
 			try {
 				const streamData = await twitch.getVod(slugs[1]);
 
-				return [
-					{
-						title: 'Twitch vod', // streamData.at(-1).title
-						id: streamData.at(-1).url,
-						artist: 'unknown', // streamData.at(-1).channel.display_name
-						platform: 'twitch',
-						message: 'Twitch vod',
-						url: args[0],
-						user: 'unknown', // message.author.id
-						live: false
-						// duration: 'unknown',
-					}
-				];
-			} catch (err) {
-				console.error(err);
-				throw new Error("Couldn't find vod");
+				return {
+					data: [
+						{
+							title: 'Twitch vod', // streamData.at(-1).title
+							id: streamData.at(-1).url,
+							artist: 'unknown', // streamData.at(-1).channel.display_name
+							platform: 'twitch',
+							message: 'Twitch vod',
+							url: args[0],
+							user: 'unknown', // message.author.id
+							live: false
+							// duration: 'unknown',
+						}
+					]
+				};
+			} catch (error) {
+				console.error(error);
+				return {
+					data: [],
+					error: "Couldn't find vod"
+				};
 			}
 
 			// TODO: clips
 		}
 
-		throw new Error('Not implemented');
+		return {
+			data: [],
+			error: "Couldn't find song"
+		};
 	},
 
 	async getResource(song) {

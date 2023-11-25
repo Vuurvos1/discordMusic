@@ -7,9 +7,7 @@ import commands from './commands/index.js';
 import { servers } from './utils/utils.js';
 import { prefix } from './constants.js';
 
-if (!botToken) {
-	throw new Error('Please provide a bot token!');
-}
+if (!botToken) throw new Error('Please provide a bot token!');
 
 const client = new Client({
 	intents: [

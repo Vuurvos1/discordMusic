@@ -14,21 +14,27 @@ export async function searchSong(args) {
 
 		// TODO: soundcloud
 		for (const [key, platform] of platforms) {
-			if (platform.matcher(url.host)) {
-				try {
-					return {
-						message: key,
-						songs: (await platform.getSong({ args })) || [],
-						error: false
-					};
-				} catch (err) {
-					return {
-						message: err,
-						songs: [],
-						error: true
-					};
-				}
+			const match = platform.matcher(url.host);
+
+			if (!match) continue;
+
+			const data = await platform.getAudio({ args });
+
+			console.log(data);
+
+			if (data.error) {
+				return {
+					message: data.error,
+					songs: [],
+					error: true
+				};
 			}
+
+			return {
+				message: key,
+				songs: data.data,
+				error: false
+			};
 		}
 	}
 
@@ -37,11 +43,19 @@ export async function searchSong(args) {
 		const youtubePlatform = platforms.get('youtube');
 		if (!youtubePlatform) throw new Error('youtube platform not found');
 
-		const song = await youtubePlatform.getSong({ args });
+		const song = await youtubePlatform.getAudio({ args });
+
+		if (song.error) {
+			return {
+				message: song.error,
+				songs: [],
+				error: true
+			};
+		}
 
 		return {
 			message: '', // added ... to the queue
-			songs: song || [],
+			songs: song.data,
 			error: false
 		};
 	} catch (error) {

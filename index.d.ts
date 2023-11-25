@@ -55,6 +55,8 @@ export type SearchSong = {
 	error?: boolean;
 };
 
+// TODO: change platform to enum?
+
 // song might not be the best name, maybe change to "Audio"
 export type Song = {
 	title: string;
@@ -71,6 +73,10 @@ export type Song = {
 export type PlatformInterface = {
 	name: string;
 	matcher: (string: string) => boolean;
-	getSong: (params: { message?: Message; args: string[]; client?: Client }) => Promise<Song[]>; // TODO: rename to getAudio?
+	getAudio: (params: {
+		message?: Message;
+		args: string[];
+		client?: Client;
+	}) => Promise<{ data: Song[]; error?: string }>;
 	getResource: (song: Song) => Promise<AudioResource | undefined>; // TODO: rename to getAudioResource?
 };

@@ -17,28 +17,32 @@ describe('youtube', () => {
 	it('should get resource', async () => {});
 
 	it.concurrent('should get song data from stream', async () => {
-		const songData = await twitch.getSong({
+		const data = await twitch.getAudio({
 			args: ['https://www.twitch.tv/monstercat']
 		});
 
-		expect(songData).toBeInstanceOf(Array);
-		expect(songData).toHaveLength(1);
+		expect(data.data).toBeInstanceOf(Array);
+		expect(data.data).toHaveLength(1);
 
-		expect(songData[0]).toHaveProperty('platform', 'twitch');
-		expect(songData[0]).toHaveProperty('artist', 'monstercat');
-		expect(songData[0]).toHaveProperty('live', true);
+		const song = data.data.at(0);
+		expect(song).toHaveProperty('platform', 'twitch');
+		expect(song).toHaveProperty('artist', 'monstercat');
+		expect(song).toHaveProperty('live', true);
 	});
 
 	it.concurrent('should get song data from vod', async () => {
-		const songData = await twitch.getSong({
+		const data = await twitch.getAudio({
 			args: ['https://www.twitch.tv/videos/451939071']
 		});
 
-		expect(songData).toBeInstanceOf(Array);
-		expect(songData).toHaveLength(1);
+		expect(data.data).toBeInstanceOf(Array);
+		expect(data.data).toHaveLength(1);
 
-		expect(songData[0]).toHaveProperty('platform', 'twitch');
-		expect(songData[0]).toHaveProperty('live', false);
-		expect(songData[0]).toHaveProperty('artist', 'unknown');
+		const song = data.data.at(0);
+		expect(song).toHaveProperty('platform', 'twitch');
+		expect(song).toHaveProperty('live', false);
+		expect(song).toHaveProperty('artist', 'unknown');
 	});
+
+	// TODO: test for non-existent vods and streams
 });

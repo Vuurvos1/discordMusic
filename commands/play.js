@@ -7,11 +7,8 @@ import {
 } from '../utils/utils.js';
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 import { searchSong } from '../utils/music.js';
-
 import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
-
 import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
-
 import { platforms } from '../platforms/index.js';
 
 /** @type {import('../').Command} */
@@ -44,7 +41,7 @@ export default {
 			);
 		}
 
-		getSong(args, message, voiceChannel);
+		getAudio(args, message, voiceChannel);
 	},
 
 	interaction: async ({ interaction }) => {
@@ -78,7 +75,7 @@ export default {
 			});
 		}
 
-		getSong([song], interaction, voiceChannel);
+		getAudio([song], interaction, voiceChannel);
 	}
 };
 
@@ -96,7 +93,7 @@ async function getAudioResource(song) {
  * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
  * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  */
-async function getSong(args, message, voiceChannel) {
+async function getAudio(args, message, voiceChannel) {
 	if (!message.guild) return;
 
 	// guildqueue creation logic
@@ -243,8 +240,8 @@ async function play(guild, song, server) {
 				embeds: [embed]
 			});
 		}
-	} catch (err) {
-		console.error(err);
+	} catch (error) {
+		console.error(error);
 		// couldn't find song/problem getting audio, skip song
 		server.songs.shift();
 		play(guild, server.songs[0], server);
