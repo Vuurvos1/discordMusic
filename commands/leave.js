@@ -5,22 +5,8 @@ import { leaveVoiceChannel } from '../utils/utils.js';
 export default {
 	name: 'leave',
 	description: 'Leave voice channel',
-	aliases: ['dc', 'disconnect'],
 	permissions: {
 		memberInVoice: true
-	},
-	command: ({ message, server }) => {
-		if (!message.guild) return;
-
-		if (!server) {
-			return message.channel.send({
-				embeds: [errorEmbed("I'm not in a voice channel")]
-			});
-		}
-
-		leaveVoiceChannel(message.guild.id);
-
-		message.react('👋');
 	},
 
 	interaction: async ({ interaction, server }) => {

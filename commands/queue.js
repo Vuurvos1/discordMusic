@@ -2,18 +2,8 @@
 export default {
 	name: 'queue',
 	description: 'Show current queue',
-	aliases: ['q'],
 	permissions: {
 		memberInVoice: true
-	},
-	command: ({ message, server }) => {
-		if (!message.guild) return;
-
-		if (!server || server?.songs.length < 1) {
-			return message.channel.send('```nim\nThe queue is empty ;-;\n```');
-		}
-
-		return message.channel.send(buildQueueMsg(server.songs.slice(0, 5)));
 	},
 
 	interaction: async ({ interaction, server }) => {

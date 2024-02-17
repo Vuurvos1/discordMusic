@@ -4,26 +4,8 @@ import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 export default {
 	name: 'stop',
 	description: 'Stop playback',
-	aliases: [],
 	permissions: {
 		memberInVoice: true
-	},
-	command: ({ message, server }) => {
-		if (!message.guild) return;
-
-		if (!server) {
-			return message.channel.send({
-				embeds: [errorEmbed('Nothing to stop!')]
-			});
-		}
-
-		server.songs = [];
-
-		if (server.audioPlayer) {
-			server.audioPlayer.stop();
-		}
-
-		return message.react('🛑');
 	},
 
 	interaction: async ({ interaction, server }) => {

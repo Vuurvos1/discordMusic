@@ -1,13 +1,20 @@
-import 'dotenv/config';
-const { botToken, guildId } = process.env;
-
-import { Client, GatewayIntentBits, SlashCommandBuilder } from 'discord.js';
+import {
+	Client,
+	GatewayIntentBits,
+	SlashCommandBuilder,
+	REST,
+	Routes,
+	ActivityType
+} from 'discord.js';
 import { inVoiceChannel, leaveVoiceChannel, getUsersInVoice, MINUTES } from './utils/utils.js';
 import commands from './commands/index.js';
 import { servers } from './utils/utils.js';
-import { prefix } from './constants.js';
 
-if (!botToken) throw new Error('Please provide a bot token!');
+const { TOKEN, CLIENT_ID, GUILD_ID } = process.env;
+
+if (!TOKEN) throw new Error('Please provide a bot token!');
+
+if (!CLIENT_ID) throw new Error('Please provide a client id!');
 
 const client = new Client({
 	intents: [
@@ -19,20 +26,14 @@ const client = new Client({
 });
 
 client.on('ready', async () => {
-	console.log('Ready!');
+	console.info('Ready!');
 
-	const guild = client.guilds.cache.get(guildId);
-
-	// setup slash commands scope
-	const slashCommands = guild ? guild.commands : client.application?.commands;
+	const commandData = [];
 
 	// setup commands
-	for (const [key, command] of Object.entries(commands)) {
-		if (!slashCommands) return;
-
+	for (const command of Object.values(commands)) {
 		if (command.interactionOptions) {
-			command.interactionOptions.setName(command.name).setDescription(command.description);
-			slashCommands.create(command.interactionOptions);
+			commandData.push(command.interactionOptions.toJSON());
 			continue;
 		}
 
@@ -40,8 +41,44 @@ client.on('ready', async () => {
 			.setName(command.name)
 			.setDescription(command.description);
 
-		slashCommands.create(data);
+		commandData.push(data.toJSON());
 	}
+
+	const rest = new REST().setToken(TOKEN);
+
+	console.info(`Started refreshing ${commandData.length} application (/) commands.`);
+	if (GUILD_ID) {
+		const data = await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
+			body: commandData
+		});
+
+		// @ts-ignore
+		console.info(`Successfully reloaded ${data?.length} application (/) commands.`);
+
+		// clear guild commands
+		// guild.commands.set([]);
+		// console.log('Commands cleared');
+		// const d = await guild.commands.fetch();
+		// console.log(d);
+	} else {
+		// register global commands
+		const data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+
+		// @ts-ignore
+		console.info(`Successfully reloaded ${data?.length} global application (/) commands.`);
+	}
+
+	if (!client.user) return;
+
+	client.user.setPresence({
+		status: 'online',
+		activities: [
+			{
+				name: 'Listening to music | /help',
+				type: ActivityType.Custom
+			}
+		]
+	});
 });
 
 client.on('reconnecting', () => {
@@ -86,40 +123,12 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 	}
 });
 
-client.on('messageCreate', (message) => {
-	// command handeler
-	const tokens = message.content.split(' ');
-	let cmd = tokens.shift();
-
-	if (message.author.bot || !cmd || cmd[0] !== prefix) return;
-
-	cmd = cmd.substring(1); // remove prefix from command
-
-	const command =
-		commands.get(cmd) ||
-		Array.from(commands.values()).find((command) => command.aliases.includes(cmd || ''));
-
-	if (!command) {
-		message.channel.send('Please enter a valid command!');
-		return;
-	}
-
-	if (command.permissions?.memberInVoice && !inVoiceChannel(message)) {
-		return;
-	}
-
-	if (!message.guild) return;
-
-	const server = servers.get(message.guild.id);
-
-	command.command({ message, args: tokens, server });
-});
-
 client.on('interactionCreate', (interaction) => {
 	if (!interaction.isChatInputCommand()) return;
 
 	const { commandName } = interaction;
-	const command = commands.get(commandName);
+
+	const command = commands[commandName];
 	if (!command) return;
 
 	if (command.permissions?.memberInVoice && !inVoiceChannel(interaction)) {
@@ -133,4 +142,4 @@ client.on('interactionCreate', (interaction) => {
 	command.interaction({ interaction, server });
 });
 
-client.login(botToken);
+client.login(TOKEN);

@@ -4,24 +4,8 @@ import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 export default {
 	name: 'skip',
 	description: 'Skip the current song',
-	aliases: ['s'],
 	permissions: {
 		memberInVoice: true
-	},
-	command: ({ message, server }) => {
-		if (!message.guild) return;
-
-		if (!server) {
-			return message.channel.send({
-				embeds: [errorEmbed('Nothing to skip!')]
-			});
-		}
-
-		if (server.audioPlayer) {
-			server.audioPlayer.stop(); // stop song to trigger next song
-		}
-
-		message.react('👌');
 	},
 
 	interaction: async ({ interaction, server }) => {

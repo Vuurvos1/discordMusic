@@ -20,8 +20,6 @@ export async function searchSong(args) {
 
 			const data = await platform.getAudio({ args });
 
-			console.log(data);
-
 			if (data.error) {
 				return {
 					message: data.error,

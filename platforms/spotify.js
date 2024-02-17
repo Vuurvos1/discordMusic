@@ -4,12 +4,12 @@ import ytdl from 'ytdl-core';
 import { default as youtube } from 'youtube-sr';
 
 import SpotifyWebApi from 'spotify-web-api-node';
-const { spotifyKey, spotifyClient } = process.env;
+const { SPOTIFY_KEY, SPOTIFY_CLIENT } = process.env;
 
 // credentials are optional
 const spotifyApi = new SpotifyWebApi({
-	clientId: spotifyClient,
-	clientSecret: spotifyKey,
+	clientId: SPOTIFY_CLIENT,
+	clientSecret: SPOTIFY_KEY,
 	redirectUri: 'http://www.example.com/callback'
 });
 
@@ -21,7 +21,7 @@ export default {
 	},
 	async getAudio({ args }) {
 		// spotify through youtube (music), playlist / track
-		if (!spotifyApi || !spotifyKey) {
+		if (!spotifyApi || !SPOTIFY_KEY) {
 			return {
 				data: [],
 				error: 'Spotify not configured'

@@ -2,12 +2,8 @@
 export default {
 	name: 'ping',
 	description: 'Pong!',
-	aliases: [],
 	permissions: {
 		memberInVoice: false
-	},
-	command: ({ message }) => {
-		return message.channel.send('pong!');
 	},
 
 	interaction: async ({ interaction }) => {
