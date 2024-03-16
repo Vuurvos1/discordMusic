@@ -1,5 +1,4 @@
 import { URL } from 'node:url';
-// import { demuxProbe, createAudioResource } from '@discordjs/voice';
 import { isValidUrl } from './utils.js';
 
 import { platforms } from '../platforms/index.js';
@@ -66,9 +65,3 @@ export async function searchSong(args) {
 		error: true
 	};
 }
-
-// TODO: reimpliment?
-// export async function probeAndCreateResource(readableStream) {
-// 	const { stream, type } = await demuxProbe(readableStream);
-// 	return createAudioResource(stream, { inputType: type });
-// }

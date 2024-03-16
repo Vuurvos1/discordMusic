@@ -102,4 +102,17 @@ export function sendMessage(message, messagePayload, ephemeral = false) {
 	}
 }
 
+/**
+ * Convert ms to mm:ss
+ * @param {number} duration in ms
+ * @returns
+ */
+export function formatTimestamp(duration) {
+	const seconds = Math.floor((duration / 1000) % 60);
+	const minutes = Math.floor((duration / (1000 * 60)) % 60);
+
+	// TODO: add optional hours
+	return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export const MINUTES = 60 * 1000;
