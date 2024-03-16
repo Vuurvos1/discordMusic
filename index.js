@@ -26,8 +26,6 @@ const client = new Client({
 });
 
 client.on('ready', async () => {
-	console.info('Ready!');
-
 	const commandData = [];
 
 	// setup commands
@@ -58,15 +56,15 @@ client.on('ready', async () => {
 		// clear guild commands
 		// guild.commands.set([]);
 		// console.log('Commands cleared');
-		// const d = await guild.commands.fetch();
-		// console.log(d);
 	} else {
 		// register global commands
-		const data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+		const data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commandData });
 
 		// @ts-ignore
 		console.info(`Successfully reloaded ${data?.length} global application (/) commands.`);
 	}
+
+	console.info('Ready!');
 
 	if (!client.user) return;
 
