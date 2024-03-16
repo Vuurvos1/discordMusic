@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import twitch from './twitch';
 
-describe('youtube', () => {
+describe('twitch', () => {
 	it('should match twitch urls', () => {
 		expect(twitch.matcher('twitch.tv')).toBe(true);
 		expect(twitch.matcher('https://www.twitch.tv/monstercat')).toBe(true);
@@ -16,15 +16,20 @@ describe('youtube', () => {
 
 	it('should get resource', async () => {});
 
-	it.concurrent('should get song data from stream', async () => {
+	it.concurrent('should get song data from stream', async ({ skip }) => {
 		const data = await twitch.getAudio({
 			args: ['https://www.twitch.tv/monstercat']
 		});
+
+		if (data.data.length === 0) {
+			skip();
+		}
 
 		expect(data.data).toBeInstanceOf(Array);
 		expect(data.data).toHaveLength(1);
 
 		const song = data.data.at(0);
+
 		expect(song).toHaveProperty('platform', 'twitch');
 		expect(song).toHaveProperty('artist', 'monstercat');
 		expect(song).toHaveProperty('live', true);

@@ -1,8 +1,8 @@
-import ytdl from 'ytdl-core';
 import { URL } from 'node:url';
 import { createAudioResource } from '@discordjs/voice';
 import { isValidUrl } from '../utils/utils.js';
 import { YouTube } from 'youtube-sr';
+import play from 'play-dl';
 
 /** @type {import('../').PlatformInterface} */
 export default {
@@ -78,26 +78,12 @@ export default {
 		}
 	},
 	async getResource(song) {
-		if (song.live) {
-			const info = await ytdl.getInfo(song.url);
-			const formats = ytdl.filterFormats(info.formats, (format) => {
-				return format.isHLS && format.itag === 95;
-			});
+		const stream = await play.stream(song.url);
 
-			// const stream = await ytdl(song.url, {
-			// 	highWaterMark: 1 << 25,
-			// 	filter: (format) => format.isHLS && format.itag === 95
-			// });
-
-			return createAudioResource(formats[0].url);
-		}
-
-		const stream = await ytdl(song.url, {
-			filter: 'audioonly',
-			quality: 'highestaudio',
-			highWaterMark: 1 << 25
+		const resource = createAudioResource(stream.stream, {
+			inputType: stream.type
 		});
 
-		return createAudioResource(stream);
+		return resource;
 	}
 };

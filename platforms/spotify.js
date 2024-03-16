@@ -1,15 +1,14 @@
 import { createAudioResource } from '@discordjs/voice';
-
-import ytdl from 'ytdl-core';
-import { default as youtube } from 'youtube-sr';
-
+import { formatTimestamp } from '../utils/utils.js';
+import play from 'play-dl';
 import SpotifyWebApi from 'spotify-web-api-node';
-const { spotifyKey, spotifyClient } = process.env;
+
+const { SPOTIFY_KEY, SPOTIFY_CLIENT } = process.env;
 
 // credentials are optional
 const spotifyApi = new SpotifyWebApi({
-	clientId: spotifyClient,
-	clientSecret: spotifyKey,
+	clientId: SPOTIFY_CLIENT,
+	clientSecret: SPOTIFY_KEY,
 	redirectUri: 'http://www.example.com/callback'
 });
 
@@ -21,7 +20,7 @@ export default {
 	},
 	async getAudio({ args }) {
 		// spotify through youtube (music), playlist / track
-		if (!spotifyApi || !spotifyKey) {
+		if (!spotifyApi || !SPOTIFY_KEY) {
 			return {
 				data: [],
 				error: 'Spotify not configured'
@@ -40,24 +39,26 @@ export default {
 				spotifyApi.setAccessToken(credentialData.body['access_token']);
 				const songData = await spotifyApi.getTrack(slugs[1]);
 
-				// look for song on youtube
-				const video = await youtube.searchOne(
-					`${songData.body.name} ${songData.body.artists[0].name}`
-				);
+				if (!songData || songData.statusCode !== 200) {
+					return { data: [], error: "Couldn't find song" };
+				}
+
+				const { body } = songData;
 
 				/** @type {import('../').Song} */
 				const song = {
-					title: video.title || 'unknown',
-					id: video.id || 'unknown',
-					artist: 'unknown',
+					title: body.name || 'unknown',
+					id: body.id || 'unknown',
+					artist: body.artists[0].name || 'unknown',
 					platform: 'spotify',
 					message: 'Spotify song',
 					user: 'unknown',
-					duration: video.durationFormatted,
+					duration: formatTimestamp(body.duration_ms),
 					url: url.href,
 					live: false
 					// user: message.author.id
 				};
+
 				// preferibly only search youtube music/videos that are in the music categorie
 				// TODO add way to validate searched song
 				if (song.title?.toLocaleLowerCase().includes(songData.body.name.toLocaleLowerCase())) {
@@ -123,22 +124,28 @@ export default {
 		};
 	},
 	async getResource(song) {
-		const video = await youtube.searchOne(`${song.artist} ${song.title}`);
+		const yt_info = await play.search(`${song.title} ${song.artist}`, {
+			limit: 1
+		});
 
-		if (!video.title) return undefined; // change to a throw?
+		if (!yt_info[0]) return undefined;
+
+		const video = yt_info[0];
+
+		if (!video.title) return undefined;
 
 		// TODO add better way to validate searched song
 		if (video.title.toLowerCase().includes(song.title.toLowerCase())) {
-			const stream = await ytdl(`https://youtu.be/${video.id}`, {
-				filter: 'audioonly',
-				quality: 'highestaudio',
-				highWaterMark: 1 << 25
+			const stream = await play.stream(video.url);
+
+			const resource = createAudioResource(stream.stream, {
+				inputType: stream.type
 			});
 
-			return createAudioResource(stream);
+			return resource;
 		}
 
-		return undefined; // change to a throw?
+		return undefined; // TODO: change to a throw?
 	}
 };
 

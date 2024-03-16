@@ -18,12 +18,6 @@ describe('ping', () => {
 		react: react
 	};
 
-	it('should return pong (chat)', async () => {
-		// @ts-ignore
-		await command.command({ message });
-		expect(send).toHaveBeenCalledWith('pong!');
-	});
-
 	/** @type { unknown | import('discord.js').ChatInputCommandInteraction} */
 	const interaction = {
 		reply: reply

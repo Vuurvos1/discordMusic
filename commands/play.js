@@ -11,41 +11,25 @@ import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discord
 import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import { platforms } from '../platforms/index.js';
 
+// TODO: add optional top option, to place song at top of queue
+
 /** @type {import('../').Command} */
 export default {
 	name: 'play',
 	description: 'Play a song',
-	aliases: ['p', 'sr'],
-	interactionOptions: new SlashCommandBuilder().addStringOption((option) =>
-		option.setName('song').setDescription('song name or url').setRequired(true)
-	),
+	interactionOptions: new SlashCommandBuilder()
+		.setName('play')
+		.setDescription('Play a song')
+		.addStringOption((option) =>
+			option.setName('search').setDescription('Search term or url of the song').setRequired(true)
+		),
 	permissions: {
 		memberInVoice: true
 	},
 
-	command: async ({ message, args }) => {
-		// if no argument is given
-		if (args.length < 1) {
-			return message.channel.send('Please enter a valid url or search query');
-		}
-
-		if (!message.member) return;
-
-		const voiceChannel = message.member.voice.channel;
-
-		if (!voiceChannel) return;
-
-		if (!canJoinVoiceChannel(voiceChannel, message.client.user)) {
-			return message.channel.send(
-				'I need the permissions to join and speak in your voice channel!'
-			);
-		}
-
-		getAudio(args, message, voiceChannel);
-	},
-
 	interaction: async ({ interaction }) => {
-		const songOption = interaction.options.get('song');
+		const songOption = interaction.options.get('search');
+
 		if (!songOption) return;
 
 		const song = songOption.value?.toString();

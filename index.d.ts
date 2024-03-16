@@ -35,14 +35,8 @@ export type GuildQueueItem = {
 export type Command = {
 	name: string;
 	description: string;
-	aliases: string[];
 	interactionOptions?: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>; // TODO: unsure if this is the correct type
 	permissions?: { memberInVoice?: boolean }; // TODO: change to a boolean array?
-	command: (params: {
-		message: Message;
-		args: string[];
-		server: GuildQueueItem | undefined;
-	}) => any; // Message, string[], discord client
 	interaction: (params: {
 		interaction: ChatInputCommandInteraction;
 		server: GuildQueueItem | undefined;
