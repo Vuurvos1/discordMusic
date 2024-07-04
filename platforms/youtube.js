@@ -84,7 +84,6 @@ export default {
 			dlChunkSize: 0,
 			quality: 'lowestaudio'
 		});
-		console.info(stream);
 
 		const resource = createAudioResource(stream, {
 			inputType: "opus"
