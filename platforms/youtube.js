@@ -2,7 +2,7 @@ import { URL } from 'node:url';
 import { createAudioResource } from '@discordjs/voice';
 import { isValidUrl } from '../utils/utils.js';
 import { YouTube } from 'youtube-sr';
-import play from 'play-dl';
+import ytdl from 'ytdl-core-discord';
 
 /** @type {import('../').PlatformInterface} */
 export default {
@@ -78,10 +78,16 @@ export default {
 		}
 	},
 	async getResource(song) {
-		const stream = await play.stream(song.url);
+		const stream = await ytdl(song.url, {
+			highWaterMark: 1 << 62,
+			liveBuffer: 1 << 62,
+			dlChunkSize: 0,
+			quality: 'lowestaudio'
+		});
+		console.info(stream);
 
-		const resource = createAudioResource(stream.stream, {
-			inputType: stream.type
+		const resource = createAudioResource(stream, {
+			inputType: "opus"
 		});
 
 		return resource;
