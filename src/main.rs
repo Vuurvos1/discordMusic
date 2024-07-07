@@ -60,6 +60,7 @@ async fn main() {
             commands::join::join(),
             leave(),
             commands::play::play(),
+            commands::skip::skip(),
         ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some(String::from("~")),

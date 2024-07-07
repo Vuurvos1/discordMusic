@@ -22,9 +22,14 @@ pub async fn play(
             } else {
                 YoutubeDl::new(data.http.clone(), search)
             };
-            let _ = handler.play_input(src.into());
 
-            check_msg(ctx.say("Playing song").await);
+            let _ = handler.enqueue_input(src.into()).await;
+
+            if !handler.queue().is_empty() {
+                check_msg(ctx.say("Playing song").await);
+            } else {
+                check_msg(ctx.say("Added to queue").await);
+            }
         } else {
             check_msg(ctx.say("Not in a voice channel to play in").await);
         }
