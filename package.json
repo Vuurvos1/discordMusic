@@ -14,13 +14,13 @@
 	"dependencies": {
 		"@discordjs/opus": "^0.9.0",
 		"@discordjs/voice": "^0.16.1",
-		"discord.js": "^14.14.1",
+		"discord.js": "^14.15.3",
 		"ffmpeg-static": "^4.4.1",
-		"libsodium-wrappers": "^0.7.13",
-		"play-dl": "^1.9.7",
+		"libsodium-wrappers": "^0.7.14",
+		"play-dl": "https://github.com/Yoduh/play-dl-test",
 		"spotify-web-api-node": "^5.0.2",
 		"twitch-m3u8": "^1.1.5",
-		"youtube-sr": "^4.3.10"
+		"youtube-sr": "^4.3.11"
 	},
 	"devDependencies": {
 		"@vitest/coverage-v8": "^0.34.6",
