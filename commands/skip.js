@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
 /** @type {import('../').Command} */
@@ -14,7 +15,7 @@ export default {
 		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to skip!')],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -24,8 +25,7 @@ export default {
 
 		const songTitle = server.songs[0].title; // get current song title
 		return interaction.reply({
-			embeds: [defaultEmbed(`Skipped \`${songTitle}\``)],
-			ephemeral: false
+			embeds: [defaultEmbed(`Skipped \`${songTitle}\``)]
 		});
 	}
 };

@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
 /** @type {import('../').Command} */
@@ -14,7 +15,7 @@ export default {
 		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to unpause')],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -23,8 +24,7 @@ export default {
 		server.audioPlayer.unpause();
 		server.paused = false;
 		return interaction.reply({
-			embeds: [defaultEmbed('Unpaused music')],
-			ephemeral: false
+			embeds: [defaultEmbed('Unpaused music')]
 		});
 	}
 };

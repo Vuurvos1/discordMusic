@@ -8,7 +8,7 @@ import {
 import { queuedEmbed, defaultEmbed, errorEmbed } from '../utils/embeds.js';
 import { searchSong } from '../utils/music.js';
 import { joinVoiceChannel, createAudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
-import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import { EmbedBuilder, SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { platforms } from '../platforms/index.js';
 
 // TODO: add optional top option, to place song at top of queue
@@ -39,7 +39,7 @@ export default {
 		if (song.trim().length < 1) {
 			return interaction.reply({
 				embeds: [errorEmbed('Please enter a valid argument')],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -55,7 +55,7 @@ export default {
 		if (!canJoinVoiceChannel(voiceChannel, interaction.client.user)) {
 			return interaction.reply({
 				embeds: [errorEmbed('I need the permissions to join and speak in your voice channel!')],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -74,7 +74,7 @@ async function getAudioResource(song) {
 
 /**
  * @param {string[]} args
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param { import('discord.js').ChatInputCommandInteraction} message
  * @param {import('discord.js').VoiceChannel | import('discord.js').VoiceBasedChannel} voiceChannel
  */
 async function getAudio(args, message, voiceChannel) {
@@ -106,7 +106,13 @@ async function getAudio(args, message, voiceChannel) {
 
 	if (songsData.error) {
 		// send error message
-		sendMessage(message, { embeds: [errorEmbed(songsData.message)] }, false);
+		sendMessage(
+			message,
+			{
+				embeds: [errorEmbed(songsData.message)]
+			},
+			false
+		);
 		return;
 	}
 

@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import { errorEmbed } from '../utils/embeds.js';
 import { leaveVoiceChannel } from '../utils/utils.js';
 
@@ -15,15 +16,14 @@ export default {
 		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed("I'm not in a voice channel")],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
 		leaveVoiceChannel(interaction.guild.id);
 
 		return interaction.reply({
-			content: "I've left the voice channel",
-			ephemeral: false
+			content: "I've left the voice channel"
 		});
 	}
 };

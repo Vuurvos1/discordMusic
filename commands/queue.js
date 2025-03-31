@@ -1,3 +1,5 @@
+import { MessageFlags } from 'discord.js';
+
 /** @type {import('../').Command} */
 export default {
 	name: 'queue',
@@ -12,13 +14,13 @@ export default {
 		if (!server || server.songs.length < 1) {
 			return interaction.reply({
 				content: '```nim\nThe queue is empty ;-;\n```',
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
 		return interaction.reply({
 			content: buildQueueMsg(server.songs.slice(0, 10)),
-			ephemeral: true
+			flags: MessageFlags.Ephemeral
 		});
 	}
 };

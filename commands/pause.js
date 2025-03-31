@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
 /** @type {import('../').Command} */
@@ -14,7 +15,7 @@ export default {
 		if (!server || server.paused) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to pause')],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -23,8 +24,7 @@ export default {
 		server.audioPlayer.pause();
 		server.paused = true;
 		return interaction.reply({
-			embeds: [defaultEmbed('Paused music')],
-			ephemeral: false
+			embeds: [defaultEmbed('Paused music')]
 		});
 	}
 };

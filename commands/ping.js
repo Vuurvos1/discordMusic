@@ -1,3 +1,5 @@
+import { MessageFlags } from 'discord.js';
+
 /** @type {import('../').Command} */
 export default {
 	name: 'ping',
@@ -9,7 +11,7 @@ export default {
 	interaction: async ({ interaction }) => {
 		return interaction.reply({
 			content: 'pong!',
-			ephemeral: true
+			flags: MessageFlags.Ephemeral
 		});
 	}
 };

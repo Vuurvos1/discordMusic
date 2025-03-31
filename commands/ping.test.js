@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import { describe, it, expect, vi } from 'vitest';
 import command from './ping';
 
@@ -28,7 +29,7 @@ describe('ping', () => {
 		await command.interaction({ interaction });
 		expect(reply).toHaveBeenCalledWith({
 			content: 'pong!',
-			ephemeral: true
+			flags: MessageFlags.Ephemeral
 		});
 	});
 });

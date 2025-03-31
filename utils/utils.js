@@ -1,4 +1,4 @@
-import { EmbedBuilder, PermissionsBitField } from 'discord.js';
+import { EmbedBuilder, PermissionsBitField, MessageFlags } from 'discord.js';
 
 /** @type {Map<string, import('../').GuildQueueItem>} */
 export const servers = new Map();
@@ -11,7 +11,7 @@ export const colors = {
 
 /**
  * Check if a user is in a voice channel
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
+ * @param { import('discord.js').ChatInputCommandInteraction} message
  * @returns {boolean}
  * */
 export function inVoiceChannel(message) {
@@ -85,21 +85,16 @@ export function isValidUrl(urlString) {
 }
 
 /**
- * @param {import('discord.js').Message | import('discord.js').ChatInputCommandInteraction} message
- * @param {import('discord.js').MessageCreateOptions } messagePayload
+ * @param  {import('discord.js').ChatInputCommandInteraction} message
+ * @param {import('discord.js').InteractionReplyOptions } messagePayload
  * @param {boolean} ephemeral
  */
 export function sendMessage(message, messagePayload, ephemeral = false) {
-	// Switch this so ephemeral is default, and just pass it to channel send where it should be ignored
-
-	if (message?.isCommand) {
-		// slash command
-		// @ts-ignore funky type conversion
-		message.reply({ ...messagePayload, ephemeral });
-	} else {
-		// text command
-		message.channel?.send(messagePayload);
+	if (ephemeral) {
+		messagePayload.flags = MessageFlags.Ephemeral;
 	}
+
+	message.reply(messagePayload);
 }
 
 /**

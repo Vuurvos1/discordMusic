@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { colors } from '../utils/utils.js';
 
 /** @type {import('../index.js').Command} */
@@ -17,7 +17,7 @@ export default {
 		if (!commands) {
 			return interaction.reply({
 				content: 'No commands found',
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -38,7 +38,7 @@ export default {
 
 		return interaction.reply({
 			embeds: [embed],
-			ephemeral: true
+			flags: MessageFlags.Ephemeral
 		});
 	}
 };

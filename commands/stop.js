@@ -13,8 +13,7 @@ export default {
 
 		if (!server) {
 			return interaction.reply({
-				embeds: [errorEmbed('Nothing to stop!')],
-				ephemeral: false
+				embeds: [errorEmbed('Nothing to stop!')]
 			});
 		}
 
@@ -25,8 +24,7 @@ export default {
 		}
 
 		return interaction.reply({
-			embeds: [defaultEmbed('Stopped music')],
-			ephemeral: false
+			embeds: [defaultEmbed('Stopped music')]
 		});
 	}
 };

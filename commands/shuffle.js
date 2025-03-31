@@ -18,8 +18,7 @@ export default {
 		server.songs.sort(() => Math.random() - 0.5);
 
 		return interaction.reply({
-			content: 'Shuffled queue',
-			ephemeral: false
+			content: 'Shuffled queue'
 		});
 	}
 };

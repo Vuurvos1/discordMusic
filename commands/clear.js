@@ -1,3 +1,4 @@
+import { MessageFlags } from 'discord.js';
 import { errorEmbed, defaultEmbed } from '../utils/embeds.js';
 
 /** @type {import('../').Command} */
@@ -14,7 +15,7 @@ export default {
 		if (!server) {
 			return interaction.reply({
 				embeds: [errorEmbed('Nothing to clear')],
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		}
 
@@ -22,8 +23,7 @@ export default {
 		server.songs = [server.songs[0]];
 
 		return interaction.reply({
-			embeds: [defaultEmbed('Cleared the queue')],
-			ephemeral: false
+			embeds: [defaultEmbed('Cleared the queue')]
 		});
 	}
 };
