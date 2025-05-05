@@ -1,12 +1,3 @@
-//! Requires the "client", "standard_framework", and "voice" features be enabled in your
-//! Cargo.toml, like so:
-//!
-//! ```toml
-//! [dependencies.serenity]
-//! git = "https://github.com/serenity-rs/serenity.git"
-//! features = ["client", "standard_framework", "voice"]
-//! ```
-
 mod commands;
 
 use std::sync::Arc;
@@ -14,9 +5,19 @@ use std::sync::Arc;
 use dotenv::dotenv;
 
 use serenity::all as serenity;
+use serenity::{
+    async_trait,
+    client::{Client, EventHandler},
+    model::{channel::Message, gateway::Ready},
+    prelude::{GatewayIntents, TypeMapKey},
+    Result as SerenityResult,
+};
 
 // Event related imports to detect track creation failures.
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler, TrackEvent};
+
+// To turn user URLs into playable audio, we'll use yt-dlp.
+use songbird::input::YoutubeDl;
 
 // YtDl requests need an HTTP client to operate -- we'll create and store our own.
 use reqwest::Client as HttpClient;
@@ -33,7 +34,7 @@ type CommandResult = Result<(), Error>;
 struct Handler;
 
 #[serenity::async_trait]
-impl serenity::EventHandler for Handler {
+impl EventHandler for Handler {
     async fn ready(&self, _: serenity::Context, ready: serenity::Ready) {
         println!("{} is connected!", ready.user.name);
     }
@@ -46,7 +47,7 @@ async fn main() {
     dotenv().ok().expect("Failed to load .env file");
 
     // Configure the client with your Discord bot token in the environment.
-    let token = std::env::var("TOKEN").expect("Discord token must be set.");
+    let token = std::env::var("DISCORD_TOKEN").expect("Discord token must be set.");
 
     // Create our songbird voice manager
     let manager = songbird::Songbird::serenity();
@@ -54,13 +55,15 @@ async fn main() {
     // Configure our command framework
     let options = poise::FrameworkOptions {
         commands: vec![
-            deafen(),
-            undeafen(),
+            // deafen(),
+            // undeafen(),
+            // commands::join::join(),
+            // leave(),
+            // commands::play::play(),
+            // commands::skip::skip(),
             commands::ping::ping(),
-            commands::join::join(),
-            leave(),
-            commands::play::play(),
-            commands::skip::skip(),
+            join(),
+            play(),
         ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some(String::from("~")),
@@ -74,7 +77,7 @@ async fn main() {
 
     let framework = poise::Framework::builder()
         .options(options)
-        .setup(|ctx: &::serenity::prelude::Context, _ready, framework| {
+        .setup(|ctx: &serenity::Context, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
@@ -89,14 +92,13 @@ async fn main() {
         })
         .build();
 
-    let intents =
-        serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
     let mut client = serenity::Client::builder(&token, intents)
         .voice_manager_arc(manager)
         .event_handler(Handler)
         .framework(framework)
         .await
-        .expect("Err creating client");
+        .expect("Error creating client");
 
     tokio::spawn(async move {
         let _ = client
@@ -110,42 +112,37 @@ async fn main() {
 }
 
 // #[poise::command(slash_command, guild_only)]
-// async fn ping(ctx: Context<'_>) -> CommandResult {
-//     let _ = ctx.reply("Pong!").await;
+
+// #[poise::command(slash_command, guild_only)]
+// async fn deafen(ctx: Context<'_>) -> CommandResult {
+//     let guild_id = ctx.guild_id().unwrap();
+//     let manager = &ctx.data().songbird;
+
+//     let handler_lock = match manager.get(guild_id) {
+//         Some(handler) => handler,
+//         None => {
+//             check_msg(ctx.reply("Not in a voice channel").await);
+
+//             return Ok(());
+//         }
+//     };
+
+//     let mut handler = handler_lock.lock().await;
+
+//     if handler.is_deaf() {
+//         check_msg(ctx.say("Already deafened").await);
+//     } else {
+//         if let Err(e) = handler.deafen(true).await {
+//             check_msg(ctx.say(format!("Failed: {:?}", e)).await);
+//         }
+
+//         check_msg(ctx.say("Deafened").await);
+//     }
+
 //     Ok(())
 // }
 
-#[poise::command(slash_command, guild_only)]
-async fn deafen(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
-    let manager = &ctx.data().songbird;
-
-    let handler_lock = match manager.get(guild_id) {
-        Some(handler) => handler,
-        None => {
-            check_msg(ctx.reply("Not in a voice channel").await);
-
-            return Ok(());
-        }
-    };
-
-    let mut handler = handler_lock.lock().await;
-
-    if handler.is_deaf() {
-        check_msg(ctx.say("Already deafened").await);
-    } else {
-        if let Err(e) = handler.deafen(true).await {
-            check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-        }
-
-        check_msg(ctx.say("Deafened").await);
-    }
-
-    Ok(())
-}
-
 struct TrackErrorNotifier;
-
 #[serenity::async_trait]
 impl VoiceEventHandler for TrackErrorNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
@@ -164,91 +161,198 @@ impl VoiceEventHandler for TrackErrorNotifier {
 }
 
 #[poise::command(slash_command, guild_only)]
-async fn leave(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
+async fn join(ctx: Context<'_>) -> CommandResult {
+    println!("join");
 
-    let manager = &ctx.data().songbird;
-    let has_handler = manager.get(guild_id).is_some();
+    let (guild_id, channel_id) = {
+        let guild = ctx.guild().unwrap();
+        let channel_id = guild
+            .voice_states
+            .get(&ctx.author().id)
+            .and_then(|voice_state| voice_state.channel_id);
 
-    if has_handler {
-        if let Err(e) = manager.remove(guild_id).await {
-            check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-        }
+        (guild.id, channel_id)
+    };
 
-        check_msg(ctx.say("Left voice channel").await);
-    } else {
-        check_msg(ctx.reply("Not in a voice channel").await);
-    }
-
-    Ok(())
-}
-
-#[poise::command(slash_command, guild_only)]
-async fn mute(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
-    let manager = &ctx.data().songbird;
-
-    let handler_lock = match manager.get(guild_id) {
-        Some(handler) => handler,
+    let connect_to = match channel_id {
+        Some(channel) => channel,
         None => {
             check_msg(ctx.reply("Not in a voice channel").await);
-
             return Ok(());
         }
     };
 
+    let manager = &ctx.data().songbird;
+    if let Ok(handler_lock) = manager.join(guild_id, connect_to).await {
+        // Attach an event handler to see notifications of all track errors.
+        let mut handler = handler_lock.lock().await;
+        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+    }
+
+    Ok(())
+}
+
+/// Play a song
+#[poise::command(slash_command, guild_only)]
+async fn play(
+    ctx: Context<'_>,
+    #[description = "Search term or url of the song"] search: String,
+) -> CommandResult {
+    println!("play");
+    println!("search: {}", search);
+
+    let do_search = !search.starts_with("http");
+
+    let guild_id = ctx.guild_id().unwrap();
+    let data = ctx.data();
+    let manager = &data.songbird;
+
+    // Check if the bot is already in a voice channel in this guild.
+    let handler_lock = if manager.get(guild_id).is_none() {
+        // Not in a channel, try to join the user's channel.
+        let channel_id = {
+            let guild = ctx.guild().unwrap();
+            guild
+                .voice_states
+                .get(&ctx.author().id)
+                .and_then(|voice_state| voice_state.channel_id)
+        };
+
+        let connect_to = match channel_id {
+            Some(channel) => channel,
+            None => {
+                check_msg(ctx.reply("You are not in a voice channel.").await);
+                return Ok(());
+            }
+        };
+
+        // Attempt to join the channel.
+        match manager.join(guild_id, connect_to).await {
+            Ok(handler_lock) => {
+                // Successfully joined, add the error notifier.
+                let mut handler = handler_lock.lock().await;
+                handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+                drop(handler); // Release lock before returning
+                handler_lock // Return the handler lock for later use
+            }
+            Err(e) => {
+                check_msg(ctx.say(format!("Error joining channel: {:?}", e)).await);
+                return Ok(());
+            }
+        }
+    } else {
+        // Already in a channel, get the existing handler lock.
+        // .unwrap() is safe here because we checked is_none() above.
+        manager.get(guild_id).unwrap()
+    };
+
+    // TODO: this doesn't queue the songs
+
+    // Now we have the handler lock, either from joining or because we were already in.
     let mut handler = handler_lock.lock().await;
 
-    if handler.is_mute() {
-        check_msg(ctx.say("Already muted").await);
+    let src = if do_search {
+        YoutubeDl::new_search(data.http.clone(), search)
     } else {
-        if let Err(e) = handler.mute(true).await {
-            check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-        }
+        YoutubeDl::new(data.http.clone(), search)
+    };
 
-        check_msg(ctx.say("Now muted").await);
-    }
+    // Set cookies path - You might need this depending on your yt-dlp issues
+    // src.cookies = Some("./cookies.txt".into());
+
+    let _ = handler.play_input(src.into());
+
+    check_msg(ctx.say("Playing song").await);
 
     Ok(())
 }
 
-#[poise::command(prefix_command, guild_only)]
-async fn undeafen(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
-    let manager = &ctx.data().songbird;
+// #[poise::command(slash_command, guild_only)]
+// async fn leave(ctx: Context<'_>) -> CommandResult {
+//     let guild_id = ctx.guild_id().unwrap();
 
-    if let Some(handler_lock) = manager.get(guild_id) {
-        let mut handler = handler_lock.lock().await;
-        if let Err(e) = handler.deafen(false).await {
-            check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-        }
+//     let manager = &ctx.data().songbird;
+//     let has_handler = manager.get(guild_id).is_some();
 
-        check_msg(ctx.say("Undeafened").await);
-    } else {
-        check_msg(ctx.say("Not in a voice channel to undeafen in").await);
-    }
+//     if has_handler {
+//         if let Err(e) = manager.remove(guild_id).await {
+//             check_msg(ctx.say(format!("Failed: {:?}", e)).await);
+//         }
 
-    Ok(())
-}
+//         check_msg(ctx.say("Left voice channel").await);
+//     } else {
+//         check_msg(ctx.reply("Not in a voice channel").await);
+//     }
 
-#[poise::command(slash_command, guild_only)]
-async fn unmute(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
-    let manager = &ctx.data().songbird;
+//     Ok(())
+// }
 
-    if let Some(handler_lock) = manager.get(guild_id) {
-        let mut handler = handler_lock.lock().await;
-        if let Err(e) = handler.mute(false).await {
-            check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-        }
+// #[poise::command(slash_command, guild_only)]
+// async fn mute(ctx: Context<'_>) -> CommandResult {
+//     let guild_id = ctx.guild_id().unwrap();
+//     let manager = &ctx.data().songbird;
 
-        check_msg(ctx.say("Unmuted").await);
-    } else {
-        check_msg(ctx.say("Not in a voice channel to unmute in").await);
-    }
+//     let handler_lock = match manager.get(guild_id) {
+//         Some(handler) => handler,
+//         None => {
+//             check_msg(ctx.reply("Not in a voice channel").await);
 
-    Ok(())
-}
+//             return Ok(());
+//         }
+//     };
+
+//     let mut handler = handler_lock.lock().await;
+
+//     if handler.is_mute() {
+//         check_msg(ctx.say("Already muted").await);
+//     } else {
+//         if let Err(e) = handler.mute(true).await {
+//             check_msg(ctx.say(format!("Failed: {:?}", e)).await);
+//         }
+
+//         check_msg(ctx.say("Now muted").await);
+//     }
+
+//     Ok(())
+// }
+
+// #[poise::command(prefix_command, guild_only)]
+// async fn undeafen(ctx: Context<'_>) -> CommandResult {
+//     let guild_id = ctx.guild_id().unwrap();
+//     let manager = &ctx.data().songbird;
+
+//     if let Some(handler_lock) = manager.get(guild_id) {
+//         let mut handler = handler_lock.lock().await;
+//         if let Err(e) = handler.deafen(false).await {
+//             check_msg(ctx.say(format!("Failed: {:?}", e)).await);
+//         }
+
+//         check_msg(ctx.say("Undeafened").await);
+//     } else {
+//         check_msg(ctx.say("Not in a voice channel to undeafen in").await);
+//     }
+
+//     Ok(())
+// }
+
+// #[poise::command(slash_command, guild_only)]
+// async fn unmute(ctx: Context<'_>) -> CommandResult {
+//     let guild_id = ctx.guild_id().unwrap();
+//     let manager = &ctx.data().songbird;
+
+//     if let Some(handler_lock) = manager.get(guild_id) {
+//         let mut handler = handler_lock.lock().await;
+//         if let Err(e) = handler.mute(false).await {
+//             check_msg(ctx.say(format!("Failed: {:?}", e)).await);
+//         }
+
+//         check_msg(ctx.say("Unmuted").await);
+//     } else {
+//         check_msg(ctx.say("Not in a voice channel to unmute in").await);
+//     }
+
+//     Ok(())
+// }
 
 /// Checks that a message successfully sent; if not, then logs why to stdout.
 fn check_msg<T>(result: serenity::Result<T>) {
@@ -256,3 +360,10 @@ fn check_msg<T>(result: serenity::Result<T>) {
         println!("Error sending message: {:?}", why);
     }
 }
+
+// /// Checks that a message successfully sent; if not, then logs why to stdout.
+// fn check_msg(result: SerenityResult<Message>) {
+//     if let Err(why) = result {
+//         println!("Error sending message: {:?}", why);
+//     }
+// }
