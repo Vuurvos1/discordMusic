@@ -5,13 +5,7 @@ use std::sync::Arc;
 use dotenv::dotenv;
 
 use serenity::all as serenity;
-use serenity::{
-    async_trait,
-    client::{Client, EventHandler},
-    model::{channel::Message, gateway::Ready},
-    prelude::{GatewayIntents, TypeMapKey},
-    Result as SerenityResult,
-};
+use serenity::{client::EventHandler, prelude::GatewayIntents};
 
 // Event related imports to detect track creation failures.
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler, TrackEvent};
@@ -222,7 +216,7 @@ async fn play(
     };
 
     // Enqueue the source using songbird's built-in queue
-    let track_handle = handler.enqueue_input(src.into()).await;
+    let _track_handle = handler.enqueue_input(src.into()).await;
     // track_handle.
 
     // Update the confirmation message based on queue state
@@ -314,7 +308,7 @@ async fn skip(ctx: Context<'_>) -> CommandResult {
     Ok(())
 }
 
-// #[poise::command(slash_command, guild_only)]
+#[poise::command(slash_command, guild_only)]
 async fn pause(ctx: Context<'_>) -> CommandResult {
     println!("pause");
 
