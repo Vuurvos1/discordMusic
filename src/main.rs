@@ -269,14 +269,23 @@ async fn leave(ctx: Context<'_>) -> CommandResult {
         }
 
         if let Err(e) = manager.remove(guild_id).await {
-            check_msg(ctx.say(format!("Failed: {:?}", e)).await);
+            let reply = poise::CreateReply::default()
+                .content("Failed to leave voice channel")
+                .ephemeral(true);
+            check_msg(ctx.send(reply).await);
+            println!("Failed to leave voice channel: {:?}", e);
+            return Ok(());
         }
 
         check_msg(ctx.say("Cleared queue and left voice channel").await);
     } else {
-        check_msg(ctx.reply("Not in a voice channel").await);
+        let reply = poise::CreateReply::default()
+            .content("Not in a voice channel")
+            .ephemeral(true);
+        check_msg(ctx.send(reply).await);
     }
 
+    check_msg(ctx.say("Left voice channel").await);
     Ok(())
 }
 
@@ -443,10 +452,3 @@ fn check_msg<T>(result: serenity::Result<T>) {
         println!("Error sending message: {:?}", why);
     }
 }
-
-// /// Checks that a message successfully sent; if not, then logs why to stdout.
-// fn check_msg(result: SerenityResult<Message>) {
-//     if let Err(why) = result {
-//         println!("Error sending message: {:?}", why);
-//     }
-// }

@@ -36,3 +36,7 @@ await coms.forEach(async (com) => {
 await client.application.commands.set([]); // clear all global commands
 console.log(await client.api.applications(client.user.id).commands.get()); //
 ``` -->
+
+## TODO
+
+- Add a docker file to run the bot
