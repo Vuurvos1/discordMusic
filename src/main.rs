@@ -49,15 +49,13 @@ async fn main() {
     // Configure our command framework
     let options = poise::FrameworkOptions {
         commands: vec![
-            // commands::join::join(),
-            // commands::play::play(),
-            // commands::skip::skip(),
             commands::ping::ping(),
             join(),
             play(),
             skip(),
-            leave(),
-            pause(),
+            commands::leave::leave(),
+            commands::pause::pause(),
+            commands::stop::stop(),
         ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some(String::from("~")),
@@ -138,7 +136,10 @@ async fn join(ctx: Context<'_>) -> CommandResult {
     let connect_to = match channel_id {
         Some(channel) => channel,
         None => {
-            check_msg(ctx.reply("Not in a voice channel").await);
+            let reply = poise::CreateReply::default()
+                .content("Not in a voice channel")
+                .ephemeral(true);
+            check_msg(ctx.send(reply).await);
             return Ok(());
         }
     };
@@ -181,7 +182,10 @@ async fn play(
         let connect_to = match channel_id {
             Some(channel) => channel,
             None => {
-                check_msg(ctx.reply("You are not in a voice channel.").await);
+                let reply = poise::CreateReply::default()
+                    .content("You are not in a voice channel.")
+                    .ephemeral(true);
+                check_msg(ctx.send(reply).await);
                 return Ok(());
             }
         };
@@ -255,44 +259,7 @@ async fn play(
 }
 
 #[poise::command(slash_command, guild_only)]
-async fn leave(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
-
-    let manager = &ctx.data().songbird;
-    let has_handler = manager.get(guild_id).is_some();
-
-    if has_handler {
-        // Get the handler and clear the queue before leaving
-        if let Some(handler_lock) = manager.get(guild_id) {
-            let handler = handler_lock.lock().await;
-            handler.queue().stop();
-        }
-
-        if let Err(e) = manager.remove(guild_id).await {
-            let reply = poise::CreateReply::default()
-                .content("Failed to leave voice channel")
-                .ephemeral(true);
-            check_msg(ctx.send(reply).await);
-            println!("Failed to leave voice channel: {:?}", e);
-            return Ok(());
-        }
-
-        check_msg(ctx.say("Cleared queue and left voice channel").await);
-    } else {
-        let reply = poise::CreateReply::default()
-            .content("Not in a voice channel")
-            .ephemeral(true);
-        check_msg(ctx.send(reply).await);
-    }
-
-    check_msg(ctx.say("Left voice channel").await);
-    Ok(())
-}
-
-#[poise::command(slash_command, guild_only)]
 async fn skip(ctx: Context<'_>) -> CommandResult {
-    println!("skip");
-
     let guild_id = ctx.guild_id().unwrap();
 
     let manager = &ctx.data().songbird;
@@ -306,54 +273,28 @@ async fn skip(ctx: Context<'_>) -> CommandResult {
         let skip_result = queue.skip();
 
         if let Ok(_skipped) = skip_result {
-            check_msg(ctx.say(format!("Skipped")).await);
+            check_msg(ctx.say("Skipped").await);
         } else {
             check_msg(ctx.say("Failed to skip").await);
         }
     } else {
-        check_msg(ctx.reply("Not in a voice channel").await);
+        let reply = poise::CreateReply::default().content("Not in a voice channel");
+        check_msg(ctx.send(reply).await);
     }
 
     Ok(())
 }
 
-#[poise::command(slash_command, guild_only)]
-async fn pause(ctx: Context<'_>) -> CommandResult {
-    println!("pause");
-
-    let guild_id = ctx.guild_id().unwrap();
-    let manager = &ctx.data().songbird;
-
-    let handler_lock = match manager.get(guild_id) {
-        Some(handler) => handler,
-        None => {
-            check_msg(ctx.reply("Not in a voice channel").await);
-            return Ok(());
-        }
-    };
-
-    let handler = handler_lock.lock().await;
-    let queue = handler.queue();
-    let paused = queue.pause();
-
-    if let Err(e) = paused {
-        check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-    }
-
-    Ok(())
-}
-
-#[poise::command(slash_command, guild_only)]
+#[poise::command(slash_command, guild_only, aliases("unpause"))]
 async fn resume(ctx: Context<'_>) -> CommandResult {
-    println!("resume");
-
     let guild_id = ctx.guild_id().unwrap();
     let manager = &ctx.data().songbird;
 
     let handler_lock = match manager.get(guild_id) {
         Some(handler) => handler,
         None => {
-            check_msg(ctx.reply("Not in a voice channel").await);
+            let reply = poise::CreateReply::default().content("Not in a voice channel");
+            check_msg(ctx.send(reply).await);
             return Ok(());
         }
     };
@@ -365,6 +306,8 @@ async fn resume(ctx: Context<'_>) -> CommandResult {
     if let Err(e) = resumed {
         check_msg(ctx.say(format!("Failed: {:?}", e)).await);
     }
+
+    check_msg(ctx.say("Resumed").await);
 
     Ok(())
 }
@@ -393,35 +336,6 @@ async fn resume(ctx: Context<'_>) -> CommandResult {
 //         }
 
 //         check_msg(ctx.say("Deafened").await);
-//     }
-
-//     Ok(())
-// }
-
-// #[poise::command(slash_command, guild_only)]
-// async fn mute(ctx: Context<'_>) -> CommandResult {
-//     let guild_id = ctx.guild_id().unwrap();
-//     let manager = &ctx.data().songbird;
-
-//     let handler_lock = match manager.get(guild_id) {
-//         Some(handler) => handler,
-//         None => {
-//             check_msg(ctx.reply("Not in a voice channel").await);
-
-//             return Ok(());
-//         }
-//     };
-
-//     let mut handler = handler_lock.lock().await;
-
-//     if handler.is_mute() {
-//         check_msg(ctx.say("Already muted").await);
-//     } else {
-//         if let Err(e) = handler.mute(true).await {
-//             check_msg(ctx.say(format!("Failed: {:?}", e)).await);
-//         }
-
-//         check_msg(ctx.say("Now muted").await);
 //     }
 
 //     Ok(())
