@@ -7,9 +7,16 @@ A Discord bot that plays music
 
 ## Adding the bot to your server
 
-In de discord developer portal make sure you have selected `bot` and `applications.commands` under scope
+To add the bot to your Discord server, follow these steps:
 
-under Bot permissions, turn on administrator rights (or enable all voice and text related permissions)
+1.  **Navigate to the [Discord Developer Portal](https://discord.com/developers/applications).**
+2.  **Select your application.**
+3.  Under the "OAuth2" > "URL Generator" section, select the `bot` and `applications.commands` scopes.
+4.  A URL will be generated at the bottom of the page. Copy this URL and paste it into your browser.
+5.  Select the server you want to add the bot to and click "Authorize".
+6.  Back in the Discord Developer Portal, go to the "Bot" page.
+7.  Under "Privileged Gateway Intents", ensure "Message Content Intent" is enabled if your bot needs to read message content.
+8.  Under "Bot Permissions", grant the bot "Administrator" rights. Alternatively, you can enable all necessary voice and text-related permissions individually for more granular control.
 
 ## Features
 
@@ -20,7 +27,7 @@ under Bot permissions, turn on administrator rights (or enable all voice and tex
 
 - `play <song>`: play a song
 - `pause`: pause the current song
-- `resume`: resume the current song
+- `unpause`: resume the current song
 - `skip`: skip the current song
 - `queue`: show the current queue
 - `leave`: leave the voice channel
@@ -50,16 +57,15 @@ console.log(await client.api.applications(client.user.id).commands.get()); //
 
 First of all make sure you have rust installed
 
-```
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 make sure you have the following installed
 
-```
-sudo apt update
-sudo apt install build-essential libc6-dev
-sudo apt install cmake build-essential pkg-config libopus-dev
+```bash
+sudo apt update 
+sudo apt install build-essential libc6-dev cmake pkg-config libopus-dev
 ```
 
 ### yt-dlp
@@ -74,7 +80,8 @@ Note that when you install yt-dlp through pip, you might need to add the followi
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Note that when adding a song to the queue it might take a while to load the song.
+> [!NOTE]  
+> It might take a while to load the song when adding it to the queue.
 
 ## TODO
 
