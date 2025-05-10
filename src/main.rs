@@ -2,6 +2,7 @@ mod commands;
 
 use std::sync::Arc;
 
+use ::serenity::async_trait;
 use dotenv::dotenv;
 
 use serenity::all as serenity;
@@ -68,10 +69,6 @@ async fn main() {
         .setup(|ctx: &serenity::Context, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-
-                // We create a global HTTP client here to make use of in
-                // `/play`. If we wanted, we could supply cookies and auth
-                // details ahead of time.
                 Ok(UserData {
                     http: HttpClient::new(),
                     songbird: manager_clone,
@@ -159,6 +156,14 @@ async fn play(
                 // Successfully joined, add the error notifier.
                 let mut handler = handler_lock.lock().await;
                 handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+                handler.add_global_event(
+                    Event::Track(TrackEvent::End),
+                    TrackEndNotifier {
+                        guild_id: guild_id,
+                        songbird: Arc::clone(&manager),
+                    },
+                );
+
                 drop(handler); // Release lock before returning
                 handler_lock // Return the handler lock for later use
             }
@@ -185,46 +190,25 @@ async fn play(
     }
 
     let src = if do_search {
-        YoutubeDl::new_search(data.http.clone(), search)
+        YoutubeDl::new_search(data.http.clone(), search.clone())
     } else {
-        YoutubeDl::new(data.http.clone(), search)
+        YoutubeDl::new(data.http.clone(), search.clone())
     };
+
+    let queue_len = handler.queue().len();
+
+    if queue_len == 0 {
+        check_msg(ctx.say(format!("Playing: {}", search)).await);
+    } else {
+        let search_str = search.clone(); // Clone before moving into src
+        check_msg(
+            ctx.say(format!("Added \"{}\" to the queue", search_str))
+                .await,
+        );
+    }
 
     // Enqueue the source using songbird's built-in queue
     let _track_handle = handler.enqueue_input(src.into()).await;
-    // track_handle.
-
-    // Update the confirmation message based on queue state
-    let queue_len = handler.queue().len();
-    if queue_len == 1 {
-        check_msg(ctx.say("Playing").await);
-        // check_msg(
-        //     ctx.say(format!(
-        //         "Playing: {}",
-        //         track_handle
-        //             .metadata()
-        //             .title
-        //             .as_deref()
-        //             .unwrap_or("Unknown title")
-        //     ))
-        //     .await,
-        // );
-    } else {
-        check_msg(ctx.say("Added to queue").await);
-
-        // check_msg(
-        //     ctx.say(format!(
-        //         "Added to queue (position {}): {}",
-        //         queue_len,
-        //         track_handle
-        //             .metadata()
-        //             .title
-        //             .as_deref()
-        //             .unwrap_or("Unknown title")
-        //     ))
-        //     .await,
-        // );
-    }
 
     Ok(())
 }
@@ -233,5 +217,29 @@ async fn play(
 fn check_msg<T>(result: serenity::Result<T>) {
     if let Err(why) = result {
         println!("Error sending message: {:?}", why);
+    }
+}
+
+struct TrackEndNotifier {
+    guild_id: serenity::all::GuildId,
+    songbird: Arc<songbird::Songbird>,
+}
+
+#[async_trait]
+impl VoiceEventHandler for TrackEndNotifier {
+    async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
+        if let EventContext::Track(track_list) = ctx {
+            let manager = &self.songbird.clone();
+            let guild_id = self.guild_id;
+
+            // -1 because the track hasn't been removed from the queue yet
+            if track_list.len() - 1 <= 0 {
+                if let Err(e) = manager.remove(guild_id).await {
+                    println!("Error leaving guild {}: {:?}", guild_id, e);
+                }
+            }
+        }
+
+        None
     }
 }
