@@ -8,8 +8,6 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
     let manager = &ctx.data().songbird;
     let has_handler = manager.get(guild_id).is_some();
 
-    // TODO: clear timeout
-
     if has_handler {
         // Get the handler and clear the queue before leaving
         if let Some(handler_lock) = manager.get(guild_id) {

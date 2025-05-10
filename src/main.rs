@@ -229,14 +229,36 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
-            let manager = &self.songbird.clone();
-            let guild_id = self.guild_id;
+            // -1 because the track hasn't been removed from the queue yet at this point of the event
+            let queue_is_empty = track_list.len() - 1 == 0;
 
-            // -1 because the track hasn't been removed from the queue yet
-            if track_list.len() - 1 <= 0 {
-                if let Err(e) = manager.remove(guild_id).await {
-                    println!("Error leaving guild {}: {:?}", guild_id, e);
-                }
+            if queue_is_empty {
+                let manager = self.songbird.clone();
+                let guild_id = self.guild_id;
+
+                tokio::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(5 * 60)).await;
+
+                    // Check if the bot is still in a voice channel for this guild.
+                    // If not, it might have been manually disconnected (e.g., by the /leave command).
+                    if manager.get(guild_id).is_some() {
+                        // Re-fetch the handler and check if the queue is still empty
+                        if let Some(handler_lock) = manager.get(guild_id) {
+                            let handler = handler_lock.lock().await;
+                            let is_queue_still_empty = handler.queue().is_empty();
+                            drop(handler); // Release lock
+
+                            if is_queue_still_empty {
+                                if let Err(e) = manager.remove(guild_id).await {
+                                    println!(
+                                        "Error leaving guild {} after delay: {:?}",
+                                        guild_id, e
+                                    );
+                                }
+                            }
+                        }
+                    }
+                });
             }
         }
 
