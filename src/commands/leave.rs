@@ -1,4 +1,4 @@
-use crate::{check_msg, CommandResult, Context};
+use crate::{check_msg, create_default_message, create_error_message, CommandResult, Context};
 
 /// Stop and leave the voice channel
 #[poise::command(slash_command, guild_only)]
@@ -16,22 +16,18 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
         }
 
         if let Err(e) = manager.remove(guild_id).await {
-            let reply = poise::CreateReply::default()
-                .content("Failed to leave voice channel")
-                .ephemeral(true);
+            let reply = create_error_message("Failed to leave voice channel".to_string());
             check_msg(ctx.send(reply).await);
             println!("Failed to leave voice channel: {:?}", e);
             return Ok(());
         }
-
-        check_msg(ctx.say("Cleared queue and left voice channel").await);
     } else {
-        let reply = poise::CreateReply::default()
-            .content("Not in a voice channel")
-            .ephemeral(true);
+        let reply = create_error_message("Not in a voice channel".to_string());
         check_msg(ctx.send(reply).await);
+        return Ok(());
     }
 
-    check_msg(ctx.say("Left voice channel").await);
+    let reply = create_default_message("I've left the voice channel".to_string(), false);
+    check_msg(ctx.send(reply).await);
     Ok(())
 }

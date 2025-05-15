@@ -9,13 +9,24 @@ use serenity::all as serenity;
 use serenity::{client::EventHandler, prelude::GatewayIntents};
 
 // Event related imports to detect track creation failures.
-use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler, TrackEvent};
-
-// To turn user URLs into playable audio, we'll use yt-dlp.
-use songbird::input::YoutubeDl;
+use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 
 // YtDl requests need an HTTP client to operate -- we'll create and store our own.
 use reqwest::Client as HttpClient;
+
+struct CustomColours {
+    error: serenity::Colour,
+    default: serenity::Colour,
+}
+
+impl CustomColours {
+    fn new() -> Self {
+        Self {
+            error: serenity::Colour::new(0xff1155),
+            default: serenity::Colour::new(0x11ffaa),
+        }
+    }
+}
 
 struct UserData {
     http: HttpClient,
@@ -51,7 +62,7 @@ async fn main() {
     let options = poise::FrameworkOptions {
         commands: vec![
             commands::ping::ping(),
-            play(),
+            commands::play::play(),
             commands::skip::skip(),
             commands::unpause::unpause(),
             commands::leave::leave(),
@@ -114,103 +125,28 @@ impl VoiceEventHandler for TrackErrorNotifier {
     }
 }
 
-/// Play a song
-#[poise::command(slash_command, guild_only)]
-async fn play(
-    ctx: Context<'_>,
-    #[description = "Search term or url of the song"] search: String,
-) -> CommandResult {
-    let do_search = !search.starts_with("http");
+// TODO: create an in voice channel util
 
-    // TODO: handle playlists and other platforms
+fn create_default_message(message: String, ephemeral: bool) -> poise::CreateReply {
+    let colors = CustomColours::new();
+    poise::CreateReply::default()
+        .embed(
+            serenity::CreateEmbed::default()
+                .description(message)
+                .color(colors.default), // Using the custom error color
+        )
+        .ephemeral(ephemeral)
+}
 
-    let guild_id = ctx.guild_id().unwrap();
-    let data = ctx.data();
-    let manager = &data.songbird;
-
-    // Check if the bot is already in a voice channel in this guild.
-    let handler_lock = if manager.get(guild_id).is_none() {
-        // Not in a channel, try to join the user's channel.
-        let channel_id = {
-            let guild = ctx.guild().unwrap();
-            guild
-                .voice_states
-                .get(&ctx.author().id)
-                .and_then(|voice_state| voice_state.channel_id)
-        };
-
-        let connect_to = match channel_id {
-            Some(channel) => channel,
-            None => {
-                let reply = poise::CreateReply::default()
-                    .content("You are not in a voice channel.")
-                    .ephemeral(true);
-                check_msg(ctx.send(reply).await);
-                return Ok(());
-            }
-        };
-
-        // Attempt to join the channel.
-        match manager.join(guild_id, connect_to).await {
-            Ok(handler_lock) => {
-                // Successfully joined, add the error notifier.
-                let mut handler = handler_lock.lock().await;
-                handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-                handler.add_global_event(
-                    Event::Track(TrackEvent::End),
-                    TrackEndNotifier {
-                        guild_id: guild_id,
-                        songbird: Arc::clone(&manager),
-                    },
-                );
-
-                drop(handler); // Release lock before returning
-                handler_lock // Return the handler lock for later use
-            }
-            Err(e) => {
-                check_msg(ctx.say(format!("Error joining channel: {:?}", e)).await);
-                return Ok(());
-            }
-        }
-    } else {
-        // Already in a channel, get the existing handler lock.
-        // .unwrap() is safe here because we checked is_none() above.
-        manager.get(guild_id).unwrap()
-    };
-
-    // Now we have the handler lock, either from joining or because we were already in.
-    let mut handler = handler_lock.lock().await;
-
-    // Deafen the bot
-    if !handler.is_deaf() {
-        // TODO: redeafen the bot if it gets undeafened
-        if let Err(e) = handler.deafen(true).await {
-            println!("Failed to deafen: {:?}", e);
-        }
-    }
-
-    let src = if do_search {
-        YoutubeDl::new_search(data.http.clone(), search.clone())
-    } else {
-        YoutubeDl::new(data.http.clone(), search.clone())
-    };
-
-    let queue_len = handler.queue().len();
-
-    if queue_len == 0 {
-        check_msg(ctx.say(format!("Playing: {}", search)).await);
-    } else {
-        let search_str = search.clone(); // Clone before moving into src
-        check_msg(
-            ctx.say(format!("Added \"{}\" to the queue", search_str))
-                .await,
-        );
-    }
-
-    // Enqueue the source using songbird's built-in queue
-    let _track_handle = handler.enqueue_input(src.into()).await;
-
-    Ok(())
+fn create_error_message(error: String) -> poise::CreateReply {
+    let colors = CustomColours::new();
+    poise::CreateReply::default()
+        .embed(
+            serenity::CreateEmbed::default()
+                .description(error)
+                .color(colors.error), // Using the custom error color
+        )
+        .ephemeral(true)
 }
 
 /// Checks that a message successfully sent; if not, then logs why to stdout.

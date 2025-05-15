@@ -1,112 +1,108 @@
-use poise::command;
+use std::sync::Arc;
+
+// Event related imports to detect track creation failures.
+use songbird::events::{Event, TrackEvent};
+
 // To turn user URLs into playable audio, we'll use yt-dlp.
 use songbird::input::YoutubeDl;
 
-use crate::{check_msg, CommandResult, Context};
+use crate::{
+    check_msg, create_default_message, create_error_message, CommandResult, Context,
+    TrackEndNotifier, TrackErrorNotifier,
+};
 
+/// Play a song
 #[poise::command(slash_command, guild_only)]
 pub async fn play(
     ctx: Context<'_>,
-    #[description = "The URL of the song to play. Can be a search query."] search: Option<String>,
+    #[description = "Search term or url of the song"] search: String,
 ) -> CommandResult {
-    // let url = match search {
-    //     Some(url) => url,
-    //     None => {
-    //         check_msg(ctx.reply("Please provide a URL to play").await);
-    //         return Ok(());
-    //     }
-    // };
+    let do_search = !search.starts_with("http");
 
-    // let do_search = !url.starts_with("http");
+    // TODO: handle playlists and other platforms
 
-    // let guild_id = ctx.guild_id().unwrap();
+    let guild_id = ctx.guild_id().unwrap();
+    let data = ctx.data();
+    let manager = &data.songbird;
 
-    // let data = ctx.data();
+    // Check if the bot is already in a voice channel in this guild.
+    let handler_lock = if manager.get(guild_id).is_none() {
+        // Not in a channel, try to join the user's channel.
+        let channel_id = {
+            let guild = ctx.guild().unwrap();
+            guild
+                .voice_states
+                .get(&ctx.author().id)
+                .and_then(|voice_state| voice_state.channel_id)
+        };
 
-    // let http_client = ctx.data().http.clone();
+        let connect_to = match channel_id {
+            Some(channel) => channel,
+            None => {
+                let reply = create_error_message("You are not in a voice channel.".to_string());
+                check_msg(ctx.send(reply).await);
+                return Ok(());
+            }
+        };
 
-    // let manager = songbird::get(ctx)
-    //     .await
-    //     .expect("Songbird Voice client placed in at initialisation.")
-    //     .clone();
+        // Attempt to join the channel.
+        match manager.join(guild_id, connect_to).await {
+            Ok(handler_lock) => {
+                // Successfully joined, add the error notifier.
+                let mut handler = handler_lock.lock().await;
+                handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+                handler.add_global_event(
+                    Event::Track(TrackEvent::End),
+                    TrackEndNotifier {
+                        guild_id: guild_id,
+                        songbird: Arc::clone(&manager),
+                    },
+                );
 
-    // if let Some(handler_lock) = manager.get(guild_id) {
-    //     let mut handler = handler_lock.lock().await;
+                drop(handler); // Release lock before returning
+                handler_lock // Return the handler lock for later use
+            }
+            Err(e) => {
+                println!("Error joining channel: {:?}", e);
+                let reply = create_error_message("Error joining channel".to_string());
+                check_msg(ctx.send(reply).await);
+                return Ok(());
+            }
+        }
+    } else {
+        // Already in a channel, get the existing handler lock.
+        // .unwrap() is safe here because we checked is_none() above.
+        manager.get(guild_id).unwrap()
+    };
 
-    //     let mut src = if do_search {
-    //         YoutubeDl::new_search(http_client, url)
-    //     } else {
-    //         YoutubeDl::new(http_client, url)
-    //     };
-    //     let _ = handler.play_input(src.clone().into());
+    // Now we have the handler lock, either from joining or because we were already in.
+    let mut handler = handler_lock.lock().await;
 
-    //     // check_msg(msg.channel_id.say(&ctx.http, "Playing song").await);
-    // } else {
-    //     // check_msg(
-    //     //     msg.channel_id
-    //     //         .say(&ctx.http, "Not in a voice channel to play in")
-    //     //         .await,
-    //     // );
-    // }
+    // Deafen the bot
+    if !handler.is_deaf() {
+        // TODO: redeafen the bot if it gets undeafened
+        if let Err(e) = handler.deafen(true).await {
+            println!("Failed to deafen: {:?}", e);
+        }
+    }
+
+    let src = if do_search {
+        YoutubeDl::new_search(data.http.clone(), search.clone())
+    } else {
+        YoutubeDl::new(data.http.clone(), search.clone())
+    };
+
+    if handler.queue().is_empty() {
+        let reply = create_default_message(format!("Playing: {}", search), false);
+        check_msg(ctx.send(reply).await);
+    } else {
+        let search_str = search.clone(); // Clone before moving into src
+        let reply = create_default_message(format!("Added \"{}\" to the queue", search_str), false);
+        check_msg(ctx.send(reply).await);
+    }
+
+    // Enqueue the source using songbird's built-in queue
+    let _track_handle = handler.enqueue_input(src.into()).await;
 
     Ok(())
-
-    // let guild_id = ctx.guild_id().unwrap();
-    // let manager = &ctx.data().songbird;
-
-    // let handler_lock = match manager.get(guild_id) {
-    //     Some(handler) => handler,
-    //     None => {
-    //         check_msg(ctx.reply("Not in a voice channel").await);
-    //         return Ok(());
-    //     }
-    // };
-
-    // let mut handler = handler_lock.lock().await;
-
-    // // Use Songbird's ytdl to stream audio
-    // let source = match songbird::ytdl(&url).await {
-    //     Ok(source) => source,
-    //     Err(why) => {
-    //         check_msg(ctx.reply(format!("Error sourcing ffmpeg: {:?}", why)).await);
-    //         return Ok(());
-    //     }
-    // };
-
-    // handler.enqueue_source(source);
-
-    // check_msg(ctx.say(format!("Added to queue: {}", url)).await);
-
-    // Ok(())
-
-    // if let Some(search) = search {
-    //     let do_search = !search.starts_with("http");
-
-    //     let guild_id = ctx.guild_id().unwrap();
-    //     let data = ctx.data();
-
-    //     if let Some(handler_lock) = data.songbird.get(guild_id) {
-    //         let mut handler = handler_lock.lock().await;
-
-    //         // let src = if do_search {
-    //         //     YoutubeDl::new_search(data.http.clone(), search)
-    //         // } else {
-    //         //     YoutubeDl::new(data.http.clone(), search)
-    //         // };
-
-    //         // let _ = handler.enqueue_input(src.into()).await;
-
-    //         // if !handler.queue().is_empty() {
-    //         //     check_msg(ctx.say("Playing song").await);
-    //         // } else {
-    //         //     check_msg(ctx.say("Added to queue").await);
-    //         // }
-    //     } else {
-    //         check_msg(ctx.say("Not in a voice channel to play in").await);
-    //     }
-    // } else {
-    //     check_msg(ctx.reply("Please provide a URL to play").await);
-    // }
-
-    // Ok(())
 }
