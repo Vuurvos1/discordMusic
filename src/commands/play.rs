@@ -17,6 +17,14 @@ pub async fn play(
     ctx: Context<'_>,
     #[description = "Search term or url of the song"] search: String,
 ) -> CommandResult {
+    // DEFER IMMEDIATELY!
+    // Use ctx.defer_ephemeral().await? if you want the "Bot is thinking..." to be ephemeral
+    // or ctx.defer().await? for a public "Bot is thinking..."
+    if let Err(e) = ctx.defer_ephemeral().await {
+        println!("Error deferring interaction: {:?}", e);
+        return Ok(());
+    }
+
     let do_search = !search.starts_with("http");
 
     // TODO: handle playlists and other platforms

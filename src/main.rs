@@ -173,7 +173,7 @@ impl VoiceEventHandler for TrackEndNotifier {
                 let guild_id = self.guild_id;
 
                 tokio::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_secs(5 * 60)).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(10 * 60)).await;
 
                     // Check if the bot is still in a voice channel for this guild.
                     // If not, it might have been manually disconnected (e.g., by the /leave command).
