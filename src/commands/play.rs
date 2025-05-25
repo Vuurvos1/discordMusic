@@ -1,18 +1,12 @@
-use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use songbird::events::{Event, TrackEvent};
-use songbird::tracks::PlayMode;
-
-use crate::TrackMetadata;
-use crate::{GuildData, GuildDataMap};
 use songbird::input::YoutubeDl;
-use tokio::process::Command as TokioCommand;
 
+use crate::utils::get_guild_data;
 use crate::{
-    check_msg, create_default_message, create_error_message, CommandResult, Context,
-    TrackEndNotifier, TrackErrorNotifier,
+    check_msg, create_default_message, create_error_message, CommandResult, Context, GuildData,
+    TrackEndNotifier, TrackErrorNotifier, TrackMetadata,
 };
 
 /// Play a song
@@ -35,12 +29,7 @@ pub async fn play(
     let data = ctx.data();
     let manager = &data.songbird;
 
-    let guilds_data: Arc<Mutex<GuildDataMap>> = ctx.data().guilds.clone();
-    let mut guilds_data_lock = guilds_data.lock().await;
-    let guild_data = guilds_data_lock
-        .entry(guild_uid)
-        .or_insert_with(|| Arc::new(Mutex::new(GuildData::default())))
-        .clone(); // Arc<Mutex<GuildData>>
+    let guild_data = get_guild_data(ctx, guild_id.get()).await;
 
     // Check if the bot is already in a voice channel in this guild.
     let handler_lock = if manager.get(guild_id).is_none() {
@@ -241,7 +230,11 @@ pub async fn play(
         drop(handler);
 
         if queue_len == 1 {
-            play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
+            let track_handler =
+                play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
+
+            let mut guild_data_lock = guild_data.lock().await;
+            guild_data_lock.track_handle = track_handler;
         } else {
             let reply = create_default_message(
                 format!("Added \"{}\" to the queue", input_for_message),
@@ -258,7 +251,9 @@ async fn play_next_in_queue(
     ctx: Context<'_>,
     handler_lock: &Arc<tokio::sync::Mutex<songbird::Call>>,
     guild_data: Arc<tokio::sync::Mutex<GuildData>>,
-) {
+) -> Option<songbird::tracks::TrackHandle> {
+    let mut track_handle: Option<songbird::tracks::TrackHandle> = None;
+
     let data = ctx.data();
     let mut handler = handler_lock.lock().await;
     let guild_data_lock = guild_data.lock().await;
@@ -267,7 +262,7 @@ async fn play_next_in_queue(
         println!("[INFO] Playing next in custom queue: {}", metadata.title);
 
         let src = YoutubeDl::new(data.http.clone(), metadata.url.clone());
-        let _track_handle = handler.play_only_input(src.into());
+        track_handle = Some(handler.play_only_input(src.into()));
 
         let reply = create_default_message(format!("Playing: {}", metadata.title), false);
         check_msg(ctx.send(reply).await);
@@ -276,6 +271,8 @@ async fn play_next_in_queue(
     }
 
     println!("[INFO] play_next_in_custom_queue finished.");
+
+    track_handle
 }
 
 /// Helper function to check if a URL is a YouTube playlist.

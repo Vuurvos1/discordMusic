@@ -1,19 +1,38 @@
-use crate::{check_msg, create_default_message, CommandResult, Context};
+use crate::{
+    check_msg, create_default_message, create_error_message, utils::get_guild_data, CommandResult,
+    Context,
+};
 
 /// Stop playing and clear the queue
 #[poise::command(slash_command, guild_only)]
 pub async fn stop(ctx: Context<'_>) -> CommandResult {
     let guild_id = ctx.guild_id().unwrap();
-
     let manager = &ctx.data().songbird;
-    let has_handler = manager.get(guild_id).is_some();
 
-    // if has_handler {
-    //     if let Some(handler_lock) = manager.get(guild_id) {
-    //         let handler = handler_lock.lock().await;
-    //         handler.queue().stop();
-    //     }
-    // }
+    let _handler_lock = match manager.get(guild_id) {
+        Some(handler) => handler,
+        None => {
+            let reply = create_error_message("Not in a voice channel".to_string());
+            check_msg(ctx.send(reply).await);
+            return Ok(());
+        }
+    };
+
+    let guild_data = get_guild_data(ctx, guild_id.get()).await;
+    let guild_data = guild_data.lock().await;
+
+    if let Some(handler) = &guild_data.track_handle {
+        if let Err(e) = handler.stop() {
+            println!("Failed to stop: {:?}", e);
+            let reply = create_error_message("Failed to stop".to_string());
+            check_msg(ctx.send(reply).await);
+            return Ok(());
+        }
+    }
+
+    // Clear the queue
+    let mut guild_data = guild_data;
+    guild_data.queue.clear();
 
     let reply = create_default_message("Stopped music".to_string(), false);
     check_msg(ctx.send(reply).await);

@@ -1,14 +1,17 @@
 mod commands;
+mod utils;
 
+use songbird::tracks::PlayMode;
+use songbird::tracks::TrackHandle;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use ::serenity::async_trait;
 use dotenv::dotenv;
 
 use serenity::all as serenity;
+use serenity::async_trait;
 use serenity::{client::EventHandler, prelude::GatewayIntents};
 
 // Event related imports to detect track creation failures.
@@ -47,11 +50,15 @@ type CommandResult = Result<(), Error>;
 
 pub struct GuildData {
     queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
+    play_mode: PlayMode,
+    track_handle: Option<TrackHandle>,
 }
 impl Default for GuildData {
     fn default() -> Self {
         Self {
             queue: VecDeque::new(),
+            play_mode: PlayMode::Play,
+            track_handle: None,
         }
     }
 }
@@ -218,7 +225,7 @@ impl VoiceEventHandler for TrackEndNotifier {
                 metadata.title
             );
         } else {
-            // Queue is empty, optionally schedule auto-leave here
+            // Queue is empty, schedule auto-leave
             println!(
                 "[INFO] TrackEndNotifier: Queue empty for guild {}. Scheduling auto-leave.",
                 self.guild_id
