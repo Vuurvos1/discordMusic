@@ -7,13 +7,13 @@ pub async fn skip(ctx: Context<'_>) -> CommandResult {
 
     if let Some(handler_lock) = manager.get(guild_id) {
         let handler = handler_lock.lock().await;
-        let queue = handler.queue();
+        // let queue = handler.queue();
 
-        if queue.skip().is_err() {
-            let reply = create_error_message("Failed to skip".to_string());
-            check_msg(ctx.send(reply).await);
-            return Ok(());
-        }
+        // if queue.skip().is_err() {
+        //     let reply = create_error_message("Failed to skip".to_string());
+        //     check_msg(ctx.send(reply).await);
+        //     return Ok(());
+        // }
     } else {
         let reply = create_error_message("Not in a voice channel".to_string());
         check_msg(ctx.send(reply).await);

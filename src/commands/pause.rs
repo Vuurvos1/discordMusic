@@ -15,16 +15,16 @@ pub async fn pause(ctx: Context<'_>) -> CommandResult {
         }
     };
 
-    let handler = handler_lock.lock().await;
-    let queue = handler.queue();
-    let paused = queue.pause();
+    // let handler = handler_lock.lock().await;
+    // let queue = handler.queue();
+    // let paused = queue.pause();
 
-    if let Err(e) = paused {
-        println!("Failed to pause: {:?}", e);
-        let reply = create_error_message("Failed to pause".to_string());
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    }
+    // if let Err(e) = paused {
+    //     println!("Failed to pause: {:?}", e);
+    //     let reply = create_error_message("Failed to pause".to_string());
+    //     check_msg(ctx.send(reply).await);
+    //     return Ok(());
+    // }
 
     let reply = create_default_message("Paused music".to_string(), false);
     check_msg(ctx.send(reply).await);

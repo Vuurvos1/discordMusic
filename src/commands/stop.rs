@@ -8,12 +8,12 @@ pub async fn stop(ctx: Context<'_>) -> CommandResult {
     let manager = &ctx.data().songbird;
     let has_handler = manager.get(guild_id).is_some();
 
-    if has_handler {
-        if let Some(handler_lock) = manager.get(guild_id) {
-            let handler = handler_lock.lock().await;
-            handler.queue().stop();
-        }
-    }
+    // if has_handler {
+    //     if let Some(handler_lock) = manager.get(guild_id) {
+    //         let handler = handler_lock.lock().await;
+    //         handler.queue().stop();
+    //     }
+    // }
 
     let reply = create_default_message("Stopped music".to_string(), false);
     check_msg(ctx.send(reply).await);

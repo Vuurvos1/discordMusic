@@ -1,6 +1,9 @@
 mod commands;
 
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use ::serenity::async_trait;
 use dotenv::dotenv;
@@ -13,6 +16,16 @@ use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 
 // YtDl requests need an HTTP client to operate -- we'll create and store our own.
 use reqwest::Client as HttpClient;
+use songbird::input::YoutubeDl;
+use songbird::Call;
+
+#[derive(Clone, Debug)]
+pub struct TrackMetadata {
+    pub title: String,
+    pub url: String,
+    pub requested_by: String,
+    pub requested_by_id: u64,
+}
 
 struct CustomColours {
     error: serenity::Colour,
@@ -28,14 +41,28 @@ impl CustomColours {
     }
 }
 
-struct UserData {
-    http: HttpClient,
-    songbird: Arc<songbird::Songbird>,
-}
-
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, UserData, Error>;
 type CommandResult = Result<(), Error>;
+
+pub struct GuildData {
+    queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
+}
+impl Default for GuildData {
+    fn default() -> Self {
+        Self {
+            queue: VecDeque::new(),
+        }
+    }
+}
+
+pub type GuildDataMap = HashMap<u64, Arc<Mutex<GuildData>>>;
+
+struct UserData {
+    http: HttpClient,
+    songbird: Arc<songbird::Songbird>,
+    guilds: Arc<Mutex<GuildDataMap>>,
+}
 
 struct Handler;
 
@@ -63,6 +90,7 @@ async fn main() {
         commands: vec![
             commands::ping::ping(),
             commands::play::play(),
+            commands::queue::queue(),
             commands::skip::skip(),
             commands::unpause::unpause(),
             commands::leave::leave(),
@@ -83,6 +111,7 @@ async fn main() {
                 Ok(UserData {
                     http: HttpClient::new(),
                     songbird: manager_clone,
+                    guilds: Arc::new(Mutex::new(HashMap::new())),
                 })
             })
         })
@@ -159,45 +188,78 @@ fn check_msg<T>(result: serenity::Result<T>) {
 struct TrackEndNotifier {
     guild_id: serenity::all::GuildId,
     songbird: Arc<songbird::Songbird>,
+    guild_data: Arc<Mutex<GuildData>>,
+    http_client: HttpClient,
+    handler_lock: Arc<Mutex<Call>>,
 }
 
 #[async_trait]
 impl VoiceEventHandler for TrackEndNotifier {
-    async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
-        if let EventContext::Track(track_list) = ctx {
-            // -1 because the track hasn't been removed from the queue yet at this point of the event
-            let queue_is_empty = track_list.len() - 1 == 0;
+    async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
+        // Lock the handler to ensure exclusive access to playback
+        let mut handler = self.handler_lock.lock().await;
 
-            if queue_is_empty {
-                let manager = self.songbird.clone();
-                let guild_id = self.guild_id;
+        // Lock the guild data and pop the next track from the real queue
+        let mut guild_data = self.guild_data.lock().await;
+        println!(
+            "[INFO] TrackEndNotifier: Guild {} - Queue size: {}",
+            self.guild_id,
+            guild_data.queue.len()
+        );
 
-                tokio::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_secs(10 * 60)).await;
+        guild_data.queue.pop_front();
+        if let Some(metadata) = guild_data.queue.front() {
+            // Play the next track
+            let src = YoutubeDl::new(self.http_client.clone(), metadata.url.clone());
+            let _track_handle = handler.play_only_input(src.into());
 
-                    // Check if the bot is still in a voice channel for this guild.
-                    // If not, it might have been manually disconnected (e.g., by the /leave command).
-                    if manager.get(guild_id).is_some() {
-                        // Re-fetch the handler and check if the queue is still empty
-                        if let Some(handler_lock) = manager.get(guild_id) {
-                            let handler = handler_lock.lock().await;
-                            let is_queue_still_empty = handler.queue().is_empty();
-                            drop(handler); // Release lock
+            println!(
+                "[INFO] TrackEndNotifier: Playing next from custom queue: {}",
+                metadata.title
+            );
+        } else {
+            // Queue is empty, optionally schedule auto-leave here
+            println!(
+                "[INFO] TrackEndNotifier: Queue empty for guild {}. Scheduling auto-leave.",
+                self.guild_id
+            );
 
-                            if is_queue_still_empty {
-                                if let Err(e) = manager.remove(guild_id).await {
-                                    println!(
-                                        "Error leaving guild {} after delay: {:?}",
-                                        guild_id, e
-                                    );
-                                }
+            let manager = self.songbird.clone();
+            let guild_id = self.guild_id;
+
+            let guild_data = Arc::clone(&self.guild_data);
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(5 * 60)).await;
+
+                if manager.get(guild_id).is_some() {
+                    if let Some(handler_lock_check) = manager.get(guild_id) {
+                        let _handler_check = handler_lock_check.lock().await;
+                        let is_songbird_queue_still_empty =
+                            guild_data.lock().await.queue.is_empty();
+
+                        if is_songbird_queue_still_empty {
+                            println!("[INFO] Auto-leaving guild {} due to inactivity.", guild_id);
+                            if let Err(e) = manager.remove(guild_id).await {
+                                println!(
+                                    "[ERROR] Error auto-leaving guild {} after delay: {:?}",
+                                    guild_id, e
+                                );
                             }
+                        } else {
+                            println!(
+                                "[INFO] Auto-leave for guild {} cancelled, new track playing.",
+                                guild_id
+                            );
                         }
                     }
-                });
-            }
+                } else {
+                    println!(
+                        "[INFO] Bot no longer in voice channel for guild {}, auto-leave cancelled.",
+                        guild_id
+                    );
+                }
+            });
         }
-
         None
     }
 }

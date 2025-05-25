@@ -15,15 +15,15 @@ pub async fn unpause(ctx: Context<'_>) -> CommandResult {
     };
 
     let handler = handler_lock.lock().await;
-    let queue = handler.queue();
-    let resumed = queue.resume();
+    // let queue = handler.queue();
+    // let resumed = queue.resume();
 
-    if let Err(e) = resumed {
-        println!("Failed to resume: {:?}", e);
-        let reply = create_error_message("Failed to resume".to_string());
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    }
+    // if let Err(e) = resumed {
+    //     println!("Failed to resume: {:?}", e);
+    //     let reply = create_error_message("Failed to resume".to_string());
+    //     check_msg(ctx.send(reply).await);
+    //     return Ok(());
+    // }
 
     let reply = create_default_message("Resumed playing".to_string(), false);
     check_msg(ctx.send(reply).await);

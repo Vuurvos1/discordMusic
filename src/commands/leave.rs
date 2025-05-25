@@ -10,10 +10,10 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
 
     if has_handler {
         // Get the handler and clear the queue before leaving
-        if let Some(handler_lock) = manager.get(guild_id) {
-            let handler = handler_lock.lock().await;
-            handler.queue().stop();
-        }
+        // if let Some(handler_lock) = manager.get(guild_id) {
+        //     let handler = handler_lock.lock().await;
+        //     handler.queue().stop();
+        // }
 
         if let Err(e) = manager.remove(guild_id).await {
             let reply = create_error_message("Failed to leave voice channel".to_string());

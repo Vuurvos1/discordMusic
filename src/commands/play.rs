@@ -1,11 +1,13 @@
+use std::collections::VecDeque;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
-// Event related imports to detect track creation failures.
 use songbird::events::{Event, TrackEvent};
+use songbird::tracks::PlayMode;
 
-// To turn user URLs into playable audio, we'll use yt-dlp.
+use crate::TrackMetadata;
+use crate::{GuildData, GuildDataMap};
 use songbird::input::YoutubeDl;
-// Import for running yt-dlp as an external command
 use tokio::process::Command as TokioCommand;
 
 use crate::{
@@ -19,21 +21,26 @@ pub async fn play(
     ctx: Context<'_>,
     #[description = "Search term or url of the song"] search: String,
 ) -> CommandResult {
-    // DEFER IMMEDIATELY!
     // Use ctx.defer_ephemeral().await? if you want the "Bot is thinking..." to be ephemeral
     // or ctx.defer().await? for a public "Bot is thinking..."
-    if let Err(e) = ctx.defer_ephemeral().await {
+    if let Err(e) = ctx.defer().await {
         println!("Error deferring interaction: {:?}", e);
         return Ok(());
     }
 
-    let do_search = !search.starts_with("http");
-
-    // TODO: handle playlists and other platforms
+    // let do_search = !search.starts_with("http");
 
     let guild_id = ctx.guild_id().unwrap();
+    let guild_uid = guild_id.get();
     let data = ctx.data();
     let manager = &data.songbird;
+
+    let guilds_data: Arc<Mutex<GuildDataMap>> = ctx.data().guilds.clone();
+    let mut guilds_data_lock = guilds_data.lock().await;
+    let guild_data = guilds_data_lock
+        .entry(guild_uid)
+        .or_insert_with(|| Arc::new(Mutex::new(GuildData::default())))
+        .clone(); // Arc<Mutex<GuildData>>
 
     // Check if the bot is already in a voice channel in this guild.
     let handler_lock = if manager.get(guild_id).is_none() {
@@ -57,20 +64,23 @@ pub async fn play(
 
         // Attempt to join the channel.
         match manager.join(guild_id, connect_to).await {
-            Ok(handler_lock) => {
+            Ok(handler_lock_success) => {
                 // Successfully joined, add the error notifier.
-                let mut handler = handler_lock.lock().await;
+                let mut handler = handler_lock_success.lock().await;
                 handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
                 handler.add_global_event(
                     Event::Track(TrackEvent::End),
                     TrackEndNotifier {
                         guild_id: guild_id,
                         songbird: Arc::clone(&manager),
+                        guild_data: Arc::clone(&guild_data),
+                        http_client: data.http.clone(),
+                        handler_lock: Arc::clone(&handler_lock_success),
                     },
                 );
 
                 drop(handler); // Release lock before returning
-                handler_lock // Return the handler lock for later use
+                handler_lock_success // Return the handler lock for later use
             }
             Err(e) => {
                 println!("Error joining channel: {:?}", e);
@@ -97,103 +107,141 @@ pub async fn play(
     }
 
     if is_youtube_playlist(&search) {
-        // Playlist handling logic
-        let processing_msg_builder = create_default_message(
-            format!("Processing playlist: {}. This may take a moment...", search),
-            false,
-        );
-        check_msg(ctx.send(processing_msg_builder).await);
+        // // Playlist handling logic
+        // let processing_msg_builder = create_default_message(
+        //     format!("Processing playlist: {}. This may take a moment...", search),
+        //     false,
+        // );
+        // check_msg(ctx.send(processing_msg_builder).await);
 
-        let cmd_output = match TokioCommand::new("yt-dlp")
-            .arg("--get-id")
-            .arg("--flat-playlist")
-            .arg("-i") // Ignore download errors for individual videos in the playlist
-            .arg(&search) // The playlist URL
-            .output()
-            .await
-        {
-            Ok(out) => out,
-            Err(e) => {
-                println!(
-                    "[ERROR] Failed to spawn yt-dlp for playlist {}: {:?}",
-                    search, e
-                );
-                let err_reply = create_error_message(format!(
-                    "Failed to start fetching playlist details (yt-dlp command failed to run). Is yt-dlp installed and in your system's PATH? Error: {}",
-                    e
-                ));
-                check_msg(ctx.send(err_reply).await);
-                return Ok(());
-            }
-        };
+        // let cmd_output = match TokioCommand::new("yt-dlp")
+        //     .arg("--get-id")
+        //     .arg("--flat-playlist")
+        //     // .arg("--print-json") // Instead of --get-id and --flat-playlist to get titles too
+        //     .arg("-i") // Ignore download errors for individual videos in the playlist
+        //     .arg(&search) // The playlist URL
+        //     .output()
+        //     .await
+        // {
+        //     Ok(out) => out,
+        //     Err(e) => {
+        //         println!(
+        //             "[ERROR] Failed to spawn yt-dlp for playlist {}: {:?}",
+        //             search, e
+        //         );
+        //         let err_reply = create_error_message(format!(
+        //             "Failed to start fetching playlist details (yt-dlp command failed to run). Is yt-dlp installed and in your system's PATH? Error: {}",
+        //             e
+        //         ));
+        //         check_msg(ctx.send(err_reply).await);
+        //         return Ok(());
+        //     }
+        // };
 
-        if !cmd_output.status.success() {
-            let stderr = String::from_utf8_lossy(&cmd_output.stderr);
-            println!("[ERROR] yt-dlp failed for playlist {}: {}", search, stderr);
-            let error_msg = format!(
-                "Failed to fetch playlist details for \"{}\". yt-dlp error: {}",
-                search, stderr
-            );
-            check_msg(ctx.send(create_error_message(error_msg)).await);
-            return Ok(());
-        }
+        // if !cmd_output.status.success() {
+        //     let stderr = String::from_utf8_lossy(&cmd_output.stderr);
+        //     println!("[ERROR] yt-dlp failed for playlist {}: {}", search, stderr);
+        //     let error_msg = format!(
+        //         "Failed to fetch playlist details for \"{}\". yt-dlp error: {}",
+        //         search, stderr
+        //     );
+        //     check_msg(ctx.send(create_error_message(error_msg)).await);
+        //     return Ok(());
+        // }
 
-        let video_ids_str = String::from_utf8_lossy(&cmd_output.stdout);
-        let video_urls: Vec<String> = video_ids_str
-            .lines()
-            .filter(|s| !s.trim().is_empty())
-            .map(|id| format!("https://www.youtube.com/watch?v={}", id.trim()))
-            .collect();
+        // let video_ids_str = String::from_utf8_lossy(&cmd_output.stdout);
+        // let video_urls: Vec<String> = video_ids_str
+        //     .lines()
+        //     .filter(|s| !s.trim().is_empty())
+        //     .map(|id| format!("https://www.youtube.com/watch?v={}", id.trim()))
+        //     .collect();
 
-        if video_urls.is_empty() {
-            let err_reply = create_error_message(format!(
-                "No videos found in the playlist \"{}\", or it might be private/empty.",
-                search
-            ));
-            check_msg(ctx.send(err_reply).await);
-            return Ok(());
-        }
+        // if video_urls.is_empty() {
+        //     let err_reply = create_error_message(format!(
+        //         "No videos found in the playlist \"{}\", or it might be private/empty.",
+        //         search
+        //     ));
+        //     check_msg(ctx.send(err_reply).await);
+        //     return Ok(());
+        // }
 
-        let num_videos = video_urls.len();
-        let queue_was_empty = handler.queue().is_empty();
-        let mut first_song_from_playlist_msg_sent = false;
+        // let num_videos = video_urls.len();
+        // // let queue_was_empty = handler.queue().is_empty(); // We'll use custom queue logic
+        // let mut first_song_added_to_empty_queue = false;
+        // {
 
-        for (index, video_url) in video_urls.iter().enumerate() {
-            let src = YoutubeDl::new(data.http.clone(), video_url.clone());
-            let _track_handle = handler.enqueue_input(src.into()).await;
+        //     // Scope for custom_queue lock
+        //     // let mut custom_queue = queue;
+        //     first_song_added_to_empty_queue = queue.is_empty() && !video_urls.is_empty();
 
-            if queue_was_empty && index == 0 && !first_song_from_playlist_msg_sent {
-                let playing_msg = create_default_message(
-                    format!("Playing: {} (first from playlist)", video_url),
-                    false,
-                );
-                check_msg(ctx.send(playing_msg).await);
-                first_song_from_playlist_msg_sent = true;
-            }
-        }
+        //     for video_url in video_urls.iter() {
+        //         // In a real scenario, you'd want to fetch the title here.
+        //         // For now, we'll use the URL as a placeholder title.
+        //         // If yt-dlp --print-json was used, you could parse titles here.
+        //         let metadata = TrackMetadata {
+        //             title: video_url.clone(), // Placeholder, ideally fetch real title
+        //             url: video_url.clone(),
+        //             requested_by: ctx.author().name.clone(),
+        //             requested_by_id: ctx.author().id.get(), // Corrected to use .get() for u64
+        //         };
+        //         queue.push_back(metadata);
+        //     }
+        // } // custom_queue lock released
 
-        let success_msg = create_default_message(
-            format!(
-                "Added {} songs from playlist \"{}\" to the queue.",
-                num_videos, search
-            ),
-            false,
-        );
-        check_msg(ctx.send(success_msg).await);
+        // let success_msg = create_default_message(
+        //     format!(
+        //         "Added {} songs from playlist \"{}\" to queue.",
+        //         num_videos, search
+        //     ),
+        //     false,
+        // );
+        // check_msg(ctx.send(success_msg).await);
+
+        // // If the first song was added to an empty queue and the bot isn't already playing, play it.
+        // let is_playing = !queue.is_empty();
+
+        // if first_song_added_to_empty_queue && !is_playing {
+        //     drop(handler); // Release handler lock before playing
+        //     play_next_in_custom_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
+        // }
     } else {
-        // Existing logic for single track or search
-        let http_client = data.http.clone();
-        let input_for_message = search.clone(); // Clone for use in messages
+        println!("[INFO] Single track or search: {}", search);
 
-        let src = if do_search {
-            YoutubeDl::new_search(http_client, search) // search is moved here
-        } else {
-            YoutubeDl::new(http_client, search) // search is moved here
-        };
+        // Lock only for queue operations, then drop before calling play_next_in_custom_queue
+        let (queue_len, input_for_message) = {
+            let mut guild_data_lock = guild_data.lock().await;
 
-        if handler.queue().is_empty() {
-            let reply = create_default_message(format!("Playing: {}", input_for_message), false);
-            check_msg(ctx.send(reply).await);
+            println!(
+                "[INFO] Current custom queue length: {}",
+                guild_data_lock.queue.len()
+            );
+
+            let input_for_message = search.clone();
+            let metadata = TrackMetadata {
+                title: input_for_message.clone(), // Placeholder, ideally fetch title for searches/urls
+                url: search, // search is consumed by YoutubeDl later, so we use it here
+                requested_by: ctx.author().name.clone(),
+                requested_by_id: ctx.author().id.get(), // Corrected to use .get() for u64
+            };
+
+            guild_data_lock.queue.push_back(metadata);
+
+            let queue_len = guild_data_lock.queue.len();
+
+            (queue_len, input_for_message)
+        }; // lock dropped here
+
+        println!(
+            "[INFO] Added \"{}\" to queue for guild {}",
+            input_for_message, guild_uid
+        );
+
+        println!("[INFO] queue_was_empty_and_not_playing: {}", queue_len == 1);
+
+        drop(handler);
+
+        if queue_len == 1 {
+            play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
         } else {
             let reply = create_default_message(
                 format!("Added \"{}\" to the queue", input_for_message),
@@ -201,12 +249,33 @@ pub async fn play(
             );
             check_msg(ctx.send(reply).await);
         }
-
-        // Enqueue the source using songbird's built-in queue
-        let _track_handle = handler.enqueue_input(src.into()).await;
     }
 
     Ok(())
+}
+
+async fn play_next_in_queue(
+    ctx: Context<'_>,
+    handler_lock: &Arc<tokio::sync::Mutex<songbird::Call>>,
+    guild_data: Arc<tokio::sync::Mutex<GuildData>>,
+) {
+    let data = ctx.data();
+    let mut handler = handler_lock.lock().await;
+    let guild_data_lock = guild_data.lock().await;
+
+    if let Some(metadata) = guild_data_lock.queue.front() {
+        println!("[INFO] Playing next in custom queue: {}", metadata.title);
+
+        let src = YoutubeDl::new(data.http.clone(), metadata.url.clone());
+        let _track_handle = handler.play_only_input(src.into());
+
+        let reply = create_default_message(format!("Playing: {}", metadata.title), false);
+        check_msg(ctx.send(reply).await);
+    } else {
+        println!("[INFO] play_next_in_custom_queue called but custom queue was empty.");
+    }
+
+    println!("[INFO] play_next_in_custom_queue finished.");
 }
 
 /// Helper function to check if a URL is a YouTube playlist.
