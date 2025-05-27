@@ -3,8 +3,8 @@ use crate::{
     Context,
 };
 
-#[poise::command(slash_command, guild_only, aliases("resume"))]
-pub async fn unpause(ctx: Context<'_>) -> CommandResult {
+#[poise::command(slash_command, guild_only, aliases("unpause"))]
+pub async fn resume(ctx: Context<'_>) -> CommandResult {
     let guild_id = ctx.guild_id().unwrap();
     let manager = &ctx.data().songbird;
 
