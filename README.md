@@ -64,24 +64,21 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 make sure you have the following installed
 
 ```bash
-sudo apt update 
+sudo apt update
 sudo apt install build-essential libc6-dev cmake pkg-config libopus-dev
 ```
 
 ### yt-dlp
 
-```
-pip install -U "yt-dlp"
-```
-
-Note that when you install yt-dlp through pip, you might need to add the following to your `.bashrc`
-
-```
-export PATH="$HOME/.local/bin:$PATH"
-```
+This bot uses yt-dlp to search and download songs.
+For installation instructions, please refer to the [official yt-dlp installation guide](https://github.com/yt-dlp/yt-dlp/wiki/Installation).
 
 > [!NOTE]  
-> It might take a while to load the song when adding it to the queue.
+> When installing yt-dlp through pip, you might need to add the following to your `.bashrc` / `.zshrc`
+>
+> ```
+> export PATH="$HOME/.local/bin:$PATH"
+> ```
 
 ## TODO
 

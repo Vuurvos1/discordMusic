@@ -1,7 +1,8 @@
-use std::sync::Arc;
-
 use songbird::events::{Event, TrackEvent};
 use songbird::input::YoutubeDl;
+use std::sync::Arc;
+use tokio::process::Command as TokioCommand;
+use tracing::{debug, error, info};
 
 use crate::utils::get_guild_data;
 use crate::{
@@ -21,7 +22,6 @@ pub async fn play(
     }
 
     let guild_id = ctx.guild_id().unwrap();
-    let guild_uid = guild_id.get();
     let data = ctx.data();
     let manager = &data.songbird;
 
@@ -68,7 +68,7 @@ pub async fn play(
                 handler_lock_success // Return the handler lock for later use
             }
             Err(e) => {
-                println!("Error joining channel: {:?}", e);
+                error!("Error joining channel: {:?}", e);
                 let reply = create_error_message("Error joining channel".to_string());
                 check_msg(ctx.send(reply).await);
                 return Ok(());
@@ -86,25 +86,118 @@ pub async fn play(
         // Deafen the bot
         if !handler.is_deaf() {
             if let Err(e) = handler.deafen(true).await {
-                println!("Failed to deafen: {:?}", e);
+                error!("Failed to deafen: {:?}", e);
             }
         }
         // handler lock dropped here
     }
 
     if is_youtube_playlist(&search) {
-        // Playlist handling logic (not implemented here)
+        println!("[INFO] Processing YouTube playlist: {}", search);
+
+        // Send processing message
+        let processing_msg = create_default_message(
+            format!("Processing playlist: {}. This may take a moment...", search),
+            false,
+        );
+        check_msg(ctx.send(processing_msg).await);
+
+        // Use yt-dlp to get video IDs
+        let cmd_output = match TokioCommand::new("yt-dlp")
+            .arg("--get-id")
+            .arg("--flat-playlist")
+            .arg("-i") // Ignore download errors for individual videos
+            .arg(&search)
+            .output()
+            .await
+        {
+            Ok(out) => out,
+            Err(e) => {
+                error!("Failed to spawn yt-dlp for playlist {}: {:?}", search, e);
+                let err_reply = create_error_message(format!(
+                    "Failed to start fetching playlist details (yt-dlp command failed to run). Is yt-dlp installed and in your system's PATH? Error: {}",
+                    e
+                ));
+                check_msg(ctx.send(err_reply).await);
+                return Ok(());
+            }
+        };
+
+        if !cmd_output.status.success() {
+            let stderr = String::from_utf8_lossy(&cmd_output.stderr);
+            error!("yt-dlp failed for playlist {}: {}", search, stderr);
+            let error_msg = format!(
+                "Failed to fetch playlist details for \"{}\". yt-dlp error: {}",
+                search, stderr
+            );
+            check_msg(ctx.send(create_error_message(error_msg)).await);
+            return Ok(());
+        }
+
+        let video_ids_str = String::from_utf8_lossy(&cmd_output.stdout);
+        let video_urls: Vec<String> = video_ids_str
+            .lines()
+            .filter(|s| !s.trim().is_empty())
+            .map(|id| format!("https://www.youtube.com/watch?v={}", id.trim()))
+            .collect();
+
+        if video_urls.is_empty() {
+            let err_reply = create_error_message(format!(
+                "No videos found in the playlist \"{}\", or it might be private/empty.",
+                search
+            ));
+            check_msg(ctx.send(err_reply).await);
+            return Ok(());
+        }
+
+        let num_videos = video_urls.len();
+        let mut first_song_added_to_empty_queue = false;
+        {
+            let mut guild_data_lock = guild_data.lock().await;
+            first_song_added_to_empty_queue =
+                guild_data_lock.queue.is_empty() && !video_urls.is_empty();
+
+            for video_url in video_urls {
+                let metadata = TrackMetadata {
+                    title: video_url.clone(), // Using URL as placeholder title
+                    url: video_url,
+                    requested_by: ctx.author().name.clone(),
+                    requested_by_id: ctx.author().id.get(),
+                };
+                guild_data_lock.queue.push_back(metadata);
+            }
+        } // guild_data_lock is dropped here
+
+        let success_msg = create_default_message(
+            format!(
+                "Added {} songs from playlist \"{}\" to queue.",
+                num_videos, search
+            ),
+            false,
+        );
+        check_msg(ctx.send(success_msg).await);
+
+        // If this was the first song(s) added and queue was empty, start playing
+        if first_song_added_to_empty_queue {
+            let track_handler =
+                play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
+
+            if let Some(handler) = track_handler {
+                let mut guild_data_lock = guild_data.lock().await;
+                guild_data_lock.track_handle = Some(handler);
+            } else {
+                let reply = create_error_message(
+                    "Failed to play the first track from playlist.".to_string(),
+                );
+                check_msg(ctx.send(reply).await);
+            }
+        }
     } else {
         println!("[INFO] Single track or search: {}", search);
 
         // Lock only for queue operations, then drop before calling play_next_in_queue
         let (queue_len, input_for_message) = {
             let mut guild_data_lock = guild_data.lock().await;
-
-            println!(
-                "[INFO] Current custom queue length: {}",
-                guild_data_lock.queue.len()
-            );
 
             let input_for_message = search.clone();
             let metadata = TrackMetadata {
@@ -116,20 +209,12 @@ pub async fn play(
 
             guild_data_lock.queue.push_back(metadata);
 
-            println!(
-                "[INFO] Adding \"{}\" to queue - len: {}",
-                input_for_message, guild_data_lock.queue.len()
-            );
-
             let queue_len = guild_data_lock.queue.len();
 
             (queue_len, input_for_message)
         }; // lock dropped here
 
-        println!(
-            "[INFO] Added \"{}\" to queue",
-            input_for_message
-        );
+        info!("Added \"{}\" to queue", input_for_message);
 
         if queue_len == 1 {
             let track_handler =
@@ -167,7 +252,7 @@ async fn play_next_in_queue(
     let guild_data_lock = guild_data.lock().await;
 
     if let Some(metadata) = guild_data_lock.queue.front() {
-        println!("[INFO] Playing next in custom queue: {}", metadata.title);
+        info!("Playing next in custom queue: {}", metadata.title);
 
         let search = metadata.url.clone();
         let do_search = !search.starts_with("http");
@@ -185,7 +270,7 @@ async fn play_next_in_queue(
 
         Some(track_handle)
     } else {
-        println!("[INFO] play_next_in_queue called but custom queue was empty.");
+        debug!("play_next_in_queue called but custom queue was empty.");
         None
     }
 }

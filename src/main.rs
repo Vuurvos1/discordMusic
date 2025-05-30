@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{debug, error};
 
 use dotenv::dotenv;
 
@@ -208,12 +209,6 @@ impl VoiceEventHandler for TrackEndNotifier {
 
         // Lock the guild data and pop the next track from the real queue
         let mut guild_data = self.guild_data.lock().await;
-        println!(
-            "[INFO] TrackEndNotifier: Guild {} - Queue size: {}",
-            self.guild_id,
-            guild_data.queue.len()
-        );
-
         guild_data.queue.pop_front();
 
         if let Some(metadata) = guild_data.queue.front() {
@@ -228,16 +223,13 @@ impl VoiceEventHandler for TrackEndNotifier {
             };
             let _track_handle = handler.play_only_input(src.into());
 
-            println!(
-                "[INFO] TrackEndNotifier: Playing next from queue: {}",
+            debug!(
+                "TrackEndNotifier: Playing next from queue: {}",
                 metadata.title
             );
         } else {
             // Queue is empty, schedule auto-leave
-            println!(
-                "[INFO] TrackEndNotifier: Queue empty for guild {}. Scheduling auto-leave.",
-                self.guild_id
-            );
+            debug!("TrackEndNotifier: Queue empty. Scheduling auto-leave.");
 
             let manager = Arc::clone(&self.songbird); // clone the Arc
             let guild_id = self.guild_id; // Copy, GuildId is Copy
@@ -258,17 +250,14 @@ impl VoiceEventHandler for TrackEndNotifier {
                 };
 
                 if queue_empty {
-                    println!("[INFO] Auto-leaving guild {} due to inactivity.", guild_id);
+                    debug!("Auto-leaving guild due to inactivity");
 
                     if let Err(e) = manager.remove(guild_id).await {
-                        println!(
-                            "[ERROR] Error auto-leaving guild {} after delay: {:?}",
-                            guild_id, e
-                        );
+                        error!("Error auto-leaving guild after delay: {:?}", e);
                     }
                 } else {
-                    println!(
-                        "[INFO] Auto-leave for guild {} cancelled, new track playing.",
+                    debug!(
+                        "Auto-leave for guild {} cancelled, new track playing.",
                         guild_id
                     );
                 }
