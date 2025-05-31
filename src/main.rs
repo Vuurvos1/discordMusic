@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{debug, error};
 
 use dotenv::dotenv;
 
@@ -208,60 +209,55 @@ impl VoiceEventHandler for TrackEndNotifier {
 
         // Lock the guild data and pop the next track from the real queue
         let mut guild_data = self.guild_data.lock().await;
-        println!(
-            "[INFO] TrackEndNotifier: Guild {} - Queue size: {}",
-            self.guild_id,
-            guild_data.queue.len()
-        );
-
         guild_data.queue.pop_front();
+
         if let Some(metadata) = guild_data.queue.front() {
+            let search = metadata.url.clone();
+            let do_search = !search.starts_with("http");
+
             // Play the next track
-            let src = YoutubeDl::new(self.http_client.clone(), metadata.url.clone());
+            let src = if do_search {
+                YoutubeDl::new_search(self.http_client.clone(), search)
+            } else {
+                YoutubeDl::new(self.http_client.clone(), search)
+            };
             let _track_handle = handler.play_only_input(src.into());
 
-            println!(
-                "[INFO] TrackEndNotifier: Playing next from custom queue: {}",
+            debug!(
+                "TrackEndNotifier: Playing next from queue: {}",
                 metadata.title
             );
         } else {
             // Queue is empty, schedule auto-leave
-            println!(
-                "[INFO] TrackEndNotifier: Queue empty for guild {}. Scheduling auto-leave.",
-                self.guild_id
-            );
+            debug!("TrackEndNotifier: Queue empty. Scheduling auto-leave.");
 
-            let manager = self.songbird.clone();
-            let guild_id = self.guild_id;
-
+            let manager = Arc::clone(&self.songbird); // clone the Arc
+            let guild_id = self.guild_id; // Copy, GuildId is Copy
             let guild_data = Arc::clone(&self.guild_data);
-            tokio::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_secs(5 * 60)).await;
 
-                if manager.get(guild_id).is_some() {
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(10 * 60)).await;
+
+                // Only lock for the check, then drop before calling .remove
+                let queue_empty = {
                     if let Some(handler_lock_check) = manager.get(guild_id) {
                         let _handler_check = handler_lock_check.lock().await;
-                        let is_songbird_queue_still_empty =
-                            guild_data.lock().await.queue.is_empty();
+                        guild_data.lock().await.queue.is_empty()
+                    } else {
+                        // Handler is gone, nothing to do
+                        return;
+                    }
+                };
 
-                        if is_songbird_queue_still_empty {
-                            println!("[INFO] Auto-leaving guild {} due to inactivity.", guild_id);
-                            if let Err(e) = manager.remove(guild_id).await {
-                                println!(
-                                    "[ERROR] Error auto-leaving guild {} after delay: {:?}",
-                                    guild_id, e
-                                );
-                            }
-                        } else {
-                            println!(
-                                "[INFO] Auto-leave for guild {} cancelled, new track playing.",
-                                guild_id
-                            );
-                        }
+                if queue_empty {
+                    debug!("Auto-leaving guild due to inactivity");
+
+                    if let Err(e) = manager.remove(guild_id).await {
+                        error!("Error auto-leaving guild after delay: {:?}", e);
                     }
                 } else {
-                    println!(
-                        "[INFO] Bot no longer in voice channel for guild {}, auto-leave cancelled.",
+                    debug!(
+                        "Auto-leave for guild {} cancelled, new track playing.",
                         guild_id
                     );
                 }

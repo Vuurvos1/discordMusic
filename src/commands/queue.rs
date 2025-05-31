@@ -1,8 +1,4 @@
-use crate::GuildDataMap;
-use crate::{check_msg, create_default_message, create_error_message, CommandResult, Context};
-use std::collections::VecDeque;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use crate::{CommandResult, Context};
 
 /// Display the current song queue.
 #[poise::command(slash_command, guild_only)]
