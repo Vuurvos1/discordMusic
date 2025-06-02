@@ -4,7 +4,9 @@ pub mod pause;
 pub mod ping;
 pub mod play;
 pub mod queue;
+pub mod resume;
 pub mod shuffle;
 pub mod skip;
 pub mod stop;
-pub mod unpause;
+// TODO: loop
+// TODO: seek

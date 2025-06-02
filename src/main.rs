@@ -100,7 +100,7 @@ async fn main() {
             commands::play::play(),
             commands::queue::queue(),
             commands::skip::skip(),
-            commands::unpause::unpause(),
+            commands::resume::resume(),
             commands::leave::leave(),
             commands::pause::pause(),
             commands::stop::stop(),
