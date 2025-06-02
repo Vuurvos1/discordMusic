@@ -104,6 +104,8 @@ async fn main() {
             commands::leave::leave(),
             commands::pause::pause(),
             commands::stop::stop(),
+            commands::clear::clear(),
+            commands::shuffle::shuffle(),
         ],
         ..Default::default()
     };

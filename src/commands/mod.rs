@@ -1,10 +1,10 @@
+pub mod clear;
 pub mod leave;
 pub mod pause;
 pub mod ping;
 pub mod play;
 pub mod queue;
+pub mod shuffle;
 pub mod skip;
 pub mod stop;
 pub mod unpause;
-// TODO: clear
-// TODO: shuffle
