@@ -3,7 +3,7 @@ use crate::{
     Context,
 };
 
-/// Stop playing and clear the queue
+/// Stop playback and clear the queue
 #[poise::command(slash_command, guild_only)]
 pub async fn stop(ctx: Context<'_>) -> CommandResult {
     let guild_id = ctx.guild_id().unwrap();
@@ -19,7 +19,7 @@ pub async fn stop(ctx: Context<'_>) -> CommandResult {
     };
 
     let guild_data = get_guild_data(ctx, guild_id.get()).await;
-    let guild_data = guild_data.lock().await;
+    let mut guild_data = guild_data.lock().await;
 
     if let Some(handler) = &guild_data.track_handle {
         if let Err(e) = handler.stop() {
@@ -31,7 +31,6 @@ pub async fn stop(ctx: Context<'_>) -> CommandResult {
     }
 
     // Clear the queue
-    let mut guild_data = guild_data;
     guild_data.queue.clear();
 
     let reply = create_default_message("Stopped music".to_string(), false);

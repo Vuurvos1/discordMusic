@@ -75,11 +75,10 @@ pub async fn play(
             }
         }
     } else {
-        // Already in a channel, get the existing handler lock.
+        // Already in a channel
         manager.get(guild_id).unwrap()
     };
 
-    // Now we have the handler lock, either from joining or because we were already in.
     {
         let mut handler = handler_lock.lock().await;
 
@@ -95,12 +94,13 @@ pub async fn play(
     if is_youtube_playlist(&search) {
         println!("[INFO] Processing YouTube playlist: {}", search);
 
-        // Send processing message
         let processing_msg = create_default_message(
             format!("Processing playlist: {}. This may take a moment...", search),
             false,
         );
-        check_msg(ctx.send(processing_msg).await);
+        let send_msg = ctx.send(processing_msg).await?;
+
+        // check_msg(ctx.send(processing_msg).await);
 
         // Use yt-dlp to get video IDs
         let cmd_output = match TokioCommand::new("yt-dlp")
@@ -159,7 +159,7 @@ pub async fn play(
 
             for video_url in video_urls {
                 let metadata = TrackMetadata {
-                    title: video_url.clone(), // Using URL as placeholder title
+                    title: video_url.clone(),
                     url: video_url,
                     requested_by: ctx.author().name.clone(),
                     requested_by_id: ctx.author().id.get(),
@@ -175,7 +175,7 @@ pub async fn play(
             ),
             false,
         );
-        check_msg(ctx.send(success_msg).await);
+        send_msg.edit(ctx, success_msg).await?;
 
         // If this was the first song(s) added and queue was empty, start playing
         if first_song_added_to_empty_queue {
@@ -193,15 +193,13 @@ pub async fn play(
             }
         }
     } else {
-        println!("[INFO] Single track or search: {}", search);
-
         // Lock only for queue operations, then drop before calling play_next_in_queue
         let (queue_len, input_for_message) = {
             let mut guild_data_lock = guild_data.lock().await;
 
             let input_for_message = search.clone();
             let metadata = TrackMetadata {
-                title: input_for_message.clone(), // Placeholder, ideally fetch title for searches/urls
+                title: input_for_message.clone(),
                 url: search,
                 requested_by: ctx.author().name.clone(),
                 requested_by_id: ctx.author().id.get(),

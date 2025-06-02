@@ -15,17 +15,17 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
         }
     };
 
+    // Clear the queue
+    let guilds_data_map_lock = ctx.data().guilds.clone();
+    let mut guilds_data_map = guilds_data_map_lock.lock().await;
+    guilds_data_map.remove(&guild_id.get());
+
     if let Err(e) = manager.remove(guild_id).await {
         let reply = create_error_message("Failed to leave voice channel".to_string());
         check_msg(ctx.send(reply).await);
         println!("Failed to leave voice channel: {:?}", e);
         return Ok(());
     }
-
-    // Clear the queue
-    let guilds_data_map_lock = ctx.data().guilds.clone();
-    let mut guilds_data_map = guilds_data_map_lock.lock().await;
-    guilds_data_map.remove(&guild_id.get());
 
     let reply = create_default_message("I've left the voice channel".to_string(), false);
     check_msg(ctx.send(reply).await);
