@@ -62,10 +62,6 @@ For installation instructions, you can refer to the [official yt-dlp installatio
 
 Copy the `.env.example` file to `.env` and fill in the values.
 
-## TODO
-
-- Add a docker file to run the bot
-
 <!-- command removal notes
 
 ```js
