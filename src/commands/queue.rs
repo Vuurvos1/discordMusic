@@ -1,7 +1,5 @@
 use crate::utils::get_guild_data;
-use crate::{
-    check_msg, create_default_message, create_error_message, CommandResult, Context, TrackMetadata,
-};
+use crate::{check_msg, create_default_message, CommandResult, Context, TrackMetadata};
 use std::collections::VecDeque;
 
 /// Display the current song queue.
@@ -15,13 +13,13 @@ pub async fn queue(ctx: Context<'_>) -> CommandResult {
     let guild_data = guild_data.lock().await;
 
     if guild_data.queue.is_empty() {
-        let reply = create_error_message("```nim\nThe queue is empty ;-;\n```".to_string());
+        let reply = create_default_message("```nim\nThe queue is empty ;-;\n```".to_string(), true);
         check_msg(ctx.send(reply).await);
         return Ok(());
     }
 
     let msg = build_queue_msg(&guild_data.queue); // TODO: slice 0..10
-    let reply = create_default_message(msg, false);
+    let reply = create_default_message(msg, true);
     check_msg(ctx.send(reply).await);
 
     Ok(())
@@ -35,6 +33,7 @@ fn build_queue_msg(queue: &VecDeque<TrackMetadata>) -> String {
         if i == 0 {
             msg.push_str("    ⬐ current track\n");
         }
+
         let mut title = song.title.clone();
         if title.chars().count() > 40 {
             title = title.chars().take(39).collect::<String>() + "…";
@@ -42,15 +41,15 @@ fn build_queue_msg(queue: &VecDeque<TrackMetadata>) -> String {
             title = format!("{:width$}", title, width = 40);
         }
 
-        // TODO: show duration
         // TOOD: show time left
 
-        // let duration = song.duration.clone().unwrap_or_else(|| "?".to_string());
-        msg.push_str(&format!("{}) {}\n", i + 1, title)); // , duration
+        msg.push_str(&format!("{}) {} {}\n", i + 1, title, song.duration));
+
         if i == 0 {
             msg.push_str("    ⬑ current track\n");
         }
     }
+
     msg.push_str("```");
     msg
 }

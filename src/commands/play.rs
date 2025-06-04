@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use songbird::events::{Event, TrackEvent};
 use songbird::input::YoutubeDl;
 use std::sync::Arc;
@@ -64,8 +65,8 @@ pub async fn play(
                             handler_lock: Arc::clone(&handler_lock_success),
                         },
                     );
-                } // handler lock dropped here
-                handler_lock_success // Return the handler lock for later use
+                }
+                handler_lock_success
             }
             Err(e) => {
                 error!("Error joining channel: {:?}", e);
@@ -75,149 +76,42 @@ pub async fn play(
             }
         }
     } else {
-        // Already in a channel
         manager.get(guild_id).unwrap()
     };
 
     {
         let mut handler = handler_lock.lock().await;
-
-        // Deafen the bot
         if !handler.is_deaf() {
             if let Err(e) = handler.deafen(true).await {
                 error!("Failed to deafen: {:?}", e);
             }
         }
-        // handler lock dropped here
     }
 
     if is_youtube_playlist(&search) {
-        println!("[INFO] Processing YouTube playlist: {}", search);
-
-        let processing_msg = create_default_message(
-            format!("Processing playlist: {}. This may take a moment...", search),
-            false,
-        );
-        let send_msg = ctx.send(processing_msg).await?;
-
-        // check_msg(ctx.send(processing_msg).await);
-
-        // Use yt-dlp to get video IDs
-        let cmd_output = match TokioCommand::new("yt-dlp")
-            .arg("--get-id")
-            .arg("--flat-playlist")
-            .arg("-i") // Ignore download errors for individual videos
-            .arg(&search)
-            .output()
-            .await
-        {
-            Ok(out) => out,
-            Err(e) => {
-                error!("Failed to spawn yt-dlp for playlist {}: {:?}", search, e);
-                let err_reply = create_error_message(format!(
-                    "Failed to start fetching playlist details (yt-dlp command failed to run). Is yt-dlp installed and in your system's PATH? Error: {}",
-                    e
-                ));
-                check_msg(ctx.send(err_reply).await);
-                return Ok(());
-            }
-        };
-
-        if !cmd_output.status.success() {
-            let stderr = String::from_utf8_lossy(&cmd_output.stderr);
-            error!("yt-dlp failed for playlist {}: {}", search, stderr);
-            let error_msg = format!(
-                "Failed to fetch playlist details for \"{}\". yt-dlp error: {}",
-                search, stderr
-            );
-            check_msg(ctx.send(create_error_message(error_msg)).await);
-            return Ok(());
-        }
-
-        let video_ids_str = String::from_utf8_lossy(&cmd_output.stdout);
-        let video_urls: Vec<String> = video_ids_str
-            .lines()
-            .filter(|s| !s.trim().is_empty())
-            .map(|id| format!("https://www.youtube.com/watch?v={}", id.trim()))
-            .collect();
-
-        if video_urls.is_empty() {
-            let err_reply = create_error_message(format!(
-                "No videos found in the playlist \"{}\", or it might be private/empty.",
-                search
-            ));
-            check_msg(ctx.send(err_reply).await);
-            return Ok(());
-        }
-
-        let num_videos = video_urls.len();
-        let mut first_song_added_to_empty_queue = false;
-        {
-            let mut guild_data_lock = guild_data.lock().await;
-            first_song_added_to_empty_queue =
-                guild_data_lock.queue.is_empty() && !video_urls.is_empty();
-
-            for video_url in video_urls {
-                let metadata = TrackMetadata {
-                    title: video_url.clone(),
-                    url: video_url,
-                    requested_by: ctx.author().name.clone(),
-                    requested_by_id: ctx.author().id.get(),
-                };
-                guild_data_lock.queue.push_back(metadata);
-            }
-        } // guild_data_lock is dropped here
-
-        let success_msg = create_default_message(
-            format!(
-                "Added {} songs from playlist \"{}\" to queue.",
-                num_videos, search
-            ),
-            false,
-        );
-        send_msg.edit(ctx, success_msg).await?;
-
-        // If this was the first song(s) added and queue was empty, start playing
-        if first_song_added_to_empty_queue {
-            let track_handler =
-                play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
-
-            if let Some(handler) = track_handler {
-                let mut guild_data_lock = guild_data.lock().await;
-                guild_data_lock.track_handle = Some(handler);
-            } else {
-                let reply = create_error_message(
-                    "Failed to play the first track from playlist.".to_string(),
-                );
-                check_msg(ctx.send(reply).await);
-            }
-        }
+        process_playlist(
+            ctx,
+            search,
+            Arc::clone(&guild_data),
+            Arc::clone(&handler_lock),
+        )
+        .await?;
     } else {
-        // Lock only for queue operations, then drop before calling play_next_in_queue
+        // Single track handling
         let (queue_len, input_for_message) = {
             let mut guild_data_lock = guild_data.lock().await;
-
             let input_for_message = search.clone();
-            let metadata = TrackMetadata {
-                title: input_for_message.clone(),
-                url: search,
-                requested_by: ctx.author().name.clone(),
-                requested_by_id: ctx.author().id.get(),
-            };
-
+            let metadata = get_video_metadata(&search, ctx).await;
             guild_data_lock.queue.push_back(metadata);
-
             let queue_len = guild_data_lock.queue.len();
-
             (queue_len, input_for_message)
-        }; // lock dropped here
+        };
 
         info!("Added \"{}\" to queue", input_for_message);
 
         if queue_len == 1 {
             let track_handler =
                 play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
-
             match track_handler {
                 Some(handler) => {
                     let mut guild_data_lock = guild_data.lock().await;
@@ -236,6 +130,105 @@ pub async fn play(
             check_msg(ctx.send(reply).await);
         }
     }
+
+    Ok(())
+}
+
+async fn process_playlist(
+    ctx: Context<'_>,
+    search: String,
+    guild_data: Arc<tokio::sync::Mutex<GuildData>>,
+    handler_lock: Arc<tokio::sync::Mutex<songbird::Call>>,
+) -> CommandResult {
+    let processing_msg =
+        create_default_message(format!("Processing playlist: {}...", search), false);
+    let send_msg = ctx.send(processing_msg).await?;
+
+    // Get video IDs using yt-dlp
+    let cmd_output = match TokioCommand::new("yt-dlp")
+        .arg("--get-id")
+        .arg("--flat-playlist")
+        .arg("-i")
+        .arg(&search)
+        .output()
+        .await
+    {
+        Ok(out) => out,
+        Err(e) => {
+            error!("Failed to spawn yt-dlp for playlist {}: {:?}", search, e);
+            let err_reply = create_error_message(format!(
+                "Failed to start fetching playlist details (yt-dlp command failed to run). Is yt-dlp installed and in your system's PATH? Error: {}",
+                e
+            ));
+            check_msg(ctx.send(err_reply).await);
+            return Ok(());
+        }
+    };
+
+    if !cmd_output.status.success() {
+        let stderr = String::from_utf8_lossy(&cmd_output.stderr);
+        error!("yt-dlp failed for playlist {}: {}", search, stderr);
+        let error_msg = format!(
+            "Failed to fetch playlist details for \"{}\". yt-dlp error: {}",
+            search, stderr
+        );
+        check_msg(ctx.send(create_error_message(error_msg)).await);
+        return Ok(());
+    }
+
+    let video_ids_str = String::from_utf8_lossy(&cmd_output.stdout);
+    let video_urls: Vec<String> = video_ids_str
+        .lines()
+        .filter(|s| !s.trim().is_empty())
+        .map(|id| format!("https://www.youtube.com/watch?v={}", id.trim()))
+        .collect();
+
+    if video_urls.is_empty() {
+        let err_reply = create_error_message(format!(
+            "No videos found in the playlist \"{}\", or it might be private/empty.",
+            search
+        ));
+        check_msg(ctx.send(err_reply).await);
+        return Ok(());
+    }
+
+    let num_videos = video_urls.len();
+
+    // Process first track immediately
+    if let Some(first_url) = video_urls.first() {
+        let metadata = get_video_metadata(first_url, ctx).await;
+        let mut guild_data_lock = guild_data.lock().await;
+        let queue_was_empty = guild_data_lock.queue.is_empty();
+        guild_data_lock.queue.push_back(metadata);
+        drop(guild_data_lock); // Release lock before playing
+
+        // If queue was empty, start playing immediately
+        if queue_was_empty {
+            let track_handler =
+                play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
+            if let Some(handler) = track_handler {
+                let mut guild_data_lock = guild_data.lock().await;
+                guild_data_lock.track_handle = Some(handler);
+            }
+        }
+    }
+
+    // Process remaining tracks
+    let remaining_urls = video_urls.into_iter().skip(1);
+    for url in remaining_urls {
+        let metadata = get_video_metadata(&url, ctx).await;
+        let mut guild_data_lock = guild_data.lock().await;
+        guild_data_lock.queue.push_back(metadata);
+    }
+
+    let final_msg = create_default_message(
+        format!(
+            "Added {} songs from playlist \"{}\" to queue.",
+            num_videos, search
+        ),
+        false,
+    );
+    send_msg.edit(ctx, final_msg).await?;
 
     Ok(())
 }
@@ -290,4 +283,71 @@ fn is_youtube_playlist(url: &str) -> bool {
         return true;
     }
     false
+}
+
+#[derive(Debug, Deserialize)]
+struct VideoMetadata {
+    title: String,
+    duration: Option<u64>,
+    uploader: Option<String>,
+}
+
+async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
+    let cmd_output = TokioCommand::new("yt-dlp")
+        .arg("-j")
+        .arg(url)
+        .output()
+        .await;
+
+    match cmd_output {
+        Ok(output) if output.status.success() => {
+            match serde_json::from_str::<VideoMetadata>(&String::from_utf8_lossy(&output.stdout)) {
+                Ok(metadata) => {
+                    let formatted_duration = format_duration(metadata.duration);
+
+                    TrackMetadata {
+                        title: metadata.title,
+                        url: url.to_string(),
+                        artist: metadata.uploader.unwrap_or_else(|| "".to_string()),
+                        requested_by: ctx.author().id.get(),
+                        platform: "youtube".to_string(),
+                        duration: formatted_duration,
+                    }
+                }
+                Err(_e) => TrackMetadata {
+                    title: url.to_string(),
+                    url: url.to_string(),
+                    artist: "".to_string(),
+                    requested_by: ctx.author().id.get(),
+                    platform: "youtube".to_string(),
+                    duration: "".to_string(),
+                },
+            }
+        }
+        _ => TrackMetadata {
+            title: url.to_string(),
+            url: url.to_string(),
+            artist: "".to_string(),
+            requested_by: ctx.author().id.get(),
+            platform: "youtube".to_string(),
+            duration: "".to_string(),
+        }, // // if went wrong
+    }
+}
+
+fn format_duration(duration: Option<u64>) -> String {
+    if duration.is_none() {
+        return "".to_string();
+    }
+
+    let duration = duration.unwrap();
+    let hours = duration / 3600;
+    let minutes = (duration % 3600) / 60;
+    let secs = duration % 60;
+
+    if hours > 0 {
+        return format!("{:02}:{:02}:{:02}", hours, minutes, secs);
+    }
+
+    format!("{:02}:{:02}", minutes, secs)
 }

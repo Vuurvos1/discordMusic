@@ -1,7 +1,6 @@
 mod commands;
 mod utils;
 
-use songbird::tracks::PlayMode;
 use songbird::tracks::TrackHandle;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -27,8 +26,10 @@ use songbird::Call;
 pub struct TrackMetadata {
     pub title: String,
     pub url: String,
-    pub requested_by: String,
-    pub requested_by_id: u64,
+    pub artist: String,
+    pub duration: String,
+    pub requested_by: u64,
+    pub platform: String,
 }
 
 struct CustomColours {
@@ -51,14 +52,12 @@ type CommandResult = Result<(), Error>;
 
 pub struct GuildData {
     queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
-    play_mode: PlayMode,
     track_handle: Option<TrackHandle>,
 }
 impl Default for GuildData {
     fn default() -> Self {
         Self {
             queue: VecDeque::new(),
-            play_mode: PlayMode::Play,
             track_handle: None,
         }
     }
