@@ -293,45 +293,37 @@ struct VideoMetadata {
 }
 
 async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
-    let cmd_output = TokioCommand::new("yt-dlp")
+    let output = TokioCommand::new("yt-dlp")
         .arg("-j")
+        .arg("--no-playlist") // Prevent playlist expansion
         .arg(url)
         .output()
         .await;
 
-    match cmd_output {
+    let default_metadata = || TrackMetadata {
+        title: url.to_string(),
+        url: url.to_string(),
+        artist: String::new(),
+        requested_by: ctx.author().id.get(),
+        platform: "youtube".to_string(),
+        duration: String::new(),
+    };
+
+    match output {
         Ok(output) if output.status.success() => {
             match serde_json::from_str::<VideoMetadata>(&String::from_utf8_lossy(&output.stdout)) {
-                Ok(metadata) => {
-                    let formatted_duration = format_duration(metadata.duration);
-
-                    TrackMetadata {
-                        title: metadata.title,
-                        url: url.to_string(),
-                        artist: metadata.uploader.unwrap_or_else(|| "".to_string()),
-                        requested_by: ctx.author().id.get(),
-                        platform: "youtube".to_string(),
-                        duration: formatted_duration,
-                    }
-                }
-                Err(_e) => TrackMetadata {
-                    title: url.to_string(),
+                Ok(metadata) => TrackMetadata {
+                    title: metadata.title,
                     url: url.to_string(),
-                    artist: "".to_string(),
+                    artist: metadata.uploader.unwrap_or_default(),
                     requested_by: ctx.author().id.get(),
                     platform: "youtube".to_string(),
-                    duration: "".to_string(),
+                    duration: format_duration(metadata.duration),
                 },
+                Err(_) => default_metadata(),
             }
         }
-        _ => TrackMetadata {
-            title: url.to_string(),
-            url: url.to_string(),
-            artist: "".to_string(),
-            requested_by: ctx.author().id.get(),
-            platform: "youtube".to_string(),
-            duration: "".to_string(),
-        }, // // if went wrong
+        _ => default_metadata(),
     }
 }
 
