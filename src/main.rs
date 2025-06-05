@@ -50,17 +50,10 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, UserData, Error>;
 type CommandResult = Result<(), Error>;
 
+#[derive(Default)]
 pub struct GuildData {
     queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
     track_handle: Option<TrackHandle>,
-}
-impl Default for GuildData {
-    fn default() -> Self {
-        Self {
-            queue: VecDeque::new(),
-            track_handle: None,
-        }
-    }
 }
 
 pub type GuildDataMap = HashMap<u64, Arc<Mutex<GuildData>>>;
@@ -84,7 +77,7 @@ impl EventHandler for Handler {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    dotenv().ok().expect("Failed to load .env file");
+    dotenv().expect("Failed to load .env file");
 
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Discord token must be set.");

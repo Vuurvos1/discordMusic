@@ -59,7 +59,7 @@ pub async fn play(
                         Event::Track(TrackEvent::End),
                         TrackEndNotifier {
                             guild_id,
-                            songbird: Arc::clone(&manager),
+                            songbird: Arc::clone(manager),
                             guild_data: Arc::clone(&guild_data),
                             http_client: data.http.clone(),
                             handler_lock: Arc::clone(&handler_lock_success),
