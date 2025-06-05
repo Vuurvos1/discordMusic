@@ -1,2 +1,4 @@
-node_modules/
 target/
+docs/
+.github/
+.vscode/
