@@ -267,10 +267,7 @@ async fn play_next_in_queue(
         let track_handle = handler.play_only_input(src.into());
 
         let reply = create_default_message(
-            format!(
-                "Playing: {}",
-                format!("[{}]({})", metadata.title, metadata.url)
-            ),
+            format!("Playing: [{}]({})", metadata.title, metadata.url),
             false,
         );
         check_msg(ctx.send(reply).await);

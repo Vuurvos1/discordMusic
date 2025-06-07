@@ -23,23 +23,22 @@ pub async fn r#loop(ctx: Context<'_>) -> CommandResult {
 
     guild_data.looping = !guild_data.looping;
 
-    if let Some(handler) = &guild_data.track_handle {
-        if guild_data.looping {
-            if let Err(e) = handler.enable_loop() {
-                println!("Failed to enable loop: {:?}", e);
-                let reply = create_error_message("Failed to enable loop".to_string());
-                check_msg(ctx.send(reply).await);
-                return Ok(());
-            }
-        } else {
-            if let Err(e) = handler.disable_loop() {
-                println!("Failed to disable loop: {:?}", e);
-                let reply = create_error_message("Failed to disable loop".to_string());
-                check_msg(ctx.send(reply).await);
-                return Ok(());
-            }
-        }
+    let Some(handler) = &guild_data.track_handle else {
+        return Ok(());
+    };
+
+    let result = if guild_data.looping {
+        handler.enable_loop()
+    } else {
+        handler.disable_loop()
+    };
+
+    if let Err(_e) = result {
+        let reply = create_error_message(format!("Failed to toggle looping"));
+        check_msg(ctx.send(reply).await);
+        return Ok(());
     }
+
     let status = if guild_data.looping {
         "enabled"
     } else {
