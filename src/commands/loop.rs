@@ -34,7 +34,7 @@ pub async fn r#loop(ctx: Context<'_>) -> CommandResult {
     };
 
     if let Err(_e) = result {
-        let reply = create_error_message(format!("Failed to toggle looping"));
+        let reply = create_error_message("Failed to toggle looping".to_string());
         check_msg(ctx.send(reply).await);
         return Ok(());
     }
