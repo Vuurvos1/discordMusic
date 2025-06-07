@@ -11,6 +11,9 @@ use crate::{
     TrackEndNotifier, TrackErrorNotifier, TrackMetadata,
 };
 
+// TODO: support soundcloud sets
+// TOOD: support spotify through youtube
+
 /// Play a song
 #[poise::command(slash_command, guild_only)]
 pub async fn play(
@@ -19,6 +22,15 @@ pub async fn play(
 ) -> CommandResult {
     if let Err(e) = ctx.defer().await {
         println!("Error deferring interaction: {:?}", e);
+        return Ok(());
+    }
+
+    // Validate URL if it looks like a URL
+    if search.starts_with("http") && !validate_url(&search) {
+        let reply = create_error_message(
+            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud.".to_string()
+        );
+        check_msg(ctx.send(reply).await);
         return Ok(());
     }
 
@@ -243,8 +255,6 @@ async fn play_next_in_queue(
     let guild_data_lock = guild_data.lock().await;
 
     if let Some(metadata) = guild_data_lock.queue.front() {
-        info!("Playing next in custom queue: {}", metadata.title);
-
         let search = metadata.url.clone();
         let do_search = !search.starts_with("http");
 
@@ -256,7 +266,13 @@ async fn play_next_in_queue(
 
         let track_handle = handler.play_only_input(src.into());
 
-        let reply = create_default_message(format!("Playing: {}", metadata.title), false);
+        let reply = create_default_message(
+            format!(
+                "Playing: {}",
+                format!("[{}]({})", metadata.title, metadata.url)
+            ),
+            false,
+        );
         check_msg(ctx.send(reply).await);
 
         Some(track_handle)
@@ -325,6 +341,25 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
         }
         _ => default_metadata(),
     }
+}
+
+fn validate_url(url: &str) -> bool {
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return false;
+    }
+
+    // YouTube URLs
+    if url.contains("youtube.com") || url.contains("youtu.be") || url.contains("music.youtube.com")
+    {
+        return true;
+    }
+
+    // SoundCloud URLs
+    if url.contains("soundcloud.com") {
+        return true;
+    }
+
+    false
 }
 
 fn format_duration(duration: Option<u64>) -> String {

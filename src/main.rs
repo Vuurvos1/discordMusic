@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use dotenv::dotenv;
 
@@ -54,6 +54,8 @@ type CommandResult = Result<(), Error>;
 pub struct GuildData {
     queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
     track_handle: Option<TrackHandle>,
+    pub looping: bool,
+    // play_mode: PlayMode,
 }
 
 pub type GuildDataMap = HashMap<u64, Arc<Mutex<GuildData>>>;
@@ -88,16 +90,19 @@ async fn main() {
     // Configure our command framework
     let options = poise::FrameworkOptions {
         commands: vec![
+            commands::clear::clear(),
+            commands::leave::leave(),
+            commands::r#loop::r#loop(),
+            commands::r#move::r#move(),
+            commands::pause::pause(),
             commands::ping::ping(),
             commands::play::play(),
             commands::queue::queue(),
-            commands::skip::skip(),
+            commands::remove::remove(),
             commands::resume::resume(),
-            commands::leave::leave(),
-            commands::pause::pause(),
-            commands::stop::stop(),
-            commands::clear::clear(),
             commands::shuffle::shuffle(),
+            commands::skip::skip(),
+            commands::stop::stop(),
         ],
         ..Default::default()
     };
@@ -144,7 +149,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
             for (state, handle) in *track_list {
-                println!(
+                error!(
                     "Track {:?} encountered an error: {:?}",
                     handle.uuid(),
                     state.playing
@@ -203,7 +208,10 @@ impl VoiceEventHandler for TrackEndNotifier {
 
         // Lock the guild data and pop the next track from the real queue
         let mut guild_data = self.guild_data.lock().await;
-        guild_data.queue.pop_front();
+
+        if !guild_data.looping {
+            guild_data.queue.pop_front();
+        }
 
         if let Some(metadata) = guild_data.queue.front() {
             let search = metadata.url.clone();
@@ -216,14 +224,9 @@ impl VoiceEventHandler for TrackEndNotifier {
                 YoutubeDl::new(self.http_client.clone(), search)
             };
             let _track_handle = handler.play_only_input(src.into());
-
-            debug!(
-                "TrackEndNotifier: Playing next from queue: {}",
-                metadata.title
-            );
         } else {
             // Queue is empty, schedule auto-leave
-            debug!("TrackEndNotifier: Queue empty. Scheduling auto-leave.");
+            info!("TrackEndNotifier: Queue empty. Scheduling auto-leave.");
 
             let manager = Arc::clone(&self.songbird); // clone the Arc
             let guild_id = self.guild_id; // Copy, GuildId is Copy
@@ -249,11 +252,6 @@ impl VoiceEventHandler for TrackEndNotifier {
                     if let Err(e) = manager.remove(guild_id).await {
                         error!("Error auto-leaving guild after delay: {:?}", e);
                     }
-                } else {
-                    debug!(
-                        "Auto-leave for guild {} cancelled, new track playing.",
-                        guild_id
-                    );
                 }
             });
         }

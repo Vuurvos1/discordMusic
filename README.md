@@ -61,17 +61,3 @@ For installation instructions, you can refer to the [official yt-dlp installatio
 ### Environment variables
 
 Copy the `.env.example` file to `.env` and fill in the values.
-
-<!-- command removal notes
-
-```js
-// local
-let coms = await guild.commands.fetch();
-await coms.forEach(async (com) => {
-  await com.delete();
-});
-
-// global
-await client.application.commands.set([]); // clear all global commands
-console.log(await client.api.applications(client.user.id).commands.get()); //
-``` -->
