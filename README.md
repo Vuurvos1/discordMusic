@@ -5,34 +5,59 @@
 
 A Discord bot that plays music
 
-## Adding the bot to your server
+### Commands
 
-In de discord developer portal make sure you have selected `bot` and `applications.commands` under scope
+- `clear`: clear the queue
+- `leave`: leave the voice channel
+- `pause`: pause the current song
+- `play <song>`: play a song, this can be a youtube url or a search query
+- `queue`: show the current queue
+- `resume`: resume the current song
+- `shuffle`: shuffle the queue
+- `skip`: skip the current song
+- `stop`: stop the current song and clear the queue
 
-under Bot permissions, turn on administrator rights (or enable all voice and text related permissions)
+## Setup and instalation
 
-## Features
+### Rust
 
-- Play, pause, queue and skip songs
-- Slash commands
+First of all make sure you have Rust installed. You can find the official installation guide [here](https://www.rust-lang.org/tools/install).
 
-## Instalation
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
-1. clone the project
-2. open the project directory
-3. run `pnpm install`
-4. start the bot using `pnpm start` or `npm run start`
+> [!NOTE]
+> You might need to add the following if you are using linux
+>
+> ```bash
+> sudo apt update
+> sudo apt install build-essential libc6-dev cmake pkg-config libopus-dev
+> ```
 
-<!-- command removal notes
+### yt-dlp
 
-```js
-// local
-let coms = await guild.commands.fetch();
-await coms.forEach(async (com) => {
-  await com.delete();
-});
+This bot uses yt-dlp to search and stream audio.
+For installation instructions, you can refer to the [official yt-dlp installation guide](https://github.com/yt-dlp/yt-dlp/wiki/Installation).
 
-// global
-await client.application.commands.set([]); // clear all global commands
-console.log(await client.api.applications(client.user.id).commands.get()); //
-``` -->
+> [!NOTE]  
+> When installing yt-dlp through pip, you might need to add the following to your `.bashrc` / `.zshrc`
+>
+> ```
+> export PATH="$HOME/.local/bin:$PATH"
+> ```
+
+### Adding the bot to your server
+
+1.  **Navigate to the [Discord Developer Portal](https://discord.com/developers/applications).**
+2.  **Select your application.**
+3.  Under the "OAuth2" > "URL Generator" section, select the `bot` and `applications.commands` scopes.
+4.  A URL will be generated at the bottom of the page. Copy this URL and paste it into your browser.
+5.  Select the server you want to add the bot to and click "Authorize".
+6.  Back in the Discord Developer Portal, go to the "Bot" page.
+7.  Under "Privileged Gateway Intents", ensure "Message Content Intent" is enabled if your bot needs to read message content.
+8.  Under "Bot Permissions", grant the bot "Administrator" rights. Alternatively, you can enable all necessary voice and text-related permissions individually for more granular control.
+
+### Environment variables
+
+Copy the `.env.example` file to `.env` and fill in the values.

@@ -1,0 +1,14 @@
+pub mod clear;
+pub mod leave;
+pub mod r#loop;
+pub mod r#move;
+pub mod pause;
+pub mod ping;
+pub mod play;
+pub mod queue;
+pub mod remove;
+pub mod resume;
+pub mod shuffle;
+pub mod skip;
+pub mod stop;
+// TODO: seek
