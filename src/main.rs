@@ -5,7 +5,7 @@ use songbird::tracks::TrackHandle;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
 use tracing::{debug, error, info};
 
 use dotenv::dotenv;
@@ -50,12 +50,24 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, UserData, Error>;
 type CommandResult = Result<(), Error>;
 
-#[derive(Default)]
 pub struct GuildData {
     queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
     track_handle: Option<TrackHandle>,
     pub looping: bool,
+    // Auto-leave task cancellation
+    auto_leave_cancel: Option<oneshot::Sender<()>>,
     // play_mode: PlayMode,
+}
+
+impl Default for GuildData {
+    fn default() -> Self {
+        Self {
+            queue: VecDeque::new(),
+            track_handle: None,
+            looping: false,
+            auto_leave_cancel: None,
+        }
+    }
 }
 
 pub type GuildDataMap = HashMap<u64, Arc<Mutex<GuildData>>>;
@@ -192,6 +204,65 @@ fn check_msg<T>(result: serenity::Result<T>) {
     }
 }
 
+/// Cancels any existing auto-leave task for the guild
+pub async fn cancel_auto_leave(guild_data: &Arc<Mutex<GuildData>>) {
+    let mut data = guild_data.lock().await;
+    if let Some(cancel_sender) = data.auto_leave_cancel.take() {
+        let _ = cancel_sender.send(()); // Cancel existing task
+    }
+}
+
+/// Starts a new auto-leave task for the guild
+pub async fn start_auto_leave_task(
+    guild_id: serenity::all::GuildId,
+    songbird: Arc<songbird::Songbird>,
+    guild_data: Arc<Mutex<GuildData>>,
+) {
+    cancel_auto_leave(&guild_data).await;
+
+    let (cancel_sender, cancel_receiver) = oneshot::channel();
+
+    {
+        let mut data = guild_data.lock().await;
+        data.auto_leave_cancel = Some(cancel_sender);
+    }
+
+    info!("TrackEndNotifier: Queue empty. Starting single auto-leave task.");
+
+    let guild_data_clone = Arc::clone(&guild_data);
+    tokio::spawn(async move {
+        tokio::select! {
+            _ = tokio::time::sleep(std::time::Duration::from_secs(10 * 60)) => {
+                let should_leave = {
+                    if let Some(handler_lock_check) = songbird.get(guild_id) {
+                        let _handler_check = handler_lock_check.lock().await;
+                        let data = guild_data_clone.lock().await;
+                        data.queue.is_empty()
+                    } else {
+                        return;
+                    }
+                };
+
+                if should_leave {
+                    debug!("Auto-leaving guild {} due to inactivity", guild_id.get());
+
+                    {
+                        let mut data = guild_data_clone.lock().await;
+                        data.auto_leave_cancel = None;
+                    }
+
+                    if let Err(e) = songbird.remove(guild_id).await {
+                        error!("Error auto-leaving guild after delay: {:?}", e);
+                    }
+                }
+            }
+            _ = cancel_receiver => {
+                debug!("Auto-leave task cancelled for guild {}", guild_id.get());
+            }
+        }
+    });
+}
+
 struct TrackEndNotifier {
     guild_id: serenity::all::GuildId,
     songbird: Arc<songbird::Songbird>,
@@ -203,21 +274,24 @@ struct TrackEndNotifier {
 #[async_trait]
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        // Lock the handler to ensure exclusive access to playback
         let mut handler = self.handler_lock.lock().await;
 
-        // Lock the guild data and pop the next track from the real queue
         let mut guild_data = self.guild_data.lock().await;
 
         if !guild_data.looping {
             guild_data.queue.pop_front();
         }
 
-        if let Some(metadata) = guild_data.queue.front() {
+        let has_next_track = guild_data.queue.front().is_some();
+        if has_next_track {
+            if let Some(cancel_sender) = guild_data.auto_leave_cancel.take() {
+                let _ = cancel_sender.send(());
+            }
+
+            let metadata = guild_data.queue.front().unwrap();
             let search = metadata.url.clone();
             let do_search = !search.starts_with("http");
 
-            // Play the next track
             let src = if do_search {
                 YoutubeDl::new_search(self.http_client.clone(), search)
             } else {
@@ -225,35 +299,15 @@ impl VoiceEventHandler for TrackEndNotifier {
             };
             let _track_handle = handler.play_only_input(src.into());
         } else {
-            // Queue is empty, schedule auto-leave
-            info!("TrackEndNotifier: Queue empty. Scheduling auto-leave.");
+            drop(guild_data);
+            drop(handler);
 
-            let manager = Arc::clone(&self.songbird); // clone the Arc
-            let guild_id = self.guild_id; // Copy, GuildId is Copy
-            let guild_data = Arc::clone(&self.guild_data);
-
-            tokio::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_secs(10 * 60)).await;
-
-                // Only lock for the check, then drop before calling .remove
-                let queue_empty = {
-                    if let Some(handler_lock_check) = manager.get(guild_id) {
-                        let _handler_check = handler_lock_check.lock().await;
-                        guild_data.lock().await.queue.is_empty()
-                    } else {
-                        // Handler is gone, nothing to do
-                        return;
-                    }
-                };
-
-                if queue_empty {
-                    debug!("Auto-leaving guild due to inactivity");
-
-                    if let Err(e) = manager.remove(guild_id).await {
-                        error!("Error auto-leaving guild after delay: {:?}", e);
-                    }
-                }
-            });
+            start_auto_leave_task(
+                self.guild_id,
+                Arc::clone(&self.songbird),
+                Arc::clone(&self.guild_data),
+            )
+            .await;
         }
         None
     }
