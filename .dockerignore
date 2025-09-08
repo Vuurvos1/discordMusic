@@ -2,3 +2,6 @@ target/
 docs/
 .github/
 .vscode/
+
+README.md
+*.sh

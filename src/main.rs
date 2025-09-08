@@ -91,7 +91,13 @@ impl EventHandler for Handler {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    dotenv().expect("Failed to load .env file");
+    // Load .env file if it exists (optional for Docker containers)
+    if let Err(e) = dotenv() {
+        println!(
+            "No .env file found or failed to load: {}. Using environment variables directly.",
+            e
+        );
+    }
 
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Discord token must be set.");
