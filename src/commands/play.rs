@@ -21,7 +21,7 @@ pub async fn play(
     #[description = "Search term or url of the song"] search: String,
 ) -> CommandResult {
     if let Err(e) = ctx.defer().await {
-        println!("Error deferring interaction: {:?}", e);
+        error!("Error deferring interaction: {:?}", e);
         return Ok(());
     }
 
@@ -251,32 +251,40 @@ async fn play_next_in_queue(
     guild_data: Arc<tokio::sync::Mutex<GuildData>>,
 ) -> Option<songbird::tracks::TrackHandle> {
     let data = ctx.data();
-    let mut handler = handler_lock.lock().await;
-    let guild_data_lock = guild_data.lock().await;
 
-    if let Some(metadata) = guild_data_lock.queue.front() {
-        let search = metadata.url.clone();
-        let do_search = !search.starts_with("http");
-
-        let src = if do_search {
-            YoutubeDl::new_search(data.http.clone(), search)
+    // Extract required metadata without holding the lock longer than necessary
+    let (url, title) = {
+        let guild_data_lock = guild_data.lock().await;
+        if let Some(metadata) = guild_data_lock.queue.front() {
+            (metadata.url.clone(), metadata.title.clone())
         } else {
-            YoutubeDl::new(data.http.clone(), search)
-        };
+            debug!("play_next_in_queue called but custom queue was empty.");
+            return None;
+        }
+    };
 
-        let track_handle = handler.play_only_input(src.into());
-
-        let reply = create_default_message(
-            format!("Playing: [{}]({})", metadata.title, metadata.url),
-            false,
-        );
-        check_msg(ctx.send(reply).await);
-
-        Some(track_handle)
+    let src = if url.starts_with("http") {
+        YoutubeDl::new(data.http.clone(), url.clone())
     } else {
-        debug!("play_next_in_queue called but custom queue was empty.");
-        None
-    }
+        YoutubeDl::new_search(data.http.clone(), url.clone())
+    };
+
+    // Acquire the handler lock only for the duration of starting playback
+    let track_handle = {
+        let mut handler = handler_lock.lock().await;
+        handler.play_only_input(src.into())
+    };
+
+    // Send the message after releasing all locks
+    check_msg(
+        ctx.send(create_default_message(
+            format!("Playing: [{}]({})", title, url),
+            false,
+        ))
+        .await,
+    );
+
+    Some(track_handle)
 }
 
 /// Helper function to check if a URL is a YouTube playlist.
