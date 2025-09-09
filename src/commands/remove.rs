@@ -26,13 +26,13 @@ pub async fn remove(
     let guild_data = get_guild_data(ctx, guild_id.get()).await;
     let mut guild_data = guild_data.lock().await;
 
-    if guild_data.queue.len() <= 1 {
+    let queue_len = guild_data.queue.len();
+
+    if queue_len <= 1 {
         let reply = create_error_message("Nothing to remove, the queue is empty".to_string());
         check_msg(ctx.send(reply).await);
         return Ok(());
     }
-
-    let queue_len = guild_data.queue.len();
 
     if position > queue_len as u32 {
         let reply = create_error_message("Invalid position".to_string());

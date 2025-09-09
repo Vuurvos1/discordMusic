@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex};
+use tracing::warn;
 use tracing::{debug, error, info};
 
 use dotenv::dotenv;
@@ -83,7 +84,7 @@ struct Handler;
 #[serenity::async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: serenity::Context, ready: serenity::Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
@@ -93,7 +94,7 @@ async fn main() {
 
     // Load .env file if it exists (optional for Docker containers)
     if let Err(e) = dotenv() {
-        println!(
+        warn!(
             "No .env file found or failed to load: {}. Using environment variables directly.",
             e
         );
@@ -142,7 +143,9 @@ async fn main() {
         })
         .build();
 
-    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::non_privileged()
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILD_VOICE_STATES;
     let mut client = serenity::Client::builder(&token, intents)
         .voice_manager_arc(manager)
         .event_handler(Handler)
@@ -154,11 +157,11 @@ async fn main() {
         let _ = client
             .start()
             .await
-            .map_err(|why| println!("Client ended: {:?}", why));
+            .map_err(|why| error!("Client ended: {:?}", why));
     });
 
     let _signal_err = tokio::signal::ctrl_c().await;
-    println!("Received Ctrl-C, shutting down.");
+    info!("Received Ctrl-C, shutting down.");
 }
 
 struct TrackErrorNotifier;
@@ -206,7 +209,7 @@ fn create_error_message(error: String) -> poise::CreateReply {
 /// Checks that a message successfully sent; if not, then logs why to stdout.
 fn check_msg<T>(result: serenity::Result<T>) {
     if let Err(why) = result {
-        println!("Error sending message: {:?}", why);
+        error!("Error sending message: {:?}", why);
     }
 }
 

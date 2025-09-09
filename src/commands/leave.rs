@@ -1,3 +1,5 @@
+use tracing::error;
+
 use crate::{check_msg, create_default_message, create_error_message, CommandResult, Context};
 
 /// Stop and leave the voice channel
@@ -23,7 +25,7 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
     if let Err(e) = manager.remove(guild_id).await {
         let reply = create_error_message("Failed to leave voice channel".to_string());
         check_msg(ctx.send(reply).await);
-        println!("Failed to leave voice channel: {:?}", e);
+        error!("Failed to leave voice channel: {:?}", e);
         return Ok(());
     }
 

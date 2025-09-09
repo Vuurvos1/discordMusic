@@ -1,3 +1,5 @@
+use tracing::error;
+
 use crate::{
     check_msg, create_default_message, create_error_message, utils::get_guild_data, CommandResult,
     Context,
@@ -23,7 +25,7 @@ pub async fn stop(ctx: Context<'_>) -> CommandResult {
 
     if let Some(handler) = &guild_data.track_handle {
         if let Err(e) = handler.stop() {
-            println!("Failed to stop: {:?}", e);
+            error!("Failed to stop: {:?}", e);
             let reply = create_error_message("Failed to stop".to_string());
             check_msg(ctx.send(reply).await);
             return Ok(());
