@@ -15,22 +15,17 @@ pub async fn skip(ctx: Context<'_>) -> CommandResult {
     };
 
     let guild_data = get_guild_data(ctx, guild_id).await;
-    let guild_data = guild_data.lock().await;
+    let mut guild_data = guild_data.lock().await;
 
-    if guild_data.queue.is_empty() {
-        let reply = create_error_message("Queue is empty, nothing to skip".to_string());
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    }
-
-    if let Some(handler) = &guild_data.track_handle {
-        if let Err(e) = handler.stop() {
-            error!("Failed to skip song: {:?}", e);
-            let reply = create_error_message("Failed to skip song".to_string());
+    let _track = match guild_data.queue.skip() {
+        Some(track) => track,
+        None => {
+            let reply = create_error_message("Queue is empty, nothing to skip");
+            error!("Queue is empty, nothing to skip"); // TODO: remove log
             check_msg(ctx.send(reply).await);
             return Ok(());
         }
-    }
+    };
 
     let reply = create_default_message("Skipped song".to_string(), false);
     check_msg(ctx.send(reply).await);

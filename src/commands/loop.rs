@@ -12,7 +12,7 @@ pub async fn r#loop(ctx: Context<'_>) -> CommandResult {
     let _handler_lock = match manager.get(guild_id) {
         Some(handler) => handler,
         None => {
-            let reply = create_error_message("Not in a voice channel".to_string());
+            let reply = create_error_message("Not in a voice channel");
             check_msg(ctx.send(reply).await);
             return Ok(());
         }
@@ -34,7 +34,7 @@ pub async fn r#loop(ctx: Context<'_>) -> CommandResult {
     };
 
     if let Err(_e) = result {
-        let reply = create_error_message("Failed to toggle looping".to_string());
+        let reply = create_error_message("Failed to toggle looping");
         check_msg(ctx.send(reply).await);
         return Ok(());
     }

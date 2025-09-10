@@ -20,7 +20,7 @@ pub async fn get_guild_data(
 /// If not connected, sends an error reply and returns None.
 pub async fn require_voice_handler(ctx: Context<'_>) -> Option<Arc<Mutex<songbird::Call>>> {
     let Some(guild_id) = ctx.guild_id() else {
-        let reply = create_error_message("This command can only be used in a server.".to_string());
+        let reply = create_error_message("This command can only be used in a server.");
         check_msg(ctx.send(reply).await);
         return None;
     };
@@ -29,7 +29,7 @@ pub async fn require_voice_handler(ctx: Context<'_>) -> Option<Arc<Mutex<songbir
     match manager.get(guild_id) {
         Some(handler) => Some(handler),
         None => {
-            let reply = create_error_message("Not in a voice channel".to_string());
+            let reply = create_error_message("Not in a voice channel");
             check_msg(ctx.send(reply).await);
             None
         }

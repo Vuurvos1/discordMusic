@@ -28,7 +28,7 @@ pub async fn play(
     // Validate URL if it looks like a URL
     if search.starts_with("http") && !validate_url(&search) {
         let reply = create_error_message(
-            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud.".to_string()
+            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud."
         );
         check_msg(ctx.send(reply).await);
         return Ok(());
@@ -54,7 +54,7 @@ pub async fn play(
         let connect_to = match channel_id {
             Some(channel) => channel,
             None => {
-                let reply = create_error_message("You are not in a voice channel.".to_string());
+                let reply = create_error_message("You are not in a voice channel.");
                 check_msg(ctx.send(reply).await);
                 return Ok(());
             }
@@ -82,7 +82,7 @@ pub async fn play(
             }
             Err(e) => {
                 error!("Error joining channel: {:?}", e);
-                let reply = create_error_message("Error joining channel".to_string());
+                let reply = create_error_message("Error joining channel");
                 check_msg(ctx.send(reply).await);
                 return Ok(());
             }
@@ -130,7 +130,7 @@ pub async fn play(
                     guild_data_lock.track_handle = Some(handler);
                 }
                 None => {
-                    let reply = create_error_message("Failed to play the track.".to_string());
+                    let reply = create_error_message("Failed to play the track.");
                     check_msg(ctx.send(reply).await);
                 }
             }
@@ -168,7 +168,7 @@ async fn process_playlist(
         Ok(out) => out,
         Err(e) => {
             error!("Failed to spawn yt-dlp for playlist {}: {:?}", search, e);
-            let err_reply = create_error_message(format!(
+            let err_reply = create_error_message(&format!(
                 "Failed to start fetching playlist details (yt-dlp command failed to run). Is yt-dlp installed and in your system's PATH? Error: {}",
                 e
             ));
@@ -184,7 +184,7 @@ async fn process_playlist(
             "Failed to fetch playlist details for \"{}\". yt-dlp error: {}",
             search, stderr
         );
-        check_msg(ctx.send(create_error_message(error_msg)).await);
+        check_msg(ctx.send(create_error_message(&error_msg)).await);
         return Ok(());
     }
 
@@ -196,7 +196,7 @@ async fn process_playlist(
         .collect();
 
     if video_urls.is_empty() {
-        let err_reply = create_error_message(format!(
+        let err_reply = create_error_message(&format!(
             "No videos found in the playlist \"{}\", or it might be private/empty.",
             search
         ));

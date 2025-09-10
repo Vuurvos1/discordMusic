@@ -20,7 +20,7 @@ pub async fn resume(ctx: Context<'_>) -> CommandResult {
     if let Some(handler) = &guild_data.track_handle {
         if let Err(e) = handler.play() {
             error!("Failed to resume: {:?}", e);
-            let reply = create_error_message("Failed to resume".to_string());
+            let reply = create_error_message("Failed to resume");
             check_msg(ctx.send(reply).await);
             return Ok(());
         }

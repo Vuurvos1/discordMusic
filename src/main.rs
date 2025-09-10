@@ -1,9 +1,9 @@
 mod commands;
+mod queue;
 mod utils;
 
 use songbird::tracks::TrackHandle;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex};
 use tracing::warn;
@@ -22,6 +22,8 @@ use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 use reqwest::Client as HttpClient;
 use songbird::input::YoutubeDl;
 use songbird::Call;
+
+use crate::queue::Queue;
 
 #[derive(Clone, Debug)]
 pub struct TrackMetadata {
@@ -52,7 +54,7 @@ type Context<'a> = poise::Context<'a, UserData, Error>;
 type CommandResult = Result<(), Error>;
 
 pub struct GuildData {
-    queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
+    queue: Queue,
     track_handle: Option<TrackHandle>,
     pub looping: bool,
     // Auto-leave task cancellation
@@ -63,7 +65,7 @@ pub struct GuildData {
 impl Default for GuildData {
     fn default() -> Self {
         Self {
-            queue: VecDeque::new(),
+            queue: Queue::default(),
             track_handle: None,
             looping: false,
             auto_leave_cancel: None,
@@ -184,6 +186,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
 
 // TODO: create an in voice channel util
 
+// TODO: change String to &str
 fn create_default_message(message: String, ephemeral: bool) -> poise::CreateReply {
     let colors = CustomColours::new();
     poise::CreateReply::default()
@@ -195,7 +198,7 @@ fn create_default_message(message: String, ephemeral: bool) -> poise::CreateRepl
         .ephemeral(ephemeral)
 }
 
-fn create_error_message(error: String) -> poise::CreateReply {
+fn create_error_message(error: &str) -> poise::CreateReply {
     let colors = CustomColours::new();
     poise::CreateReply::default()
         .embed(
@@ -287,7 +290,7 @@ impl VoiceEventHandler for TrackEndNotifier {
         let mut guild_data = self.guild_data.lock().await;
 
         if !guild_data.looping {
-            guild_data.queue.pop_front();
+            guild_data.queue.next_track();
         }
 
         let next_search = guild_data.queue.front().map(|m| m.url.clone());

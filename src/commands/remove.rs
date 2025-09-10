@@ -21,25 +21,15 @@ pub async fn remove(
     let guild_data = get_guild_data(ctx, guild_id).await;
     let mut guild_data = guild_data.lock().await;
 
-    let queue_len = guild_data.queue.len();
-
-    if queue_len <= 1 {
-        let reply = create_error_message("Nothing to remove, the queue is empty".to_string());
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    }
-
-    if position > queue_len as u32 {
-        let reply = create_error_message("Invalid position".to_string());
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    }
-
-    let Some(song) = guild_data.queue.remove(position as usize - 1) else {
-        let reply = create_error_message("Invalid position".to_string());
-        check_msg(ctx.send(reply).await);
-        return Ok(());
+    let song = match guild_data.queue.remove(position as usize - 1) {
+        Ok(song) => song,
+        Err(e) => {
+            let reply = create_error_message(&format!("Failed to remove song: {}", e));
+            check_msg(ctx.send(reply).await);
+            return Ok(());
+        }
     };
+
     let reply = create_default_message(format!("Removed {} from the queue", song.title), false);
     check_msg(ctx.send(reply).await);
     Ok(())

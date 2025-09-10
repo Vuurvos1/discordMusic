@@ -23,7 +23,7 @@ pub async fn r#move(
     let mut guild_data = guild_data.lock().await;
 
     if guild_data.queue.len() <= 1 {
-        let reply = create_error_message("Nothing to move, the queue is empty".to_string());
+        let reply = create_error_message("Nothing to move, the queue is empty");
         check_msg(ctx.send(reply).await);
         return Ok(());
     }
@@ -32,7 +32,7 @@ pub async fn r#move(
 
     // can't move the first song because it is playing
     if from <= 1 || to > queue_len as u32 {
-        let reply = create_error_message("Invalid from position".to_string());
+        let reply = create_error_message("Invalid from position");
         check_msg(ctx.send(reply).await);
         return Ok(());
     }
@@ -40,18 +40,14 @@ pub async fn r#move(
     let from = from as usize - 1;
     let to = to as usize - 1;
 
-    // positions <= 2 will be moved to the front of the queue
-    if to <= 1 {
-        let song = guild_data.queue.remove(from).unwrap();
-        guild_data.queue.insert(1, song);
-    // if past the end of the queue, move it to the end
-    } else if to >= queue_len {
-        let song = guild_data.queue.remove(from).unwrap();
-        guild_data.queue.push_back(song);
-    } else {
-        let song = guild_data.queue.remove(from).unwrap();
-        guild_data.queue.insert(to, song);
-    }
+    let _ = match guild_data.queue.move_item(from, to) {
+        Ok(_) => (),
+        Err(e) => {
+            let reply = create_error_message(&format!("Failed to move song: {}", e));
+            check_msg(ctx.send(reply).await);
+            return Ok(());
+        }
+    };
 
     let reply = create_default_message("Moved the song".to_string(), false);
     check_msg(ctx.send(reply).await);

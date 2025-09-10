@@ -22,7 +22,7 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
     guilds_data_map.remove(&guild_id);
 
     if let Err(e) = manager.remove(guild_id).await {
-        let reply = create_error_message("Failed to leave voice channel".to_string());
+        let reply = create_error_message("Failed to leave voice channel");
         check_msg(ctx.send(reply).await);
         error!("Failed to leave voice channel: {:?}", e);
         return Ok(());

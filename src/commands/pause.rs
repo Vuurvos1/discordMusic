@@ -21,7 +21,7 @@ pub async fn pause(ctx: Context<'_>) -> CommandResult {
     if let Some(handler) = &guild_data.track_handle {
         if let Err(e) = handler.pause() {
             error!("Failed to pause: {:?}", e);
-            let reply = create_error_message("Failed to pause".to_string());
+            let reply = create_error_message("Failed to pause");
             check_msg(ctx.send(reply).await);
             return Ok(());
         }

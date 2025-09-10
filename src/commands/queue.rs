@@ -1,6 +1,6 @@
+use crate::queue::Queue;
 use crate::utils::get_guild_data;
-use crate::{check_msg, create_default_message, CommandResult, Context, TrackMetadata};
-use std::collections::VecDeque;
+use crate::{check_msg, create_default_message, CommandResult, Context};
 
 /// Display the current song queue.
 #[poise::command(slash_command, guild_only)]
@@ -25,11 +25,11 @@ pub async fn queue(ctx: Context<'_>) -> CommandResult {
     Ok(())
 }
 
-fn build_queue_msg(queue: &VecDeque<TrackMetadata>) -> String {
+fn build_queue_msg(queue: &Queue) -> String {
     let mut msg = String::from("```nim\n");
     let max = queue.len().min(10);
 
-    for (i, song) in queue.iter().take(max).enumerate() {
+    for (i, song) in queue.tracks.iter().take(max).enumerate() {
         if i == 0 {
             msg.push_str("    ⬐ current track\n");
         }

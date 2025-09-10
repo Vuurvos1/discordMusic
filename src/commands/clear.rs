@@ -17,7 +17,7 @@ pub async fn clear(ctx: Context<'_>) -> CommandResult {
     let mut guild_data = guild_data.lock().await;
 
     if guild_data.queue.is_empty() {
-        let reply = create_error_message("Nothing to clear, the queue is empty".to_string());
+        let reply = create_error_message("Nothing to clear, the queue is empty");
         check_msg(ctx.send(reply).await);
         return Ok(());
     }

@@ -591,6 +591,7 @@ dependencies = [
  "serenity",
  "songbird",
  "symphonia",
+ "thiserror 2.0.16",
  "tokio",
  "tracing",
  "tracing-futures",
