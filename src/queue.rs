@@ -24,7 +24,7 @@ impl Queue {
     pub fn is_empty(&self) -> bool {
         self.tracks.is_empty()
     }
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[allow(dead_code)]
     pub fn set_looping(&mut self, looping: bool) {
         self.looping = looping;
     }
@@ -47,10 +47,13 @@ impl Queue {
         if !self.looping {
             self.tracks.pop_front();
         }
+        // TODO: notify user that the track is looping
         self.tracks.front().cloned()
     }
 
+    // Little redundant when you can call next_track instead
     // skip the current track
+    #[allow(dead_code)]
     pub fn skip(&mut self) -> Option<TrackMetadata> {
         let _ = self.tracks.pop_front();
         self.tracks.front().cloned()
@@ -121,32 +124,121 @@ mod tests {
         }
     }
 
+    // remove
     #[test]
-    fn move_and_remove_respect_current() {
-        let mut q = Queue::default();
-        for i in 0..5 {
-            q.push(tm(i));
-        }
-        assert!(matches!(q.remove(1), Err(QueueError::LockedCurrent)));
-        assert!(matches!(q.move_item(1, 3), Err(QueueError::LockedCurrent)));
-        assert!(q.remove(3).is_ok());
-        assert!(q.move_item(2, 3).is_ok());
-    }
-
-    #[test]
-    fn advance_and_skip() {
+    fn remove_rejects_index_0_and_out_of_bounds() {
         let mut q = Queue::default();
         for i in 0..3 {
             q.push(tm(i));
         }
-        assert_eq!(q.front().unwrap().title, "t0");
-        let _ = q.skip();
-        assert_eq!(q.front().unwrap().title, "t1");
-        q.set_looping(true);
-        let n = q.next_track().unwrap();
-        assert_eq!(n.title, "t1"); // looping keeps current
+        assert!(matches!(q.remove(0), Err(QueueError::InvalidIndex)));
+        assert!(matches!(q.remove(4), Err(QueueError::InvalidIndex)));
     }
 
+    #[test]
+    fn remove_rejects_current_track() {
+        let mut q = Queue::default();
+        for i in 0..3 {
+            q.push(tm(i));
+        }
+        assert!(matches!(q.remove(1), Err(QueueError::LockedCurrent)));
+    }
+
+    #[test]
+    fn remove_valid_removes_correct_track() {
+        let mut q = Queue::default();
+        for i in 0..3 {
+            q.push(tm(i));
+        }
+        let removed = q.remove(3).expect("valid index should remove");
+        assert_eq!(removed.title, "t2");
+        assert_eq!(q.len(), 2);
+        assert_eq!(q.tracks.get(1).unwrap().title, "t1");
+    }
+
+    // move
+    #[test]
+    fn move_rejects_current_track_in_from_or_to() {
+        let mut q = Queue::default();
+        for i in 0..4 {
+            q.push(tm(i));
+        }
+        assert!(matches!(q.move_item(1, 3), Err(QueueError::LockedCurrent)));
+        assert!(matches!(q.move_item(2, 1), Err(QueueError::LockedCurrent)));
+    }
+
+    #[test]
+    fn move_rejects_invalid_indices() {
+        let mut q = Queue::default();
+        for i in 0..3 {
+            q.push(tm(i));
+        }
+        assert!(matches!(q.move_item(0, 2), Err(QueueError::InvalidIndex)));
+        assert!(matches!(q.move_item(2, 0), Err(QueueError::InvalidIndex)));
+        assert!(matches!(q.move_item(5, 2), Err(QueueError::InvalidIndex)));
+    }
+
+    #[test]
+    fn move_valid_reorders_track() {
+        let mut q = Queue::default();
+        for i in 0..4 {
+            q.push(tm(i));
+        }
+        // [t0, t1, t2, t3] -> move t2 (3) to position 2 => [t0, t2, t1, t3]
+        q.move_item(3, 2).expect("move should succeed");
+        let titles: Vec<_> = q.tracks.iter().map(|t| t.title.as_str()).collect();
+        assert_eq!(titles, vec!["t0", "t2", "t1", "t3"]);
+    }
+
+    // skip
+    #[test]
+    fn skip_advances_to_next() {
+        let mut q = Queue::default();
+        for i in 0..2 {
+            q.push(tm(i));
+        }
+        let next = q.skip().expect("should have next track");
+        assert_eq!(next.title, "t1");
+        assert_eq!(q.front().unwrap().title, "t1");
+    }
+
+    #[test]
+    fn skip_on_single_track_empties_queue() {
+        let mut q = Queue::default();
+        q.push(tm(0));
+        assert!(q.skip().is_none());
+        assert!(q.front().is_none());
+        assert!(q.is_empty());
+    }
+
+    // next_track
+    #[test]
+    fn next_track_advances_when_not_looping() {
+        let mut q = Queue::default();
+        for i in 0..2 {
+            q.push(tm(i));
+        }
+        assert_eq!(q.front().unwrap().title, "t0");
+        let n = q.next_track().expect("should have next track");
+        assert_eq!(n.title, "t1");
+        assert_eq!(q.front().unwrap().title, "t1");
+    }
+
+    #[test]
+    fn next_track_keeps_current_when_looping() {
+        let mut q = Queue::default();
+        for i in 0..2 {
+            q.push(tm(i));
+        }
+        // Make current be t1, then enable looping
+        let _ = q.skip();
+        q.set_looping(true);
+        let n = q.next_track().expect("should keep current when looping");
+        assert_eq!(n.title, "t1");
+        assert_eq!(q.front().unwrap().title, "t1");
+    }
+
+    // shuffle
     #[test]
     fn shuffle_preserves_first() {
         let mut q = Queue::default();
@@ -156,5 +248,23 @@ mod tests {
         let first = q.front().unwrap().title.clone();
         q.shuffle();
         assert_eq!(q.front().unwrap().title, first);
+        assert_eq!(q.len(), 6);
+    }
+
+    #[test]
+    fn shuffle_noop_for_len_leq_2() {
+        // len == 1
+        let mut q1 = Queue::default();
+        q1.push(tm(0));
+        q1.shuffle();
+        assert_eq!(q1.front().unwrap().title, "t0");
+
+        // len == 2
+        let mut q2 = Queue::default();
+        q2.push(tm(0));
+        q2.push(tm(1));
+        q2.shuffle();
+        let titles: Vec<_> = q2.tracks.iter().map(|t| t.title.as_str()).collect();
+        assert_eq!(titles, vec!["t0", "t1"]);
     }
 }
