@@ -49,7 +49,7 @@ pub async fn r#move(
         }
     };
 
-    let reply = create_default_message("Moved the song".to_string(), false);
+    let reply = create_default_message("Moved the song", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

@@ -28,7 +28,7 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
         return Ok(());
     }
 
-    let reply = create_default_message("I've left the voice channel".to_string(), false);
+    let reply = create_default_message("I've left the voice channel", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

@@ -56,7 +56,6 @@ type CommandResult = Result<(), Error>;
 pub struct GuildData {
     queue: Queue,
     track_handle: Option<TrackHandle>,
-    pub looping: bool,
     // Auto-leave task cancellation
     auto_leave_cancel: Option<oneshot::Sender<()>>,
     // play_mode: PlayMode,
@@ -67,7 +66,6 @@ impl Default for GuildData {
         Self {
             queue: Queue::default(),
             track_handle: None,
-            looping: false,
             auto_leave_cancel: None,
         }
     }
@@ -186,8 +184,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
 
 // TODO: create an in voice channel util
 
-// TODO: change String to &str
-fn create_default_message(message: String, ephemeral: bool) -> poise::CreateReply {
+fn create_default_message(message: &str, ephemeral: bool) -> poise::CreateReply {
     let colors = CustomColours::new();
     poise::CreateReply::default()
         .embed(
@@ -289,9 +286,7 @@ impl VoiceEventHandler for TrackEndNotifier {
         let mut handler = self.handler_lock.lock().await;
         let mut guild_data = self.guild_data.lock().await;
 
-        if !guild_data.looping {
-            guild_data.queue.next_track();
-        }
+        guild_data.queue.next_track();
 
         let next_search = guild_data.queue.front().map(|m| m.url.clone());
 

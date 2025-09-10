@@ -27,7 +27,7 @@ pub async fn pause(ctx: Context<'_>) -> CommandResult {
         }
     }
 
-    let reply = create_default_message("Paused music".to_string(), false);
+    let reply = create_default_message("Paused music", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

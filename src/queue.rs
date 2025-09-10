@@ -14,7 +14,7 @@ pub enum QueueError {
 #[derive(Default, Debug, Clone)]
 pub struct Queue {
     pub tracks: VecDeque<TrackMetadata>,
-    publooping: bool,
+    pub looping: bool,
 }
 
 impl Queue {
@@ -24,6 +24,7 @@ impl Queue {
     pub fn is_empty(&self) -> bool {
         self.tracks.is_empty()
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn set_looping(&mut self, looping: bool) {
         self.looping = looping;
     }
@@ -39,10 +40,6 @@ impl Queue {
     }
     pub fn clear(&mut self) {
         self.tracks.clear();
-    }
-
-    pub fn push_back(&mut self, track: TrackMetadata) {
-        self.tracks.push_back(track);
     }
 
     // Called when a track ends naturally. Returns the next track to play (if any).

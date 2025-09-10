@@ -27,7 +27,7 @@ pub async fn skip(ctx: Context<'_>) -> CommandResult {
         }
     };
 
-    let reply = create_default_message("Skipped song".to_string(), false);
+    let reply = create_default_message("Skipped song", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

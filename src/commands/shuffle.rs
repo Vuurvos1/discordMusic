@@ -30,7 +30,7 @@ pub async fn shuffle(ctx: Context<'_>) -> CommandResult {
 
     guild_data.queue.shuffle();
 
-    let reply = create_default_message("Shuffled the queue".to_string(), false);
+    let reply = create_default_message("Shuffled the queue", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

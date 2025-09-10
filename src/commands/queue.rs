@@ -13,13 +13,13 @@ pub async fn queue(ctx: Context<'_>) -> CommandResult {
     let guild_data = guild_data.lock().await;
 
     if guild_data.queue.is_empty() {
-        let reply = create_default_message("```nim\nThe queue is empty ;-;\n```".to_string(), true);
+        let reply = create_default_message("```nim\nThe queue is empty ;-;\n```", true);
         check_msg(ctx.send(reply).await);
         return Ok(());
     }
 
     let msg = build_queue_msg(&guild_data.queue); // TODO: slice 0..10
-    let reply = create_default_message(msg, true);
+    let reply = create_default_message(&msg, true);
     check_msg(ctx.send(reply).await);
 
     Ok(())

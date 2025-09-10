@@ -30,7 +30,7 @@ pub async fn remove(
         }
     };
 
-    let reply = create_default_message(format!("Removed {} from the queue", song.title), false);
+    let reply = create_default_message(&format!("Removed {} from the queue", song.title), false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

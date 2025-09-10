@@ -114,7 +114,7 @@ pub async fn play(
             let mut guild_data_lock = guild_data.lock().await;
             let input_for_message = search.clone();
             let metadata = get_video_metadata(&search, ctx).await;
-            guild_data_lock.queue.push_back(metadata);
+            guild_data_lock.queue.push(metadata);
             let queue_len = guild_data_lock.queue.len();
             (queue_len, input_for_message)
         };
@@ -136,7 +136,7 @@ pub async fn play(
             }
         } else {
             let reply = create_default_message(
-                format!("Added \"{}\" to the queue", input_for_message),
+                &format!("Added \"{}\" to the queue", input_for_message),
                 false,
             );
             check_msg(ctx.send(reply).await);
@@ -153,7 +153,7 @@ async fn process_playlist(
     handler_lock: Arc<tokio::sync::Mutex<songbird::Call>>,
 ) -> CommandResult {
     let processing_msg =
-        create_default_message(format!("Processing playlist: {}...", search), false);
+        create_default_message(&format!("Processing playlist: {}...", search), false);
     let send_msg = ctx.send(processing_msg).await?;
 
     // Get video IDs using yt-dlp
@@ -211,7 +211,7 @@ async fn process_playlist(
         let metadata = get_video_metadata(first_url, ctx).await;
         let mut guild_data_lock = guild_data.lock().await;
         let queue_was_empty = guild_data_lock.queue.is_empty();
-        guild_data_lock.queue.push_back(metadata);
+        guild_data_lock.queue.push(metadata);
         drop(guild_data_lock); // Release lock before playing
 
         // If queue was empty, start playing immediately
@@ -230,11 +230,11 @@ async fn process_playlist(
     for url in remaining_urls {
         let metadata = get_video_metadata(&url, ctx).await;
         let mut guild_data_lock = guild_data.lock().await;
-        guild_data_lock.queue.push_back(metadata);
+        guild_data_lock.queue.push(metadata);
     }
 
     let final_msg = create_default_message(
-        format!(
+        &format!(
             "Added {} songs from playlist \"{}\" to queue.",
             num_videos, search
         ),
@@ -278,7 +278,7 @@ async fn play_next_in_queue(
     // Send the message after releasing all locks
     check_msg(
         ctx.send(create_default_message(
-            format!("Playing: [{}]({})", title, url),
+            &format!("Playing: [{}]({})", title, url),
             false,
         ))
         .await,

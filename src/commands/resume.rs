@@ -26,7 +26,7 @@ pub async fn resume(ctx: Context<'_>) -> CommandResult {
         }
     }
 
-    let reply = create_default_message("Resumed playing".to_string(), false);
+    let reply = create_default_message("Resumed playing", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

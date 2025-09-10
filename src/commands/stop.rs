@@ -30,7 +30,7 @@ pub async fn stop(ctx: Context<'_>) -> CommandResult {
     // Clear the queue
     guild_data.queue.clear();
 
-    let reply = create_default_message("Stopped music".to_string(), false);
+    let reply = create_default_message("Stopped music", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

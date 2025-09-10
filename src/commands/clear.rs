@@ -25,7 +25,7 @@ pub async fn clear(ctx: Context<'_>) -> CommandResult {
     // Clear the queue
     guild_data.queue.clear();
 
-    let reply = create_default_message("Cleared the queue".to_string(), false);
+    let reply = create_default_message("Cleared the queue", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }
