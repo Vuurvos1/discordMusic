@@ -38,7 +38,7 @@ pub async fn play(
     let data = ctx.data();
     let manager = &data.songbird;
 
-    let guild_data = get_guild_data(ctx, guild_id.get()).await;
+    let guild_data = get_guild_data(ctx, guild_id).await;
 
     // Check if the bot is already in a voice channel in this guild.
     let handler_lock = if manager.get(guild_id).is_none() {

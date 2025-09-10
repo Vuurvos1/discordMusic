@@ -71,7 +71,7 @@ impl Default for GuildData {
     }
 }
 
-pub type GuildDataMap = HashMap<u64, Arc<Mutex<GuildData>>>;
+pub type GuildDataMap = HashMap<serenity::GuildId, Arc<Mutex<GuildData>>>;
 
 struct UserData {
     http: HttpClient,
@@ -284,21 +284,19 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
         let mut handler = self.handler_lock.lock().await;
-
         let mut guild_data = self.guild_data.lock().await;
 
         if !guild_data.looping {
             guild_data.queue.pop_front();
         }
 
-        let has_next_track = guild_data.queue.front().is_some();
-        if has_next_track {
+        let next_search = guild_data.queue.front().map(|m| m.url.clone());
+
+        if let Some(search) = next_search {
             if let Some(cancel_sender) = guild_data.auto_leave_cancel.take() {
                 let _ = cancel_sender.send(());
             }
 
-            let metadata = guild_data.queue.front().unwrap();
-            let search = metadata.url.clone();
             let do_search = !search.starts_with("http");
 
             let src = if do_search {
@@ -306,11 +304,12 @@ impl VoiceEventHandler for TrackEndNotifier {
             } else {
                 YoutubeDl::new(self.http_client.clone(), search)
             };
-            let _track_handle = handler.play_only_input(src.into());
+
+            let track_handle = handler.play_only_input(src.into());
+            guild_data.track_handle = Some(track_handle);
         } else {
             drop(guild_data);
             drop(handler);
-
             start_auto_leave_task(
                 self.guild_id,
                 Arc::clone(&self.songbird),

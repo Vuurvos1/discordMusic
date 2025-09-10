@@ -9,7 +9,7 @@ pub async fn queue(ctx: Context<'_>) -> CommandResult {
 
     let guild_id = ctx.guild_id().unwrap();
 
-    let guild_data = get_guild_data(ctx, guild_id.get()).await;
+    let guild_data = get_guild_data(ctx, guild_id).await;
     let guild_data = guild_data.lock().await;
 
     if guild_data.queue.is_empty() {

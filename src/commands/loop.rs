@@ -18,7 +18,7 @@ pub async fn r#loop(ctx: Context<'_>) -> CommandResult {
         }
     };
 
-    let guild_data = get_guild_data(ctx, guild_id.get()).await;
+    let guild_data = get_guild_data(ctx, guild_id).await;
     let mut guild_data = guild_data.lock().await;
 
     guild_data.looping = !guild_data.looping;
