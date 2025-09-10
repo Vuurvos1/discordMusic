@@ -283,31 +283,42 @@ struct TrackEndNotifier {
 #[async_trait]
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        let mut handler = self.handler_lock.lock().await;
-        let mut guild_data = self.guild_data.lock().await;
+        // Advance and copy next URL under guild_data lock
+        let (next_url, cancel_sender_opt) = {
+            let mut data = self.guild_data.lock().await;
+            let _ = data.queue.next_track();
+            let url = data.queue.front().map(|m| m.url.clone());
+            let cancel = if url.is_some() {
+                data.auto_leave_cancel.take()
+            } else {
+                None
+            };
+            (url, cancel)
+        };
 
-        guild_data.queue.next_track();
-
-        let next_search = guild_data.queue.front().map(|m| m.url.clone());
-
-        if let Some(search) = next_search {
-            if let Some(cancel_sender) = guild_data.auto_leave_cancel.take() {
+        if let Some(search) = next_url {
+            if let Some(cancel_sender) = cancel_sender_opt {
                 let _ = cancel_sender.send(());
             }
 
-            let do_search = !search.starts_with("http");
-
-            let src = if do_search {
-                YoutubeDl::new_search(self.http_client.clone(), search)
-            } else {
+            let src = if search.starts_with("http") {
                 YoutubeDl::new(self.http_client.clone(), search)
+            } else {
+                YoutubeDl::new_search(self.http_client.clone(), search)
             };
 
-            let track_handle = handler.play_only_input(src.into());
-            guild_data.track_handle = Some(track_handle);
+            // Briefly lock the handler to start playback
+            let track_handle = {
+                let mut handler = self.handler_lock.lock().await;
+                handler.play_only_input(src.into())
+            };
+
+            // Briefly re-lock guild_data to store the handle
+            {
+                let mut data = self.guild_data.lock().await;
+                data.track_handle = Some(track_handle);
+            }
         } else {
-            drop(guild_data);
-            drop(handler);
             start_auto_leave_task(
                 self.guild_id,
                 Arc::clone(&self.songbird),

@@ -20,16 +20,16 @@ pub async fn r#move(
     };
 
     let guild_data = get_guild_data(ctx, guild_id).await;
-    let mut guild_data = guild_data.lock().await;
-
-    let _ = match guild_data.queue.move_item(from as usize, to as usize) {
-        Ok(_) => (),
-        Err(e) => {
-            let reply = create_error_message(&format!("Failed to move song: {}", e));
-            check_msg(ctx.send(reply).await);
-            return Ok(());
-        }
+    let move_result = {
+        let mut data = guild_data.lock().await;
+        data.queue.move_item(from as usize, to as usize)
     };
+
+    if let Err(e) = move_result {
+        let reply = create_error_message(&format!("Failed to move song: {}", e));
+        check_msg(ctx.send(reply).await);
+        return Ok(());
+    }
 
     let reply = create_default_message("Moved the song", false);
     check_msg(ctx.send(reply).await);

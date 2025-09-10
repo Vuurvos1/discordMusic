@@ -19,18 +19,20 @@ pub async fn remove(
     };
 
     let guild_data = get_guild_data(ctx, guild_id).await;
-    let mut guild_data = guild_data.lock().await;
-
-    let song = match guild_data.queue.remove(position as usize) {
-        Ok(song) => song,
-        Err(e) => {
-            let reply = create_error_message(&format!("Failed to remove song: {}", e));
-            check_msg(ctx.send(reply).await);
-            return Ok(());
+    let removed_title = {
+        let mut data = guild_data.lock().await;
+        match data.queue.remove(position as usize) {
+            Ok(song) => song.title,
+            Err(e) => {
+                drop(data);
+                let reply = create_error_message(&format!("Failed to remove song: {}", e));
+                check_msg(ctx.send(reply).await);
+                return Ok(());
+            }
         }
     };
 
-    let reply = create_default_message(&format!("Removed {} from the queue", song.title), false);
+    let reply = create_default_message(&format!("Removed {} from the queue", removed_title), false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

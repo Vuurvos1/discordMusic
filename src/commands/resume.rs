@@ -15,9 +15,12 @@ pub async fn resume(ctx: Context<'_>) -> CommandResult {
     };
 
     let guild_data = get_guild_data(ctx, guild_id).await;
-    let guild_data = guild_data.lock().await;
+    let handle_opt = {
+        let data = guild_data.lock().await;
+        data.track_handle.clone()
+    };
 
-    if let Some(handler) = &guild_data.track_handle {
+    if let Some(handler) = handle_opt {
         if let Err(e) = handler.play() {
             error!("Failed to resume: {:?}", e);
             let reply = create_error_message("Failed to resume");

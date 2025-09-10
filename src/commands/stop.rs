@@ -16,19 +16,27 @@ pub async fn stop(ctx: Context<'_>) -> CommandResult {
     };
 
     let guild_data = get_guild_data(ctx, guild_id).await;
-    let mut guild_data = guild_data.lock().await;
 
-    if let Some(handler) = &guild_data.track_handle {
-        if let Err(e) = handler.stop() {
-            error!("Failed to stop: {:?}", e);
-            let reply = create_error_message("Failed to stop");
-            check_msg(ctx.send(reply).await);
-            return Ok(());
+    let stop_err = {
+        let data = guild_data.lock().await;
+        if let Some(handler) = &data.track_handle {
+            handler.stop().err()
+        } else {
+            None
         }
+    };
+
+    if let Some(e) = stop_err {
+        error!("Failed to stop: {:?}", e);
+        let reply = create_error_message("Failed to stop");
+        check_msg(ctx.send(reply).await);
+        return Ok(());
     }
 
-    // Clear the queue
-    guild_data.queue.clear();
+    {
+        let mut data = guild_data.lock().await;
+        data.queue.clear();
+    }
 
     let reply = create_default_message("Stopped music", false);
     check_msg(ctx.send(reply).await);
