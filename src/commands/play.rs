@@ -156,9 +156,9 @@ async fn process_playlist(
         create_default_message(&format!("Processing playlist: {}...", search), false);
     let send_msg = ctx.send(processing_msg).await?;
 
-    // Get video IDs using yt-dlp
+    // Single yt-dlp call to fetch playlist entries (flat: title/id only)
     let cmd_output = match TokioCommand::new("yt-dlp")
-        .arg("--get-id")
+        .arg("-J")
         .arg("--flat-playlist")
         .arg("-i")
         .arg(&search)
@@ -188,14 +188,50 @@ async fn process_playlist(
         return Ok(());
     }
 
-    let video_ids_str = String::from_utf8_lossy(&cmd_output.stdout);
-    let video_urls: Vec<String> = video_ids_str
-        .lines()
-        .filter(|s| !s.trim().is_empty())
-        .map(|id| format!("https://www.youtube.com/watch?v={}", id.trim()))
-        .collect();
+    #[derive(Debug, Deserialize)]
+    struct FlatEntry {
+        id: Option<String>,
+        title: Option<String>,
+        // Some providers may expose different fields; we use only these two
+    }
+    #[derive(Debug, Deserialize)]
+    struct FlatPlaylist {
+        entries: Vec<Option<FlatEntry>>, // some entries can be null on errors
+    }
 
-    if video_urls.is_empty() {
+    let json_str = String::from_utf8_lossy(&cmd_output.stdout);
+    let parsed: FlatPlaylist = match serde_json::from_str(&json_str) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Failed to parse yt-dlp JSON for playlist {}: {:?}",
+                search, e
+            );
+            let reply = create_error_message("Failed to parse playlist details");
+            check_msg(ctx.send(reply).await);
+            return Ok(());
+        }
+    };
+
+    let mut items: Vec<TrackMetadata> = Vec::new();
+    for entry_opt in parsed.entries.into_iter() {
+        if let Some(entry) = entry_opt {
+            if let Some(id) = entry.id {
+                let url = format!("https://www.youtube.com/watch?v={}", id);
+                let title = entry.title.unwrap_or_else(|| url.clone());
+                items.push(TrackMetadata {
+                    title,
+                    url,
+                    artist: String::new(),
+                    duration: String::new(),
+                    requested_by: ctx.author().id.get(),
+                    platform: "youtube".into(),
+                });
+            }
+        }
+    }
+
+    if items.is_empty() {
         let err_reply = create_error_message(&format!(
             "No videos found in the playlist \"{}\", or it might be private/empty.",
             search
@@ -204,39 +240,30 @@ async fn process_playlist(
         return Ok(());
     }
 
-    let num_videos = video_urls.len();
+    let added_count = items.len();
 
-    // Process first track immediately
-    if let Some(first_url) = video_urls.first() {
-        let metadata = get_video_metadata(first_url, ctx).await;
-        let mut guild_data_lock = guild_data.lock().await;
-        let queue_was_empty = guild_data_lock.queue.is_empty();
-        guild_data_lock.queue.push(metadata);
-        drop(guild_data_lock); // Release lock before playing
-
-        // If queue was empty, start playing immediately
-        if queue_was_empty {
-            let track_handler =
-                play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await;
-            if let Some(handler) = track_handler {
-                let mut guild_data_lock = guild_data.lock().await;
-                guild_data_lock.track_handle = Some(handler);
-            }
+    // Enqueue all items with a single lock; then, if previously empty, start playback
+    let queue_was_empty = {
+        let mut data = guild_data.lock().await;
+        let was_empty = data.queue.is_empty();
+        for m in items {
+            data.queue.push(m);
         }
-    }
+        was_empty
+    };
 
-    // Process remaining tracks
-    let remaining_urls = video_urls.into_iter().skip(1);
-    for url in remaining_urls {
-        let metadata = get_video_metadata(&url, ctx).await;
-        let mut guild_data_lock = guild_data.lock().await;
-        guild_data_lock.queue.push(metadata);
+    if queue_was_empty {
+        if let Some(handler) = play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await
+        {
+            let mut data = guild_data.lock().await;
+            data.track_handle = Some(handler);
+        }
     }
 
     let final_msg = create_default_message(
         &format!(
             "Added {} songs from playlist \"{}\" to queue.",
-            num_videos, search
+            added_count, search
         ),
         false,
     );
