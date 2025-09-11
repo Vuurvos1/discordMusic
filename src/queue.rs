@@ -68,10 +68,9 @@ impl Queue {
         if index == 1 {
             return Err(QueueError::LockedCurrent);
         }
-        Ok(self
-            .tracks
+        self.tracks
             .remove(index - 1)
-            .ok_or(QueueError::InvalidIndex)?)
+            .ok_or(QueueError::InvalidIndex)
     }
 
     // Moves a track from -> to (1-based). Index 1 is locked.

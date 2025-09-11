@@ -214,20 +214,18 @@ async fn process_playlist(
     };
 
     let mut items: Vec<TrackMetadata> = Vec::new();
-    for entry_opt in parsed.entries.into_iter() {
-        if let Some(entry) = entry_opt {
-            if let Some(id) = entry.id {
-                let url = format!("https://www.youtube.com/watch?v={}", id);
-                let title = entry.title.unwrap_or_else(|| url.clone());
-                items.push(TrackMetadata {
-                    title,
-                    url,
-                    artist: String::new(),
-                    duration: String::new(),
-                    requested_by: ctx.author().id.get(),
-                    platform: "youtube".into(),
-                });
-            }
+    for entry in parsed.entries.into_iter().flatten() {
+        if let Some(id) = entry.id {
+            let url = format!("https://www.youtube.com/watch?v={}", id);
+            let title = entry.title.unwrap_or_else(|| url.clone());
+            items.push(TrackMetadata {
+                title,
+                url,
+                artist: String::new(),
+                duration: String::new(),
+                requested_by: ctx.author().id.get(),
+                platform: "youtube".into(),
+            });
         }
     }
 

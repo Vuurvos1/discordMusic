@@ -53,22 +53,13 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, UserData, Error>;
 type CommandResult = Result<(), Error>;
 
+#[derive(Default)]
 pub struct GuildData {
     queue: Queue,
     track_handle: Option<TrackHandle>,
     // Auto-leave task cancellation
     auto_leave_cancel: Option<oneshot::Sender<()>>,
     // play_mode: PlayMode,
-}
-
-impl Default for GuildData {
-    fn default() -> Self {
-        Self {
-            queue: Queue::default(),
-            track_handle: None,
-            auto_leave_cancel: None,
-        }
-    }
 }
 
 pub type GuildDataMap = HashMap<serenity::GuildId, Arc<Mutex<GuildData>>>;
