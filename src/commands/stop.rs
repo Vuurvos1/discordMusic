@@ -1,39 +1,44 @@
+use tracing::error;
+
 use crate::{
-    check_msg, create_default_message, create_error_message, utils::get_guild_data, CommandResult,
-    Context,
+    check_msg, create_default_message, create_error_message, utils::get_guild_data,
+    utils::require_voice_handler, CommandResult, Context,
 };
 
 /// Stop playback and clear the queue
 #[poise::command(slash_command, guild_only)]
 pub async fn stop(ctx: Context<'_>) -> CommandResult {
     let guild_id = ctx.guild_id().unwrap();
-    let manager = &ctx.data().songbird;
 
-    let _handler_lock = match manager.get(guild_id) {
-        Some(handler) => handler,
-        None => {
-            let reply = create_error_message("Not in a voice channel".to_string());
-            check_msg(ctx.send(reply).await);
-            return Ok(());
+    let _handler_lock = match require_voice_handler(ctx).await {
+        Some(lock) => lock,
+        None => return Ok(()),
+    };
+
+    let guild_data = get_guild_data(ctx, guild_id).await;
+
+    let stop_err = {
+        let data = guild_data.lock().await;
+        if let Some(handler) = &data.track_handle {
+            handler.stop().err()
+        } else {
+            None
         }
     };
 
-    let guild_data = get_guild_data(ctx, guild_id.get()).await;
-    let mut guild_data = guild_data.lock().await;
-
-    if let Some(handler) = &guild_data.track_handle {
-        if let Err(e) = handler.stop() {
-            println!("Failed to stop: {:?}", e);
-            let reply = create_error_message("Failed to stop".to_string());
-            check_msg(ctx.send(reply).await);
-            return Ok(());
-        }
+    if let Some(e) = stop_err {
+        error!("Failed to stop: {:?}", e);
+        let reply = create_error_message("Failed to stop");
+        check_msg(ctx.send(reply).await);
+        return Ok(());
     }
 
-    // Clear the queue
-    guild_data.queue.clear();
+    {
+        let mut data = guild_data.lock().await;
+        data.queue.clear();
+    }
 
-    let reply = create_default_message("Stopped music".to_string(), false);
+    let reply = create_default_message("Stopped music", false);
     check_msg(ctx.send(reply).await);
     Ok(())
 }

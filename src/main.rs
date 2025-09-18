@@ -1,11 +1,12 @@
 mod commands;
+mod queue;
 mod utils;
 
 use songbird::tracks::TrackHandle;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
+use tracing::warn;
 use tracing::{debug, error, info};
 
 use dotenv::dotenv;
@@ -21,6 +22,8 @@ use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 use reqwest::Client as HttpClient;
 use songbird::input::YoutubeDl;
 use songbird::Call;
+
+use crate::queue::Queue;
 
 #[derive(Clone, Debug)]
 pub struct TrackMetadata {
@@ -52,13 +55,14 @@ type CommandResult = Result<(), Error>;
 
 #[derive(Default)]
 pub struct GuildData {
-    queue: VecDeque<TrackMetadata>, // TODO: rename to tracks?
+    queue: Queue,
     track_handle: Option<TrackHandle>,
-    pub looping: bool,
+    // Auto-leave task cancellation
+    auto_leave_cancel: Option<oneshot::Sender<()>>,
     // play_mode: PlayMode,
 }
 
-pub type GuildDataMap = HashMap<u64, Arc<Mutex<GuildData>>>;
+pub type GuildDataMap = HashMap<serenity::GuildId, Arc<Mutex<GuildData>>>;
 
 struct UserData {
     http: HttpClient,
@@ -71,7 +75,7 @@ struct Handler;
 #[serenity::async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: serenity::Context, ready: serenity::Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
@@ -79,7 +83,13 @@ impl EventHandler for Handler {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    dotenv().expect("Failed to load .env file");
+    // Load .env file if it exists (optional for Docker containers)
+    if let Err(e) = dotenv() {
+        warn!(
+            "No .env file found or failed to load: {}. Using environment variables directly.",
+            e
+        );
+    }
 
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Discord token must be set.");
@@ -124,7 +134,9 @@ async fn main() {
         })
         .build();
 
-    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::non_privileged()
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILD_VOICE_STATES;
     let mut client = serenity::Client::builder(&token, intents)
         .voice_manager_arc(manager)
         .event_handler(Handler)
@@ -136,11 +148,11 @@ async fn main() {
         let _ = client
             .start()
             .await
-            .map_err(|why| println!("Client ended: {:?}", why));
+            .map_err(|why| error!("Client ended: {:?}", why));
     });
 
     let _signal_err = tokio::signal::ctrl_c().await;
-    println!("Received Ctrl-C, shutting down.");
+    info!("Received Ctrl-C, shutting down.");
 }
 
 struct TrackErrorNotifier;
@@ -163,7 +175,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
 
 // TODO: create an in voice channel util
 
-fn create_default_message(message: String, ephemeral: bool) -> poise::CreateReply {
+fn create_default_message(message: &str, ephemeral: bool) -> poise::CreateReply {
     let colors = CustomColours::new();
     poise::CreateReply::default()
         .embed(
@@ -174,7 +186,7 @@ fn create_default_message(message: String, ephemeral: bool) -> poise::CreateRepl
         .ephemeral(ephemeral)
 }
 
-fn create_error_message(error: String) -> poise::CreateReply {
+fn create_error_message(error: &str) -> poise::CreateReply {
     let colors = CustomColours::new();
     poise::CreateReply::default()
         .embed(
@@ -188,8 +200,67 @@ fn create_error_message(error: String) -> poise::CreateReply {
 /// Checks that a message successfully sent; if not, then logs why to stdout.
 fn check_msg<T>(result: serenity::Result<T>) {
     if let Err(why) = result {
-        println!("Error sending message: {:?}", why);
+        error!("Error sending message: {:?}", why);
     }
+}
+
+/// Cancels any existing auto-leave task for the guild
+pub async fn cancel_auto_leave(guild_data: &Arc<Mutex<GuildData>>) {
+    let mut data = guild_data.lock().await;
+    if let Some(cancel_sender) = data.auto_leave_cancel.take() {
+        let _ = cancel_sender.send(()); // Cancel existing task
+    }
+}
+
+/// Starts a new auto-leave task for the guild
+pub async fn start_auto_leave_task(
+    guild_id: serenity::all::GuildId,
+    songbird: Arc<songbird::Songbird>,
+    guild_data: Arc<Mutex<GuildData>>,
+) {
+    cancel_auto_leave(&guild_data).await;
+
+    let (cancel_sender, cancel_receiver) = oneshot::channel();
+
+    {
+        let mut data = guild_data.lock().await;
+        data.auto_leave_cancel = Some(cancel_sender);
+    }
+
+    info!("TrackEndNotifier: Queue empty. Starting single auto-leave task.");
+
+    let guild_data_clone = Arc::clone(&guild_data);
+    tokio::spawn(async move {
+        tokio::select! {
+            _ = tokio::time::sleep(std::time::Duration::from_secs(10 * 60)) => {
+                let should_leave = {
+                    if let Some(handler_lock_check) = songbird.get(guild_id) {
+                        let _handler_check = handler_lock_check.lock().await;
+                        let data = guild_data_clone.lock().await;
+                        data.queue.is_empty()
+                    } else {
+                        return;
+                    }
+                };
+
+                if should_leave {
+                    debug!("Auto-leaving guild {} due to inactivity", guild_id.get());
+
+                    {
+                        let mut data = guild_data_clone.lock().await;
+                        data.auto_leave_cancel = None;
+                    }
+
+                    if let Err(e) = songbird.remove(guild_id).await {
+                        error!("Error auto-leaving guild after delay: {:?}", e);
+                    }
+                }
+            }
+            _ = cancel_receiver => {
+                debug!("Auto-leave task cancelled for guild {}", guild_id.get());
+            }
+        }
+    });
 }
 
 struct TrackEndNotifier {
@@ -203,57 +274,48 @@ struct TrackEndNotifier {
 #[async_trait]
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        // Lock the handler to ensure exclusive access to playback
-        let mut handler = self.handler_lock.lock().await;
-
-        // Lock the guild data and pop the next track from the real queue
-        let mut guild_data = self.guild_data.lock().await;
-
-        if !guild_data.looping {
-            guild_data.queue.pop_front();
-        }
-
-        if let Some(metadata) = guild_data.queue.front() {
-            let search = metadata.url.clone();
-            let do_search = !search.starts_with("http");
-
-            // Play the next track
-            let src = if do_search {
-                YoutubeDl::new_search(self.http_client.clone(), search)
+        // Advance and copy next URL under guild_data lock
+        let (next_url, cancel_sender_opt) = {
+            let mut data = self.guild_data.lock().await;
+            let _ = data.queue.next_track();
+            let url = data.queue.front().map(|m| m.url.clone());
+            let cancel = if url.is_some() {
+                data.auto_leave_cancel.take()
             } else {
-                YoutubeDl::new(self.http_client.clone(), search)
+                None
             };
-            let _track_handle = handler.play_only_input(src.into());
+            (url, cancel)
+        };
+
+        if let Some(search) = next_url {
+            if let Some(cancel_sender) = cancel_sender_opt {
+                let _ = cancel_sender.send(());
+            }
+
+            let src = if search.starts_with("http") {
+                YoutubeDl::new(self.http_client.clone(), search)
+            } else {
+                YoutubeDl::new_search(self.http_client.clone(), search)
+            };
+
+            // Briefly lock the handler to start playback
+            let track_handle = {
+                let mut handler = self.handler_lock.lock().await;
+                handler.play_only_input(src.into())
+            };
+
+            // Briefly re-lock guild_data to store the handle
+            {
+                let mut data = self.guild_data.lock().await;
+                data.track_handle = Some(track_handle);
+            }
         } else {
-            // Queue is empty, schedule auto-leave
-            info!("TrackEndNotifier: Queue empty. Scheduling auto-leave.");
-
-            let manager = Arc::clone(&self.songbird); // clone the Arc
-            let guild_id = self.guild_id; // Copy, GuildId is Copy
-            let guild_data = Arc::clone(&self.guild_data);
-
-            tokio::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_secs(10 * 60)).await;
-
-                // Only lock for the check, then drop before calling .remove
-                let queue_empty = {
-                    if let Some(handler_lock_check) = manager.get(guild_id) {
-                        let _handler_check = handler_lock_check.lock().await;
-                        guild_data.lock().await.queue.is_empty()
-                    } else {
-                        // Handler is gone, nothing to do
-                        return;
-                    }
-                };
-
-                if queue_empty {
-                    debug!("Auto-leaving guild due to inactivity");
-
-                    if let Err(e) = manager.remove(guild_id).await {
-                        error!("Error auto-leaving guild after delay: {:?}", e);
-                    }
-                }
-            });
+            start_auto_leave_task(
+                self.guild_id,
+                Arc::clone(&self.songbird),
+                Arc::clone(&self.guild_data),
+            )
+            .await;
         }
         None
     }
