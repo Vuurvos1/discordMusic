@@ -12,7 +12,9 @@ pub async fn r#move(
     #[description = "The song to move"] from: u32,
     #[description = "The new position of the song"] to: u32,
 ) -> CommandResult {
-    let guild_id = ctx.guild_id().ok_or("guild_only command called outside a guild")?;
+    let guild_id = ctx
+        .guild_id()
+        .ok_or("guild_only command called outside a guild")?;
 
     let _handler_lock = match require_voice_handler(ctx).await {
         Some(lock) => lock,
