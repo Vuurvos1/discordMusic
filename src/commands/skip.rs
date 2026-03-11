@@ -6,7 +6,7 @@ use tracing::error;
 
 #[poise::command(slash_command, guild_only)]
 pub async fn skip(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
+    let guild_id = ctx.guild_id().ok_or("guild_only command called outside a guild")?;
 
     let _handler_lock = match require_voice_handler(ctx).await {
         Some(lock) => lock,
@@ -14,16 +14,15 @@ pub async fn skip(ctx: Context<'_>) -> CommandResult {
     };
 
     let guild_data = get_guild_data(ctx, guild_id).await;
-    let (is_empty, handle_opt) = {
+    let handle_opt = {
         let data = guild_data.lock().await;
-        (data.queue.is_empty(), data.track_handle.clone())
+        if data.queue.is_empty() {
+            let reply = create_error_message("Queue is empty, nothing to skip");
+            check_msg(ctx.send(reply).await);
+            return Ok(());
+        }
+        data.track_handle.clone()
     };
-
-    if is_empty {
-        let reply = create_error_message("Queue is empty, nothing to skip");
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    }
 
     let Some(handle) = handle_opt else {
         let reply = create_error_message("Nothing is currently playing");
@@ -31,8 +30,13 @@ pub async fn skip(ctx: Context<'_>) -> CommandResult {
         return Ok(());
     };
 
+    // Signal TrackEndNotifier to use skip() instead of next_track(), so looping is bypassed.
+    // Set the flag before stopping so it's visible to TrackEndNotifier whenever the event fires.
+    guild_data.lock().await.skip_requested = true;
+
     if let Err(e) = handle.stop() {
         error!("Failed to skip song: {:?}", e);
+        guild_data.lock().await.skip_requested = false;
         let reply = create_error_message("Failed to skip song");
         check_msg(ctx.send(reply).await);
         return Ok(());

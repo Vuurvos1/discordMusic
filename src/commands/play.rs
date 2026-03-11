@@ -34,17 +34,23 @@ pub async fn play(
         return Ok(());
     }
 
-    let guild_id = ctx.guild_id().unwrap();
+    let guild_id = ctx.guild_id().ok_or("guild_only command called outside a guild")?;
     let data = ctx.data();
     let manager = &data.songbird;
 
     let guild_data = get_guild_data(ctx, guild_id).await;
 
     // Check if the bot is already in a voice channel in this guild.
-    let handler_lock = if manager.get(guild_id).is_none() {
+    let handler_lock = if let Some(handler) = manager.get(guild_id) {
+        handler
+    } else {
         // Not in a channel, try to join the user's channel.
         let channel_id = {
-            let guild = ctx.guild().unwrap();
+            let Some(guild) = ctx.guild() else {
+                let reply = create_error_message("Could not fetch guild data.");
+                check_msg(ctx.send(reply).await);
+                return Ok(());
+            };
             guild
                 .voice_states
                 .get(&ctx.author().id)
@@ -87,8 +93,6 @@ pub async fn play(
                 return Ok(());
             }
         }
-    } else {
-        manager.get(guild_id).unwrap()
     };
 
     {
@@ -393,11 +397,9 @@ fn validate_url(url: &str) -> bool {
 }
 
 fn format_duration(duration: Option<u64>) -> String {
-    if duration.is_none() {
-        return "".to_string();
-    }
-
-    let duration = duration.unwrap();
+    let Some(duration) = duration else {
+        return String::new();
+    };
     let hours = duration / 3600;
     let minutes = (duration % 3600) / 60;
     let secs = duration % 60;

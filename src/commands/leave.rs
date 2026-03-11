@@ -8,7 +8,7 @@ use crate::{
 /// Stop and leave the voice channel
 #[poise::command(slash_command, guild_only)]
 pub async fn leave(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
+    let guild_id = ctx.guild_id().ok_or("guild_only command called outside a guild")?;
     let manager = &ctx.data().songbird;
 
     let _handler_lock = match require_voice_handler(ctx).await {
