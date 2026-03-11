@@ -319,22 +319,20 @@ async fn play_next_in_queue(
 }
 
 /// Helper function to check if a URL is a YouTube playlist.
+///
+/// Matches any YouTube URL that carries a `list=` query parameter, which covers:
+/// - Pure playlist pages:  `.../playlist?list=PLxxx`
+/// - Video-in-playlist:    `.../watch?v=ID&list=PLxxx`
+/// - Short URLs:           `youtu.be/ID?list=PLxxx`
+/// - YouTube Music:        `music.youtube.com/playlist?list=PLxxx`
 fn is_youtube_playlist(url: &str) -> bool {
     if !url.starts_with("https://") {
         return false;
     }
-    if (url.starts_with("https://www.youtube.com/")
-        || url.starts_with("https://youtube.com/")
-        || url.starts_with("https://m.youtube.com/")
-        || url.starts_with("https://music.youtube.com/"))
-        && url.contains("/playlist?list=")
-    {
-        if url.contains("/watch?") {
-            return false;
-        }
-        return true;
+    if !url.contains("youtube.com") && !url.contains("youtu.be") {
+        return false;
     }
-    false
+    url.contains("?list=") || url.contains("&list=")
 }
 
 #[derive(Debug, Deserialize)]
