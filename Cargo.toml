@@ -8,19 +8,21 @@ edition = "2021"
 [dependencies]
 dotenv = "0.15.0"
 poise = { version = "0.6.1", default-features = false, features = ["cache"] }
-rand = "0.9.1"
+rand = "0.9.2"
 reqwest = { default-features = false, features = [
     "stream", "rustls-tls"
-], version = "0.12.23" }
-serde = "1.0.219"
-serde_json = "1.0.143"
-songbird = { version = "0.5.0", default-features = true, features = [] }
-symphonia = "0.5.4" # needed for yt-dlp playback
-thiserror = "2.0.16"
-tokio = { version = "1.47.1", features = ["full", "macros", "rt-multi-thread"] }
-tracing = "0.1.41"
+], version = "0.12.28" }
+serde = "1.0.228"
+serde_json = "1.0.149"
+# Use fork with DAVE/E2EE support until PR #291 is merged upstream
+# https://github.com/serenity-rs/songbird/pull/291
+songbird = { git = "https://github.com/beerpsi-forks/songbird", branch = "davey", default-features = true }
+symphonia = "0.5.5" # needed for yt-dlp playback
+thiserror = "2.0.18"
+tokio = { version = "1.50.0", features = ["full", "macros", "rt-multi-thread"] }
+tracing = "0.1.44"
 tracing-futures = "0.2.5"
-tracing-subscriber = "0.3.20"
+tracing-subscriber = "0.3.22"
 
 [dependencies.serenity]
 version = "0.12"
