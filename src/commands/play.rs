@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::process::Command as TokioCommand;
 use tracing::{debug, error, info};
 
+use crate::spotify::{SpotifyError, SpotifyResource};
 use crate::utils::get_guild_data;
 use crate::{
     check_msg, create_default_message, create_error_message, CommandResult, Context, GuildData,
@@ -12,7 +13,6 @@ use crate::{
 };
 
 // TODO: support soundcloud sets
-// TOOD: support spotify through youtube
 
 /// Play a song
 #[poise::command(slash_command, guild_only)]
@@ -28,7 +28,7 @@ pub async fn play(
     // Validate URL if it looks like a URL
     if search.starts_with("http") && !validate_url(&search) {
         let reply = create_error_message(
-            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud."
+            "This platform is not supported. Currently supported platforms: YouTube, SoundCloud, and Spotify."
         );
         check_msg(ctx.send(reply).await);
         return Ok(());
@@ -100,7 +100,15 @@ pub async fn play(
         }
     }
 
-    if is_youtube_playlist(&search) {
+    if let Some(resource) = crate::spotify::parse_url(&search) {
+        process_spotify(
+            ctx,
+            resource,
+            Arc::clone(&guild_data),
+            Arc::clone(&handler_lock),
+        )
+        .await?;
+    } else if is_youtube_playlist(&search) {
         process_playlist(
             ctx,
             search,
@@ -239,8 +247,27 @@ async fn process_playlist(
     }
 
     let added_count = items.len();
+    enqueue_and_maybe_start(ctx, items, &guild_data, &handler_lock).await;
 
-    // Enqueue all items with a single lock; then, if previously empty, start playback
+    let final_msg = create_default_message(
+        &format!(
+            "Added {} songs from playlist \"{}\" to queue.",
+            added_count, search
+        ),
+        false,
+    );
+    send_msg.edit(ctx, final_msg).await?;
+
+    Ok(())
+}
+
+/// Enqueue tracks under a single lock; if the queue was previously empty, start playback.
+async fn enqueue_and_maybe_start(
+    ctx: Context<'_>,
+    items: Vec<TrackMetadata>,
+    guild_data: &Arc<tokio::sync::Mutex<GuildData>>,
+    handler_lock: &Arc<tokio::sync::Mutex<songbird::Call>>,
+) {
     let queue_was_empty = {
         let mut data = guild_data.lock().await;
         let was_empty = data.queue.is_empty();
@@ -251,17 +278,85 @@ async fn process_playlist(
     };
 
     if queue_was_empty {
-        if let Some(handler) = play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await
-        {
+        if let Some(handler) = play_next_in_queue(ctx, handler_lock, Arc::clone(guild_data)).await {
             let mut data = guild_data.lock().await;
             data.track_handle = Some(handler);
         }
     }
+}
+
+async fn process_spotify(
+    ctx: Context<'_>,
+    resource: SpotifyResource,
+    guild_data: Arc<tokio::sync::Mutex<GuildData>>,
+    handler_lock: Arc<tokio::sync::Mutex<songbird::Call>>,
+) -> CommandResult {
+    let Some(spotify) = ctx.data().spotify.clone() else {
+        let reply = create_error_message(
+            "Spotify support is not configured on this bot. Ask the operator to set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.",
+        );
+        check_msg(ctx.send(reply).await);
+        return Ok(());
+    };
+
+    let kind = match &resource {
+        SpotifyResource::Track(_) => "track",
+        SpotifyResource::Playlist(_) => "playlist",
+        SpotifyResource::Album(_) => "album",
+    };
+
+    let processing_msg = create_default_message(&format!("Processing Spotify {kind}..."), false);
+    let send_msg = ctx.send(processing_msg).await?;
+
+    let result = match &resource {
+        SpotifyResource::Track(id) => spotify.fetch_track(id).await.map(|t| vec![t]),
+        SpotifyResource::Playlist(id) => spotify.fetch_playlist_tracks(id).await,
+        SpotifyResource::Album(id) => spotify.fetch_album_tracks(id).await,
+    };
+
+    let tracks = match result {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Spotify fetch failed for {kind}: {:?}", e);
+            let user_msg = match e {
+                SpotifyError::NotFound => format!("Spotify {kind} not found."),
+                SpotifyError::Empty => format!("No tracks found in this Spotify {kind}."),
+                SpotifyError::Auth(_) => "Failed to authenticate with Spotify.".to_string(),
+                SpotifyError::Network(_) => "Failed to reach Spotify.".to_string(),
+                SpotifyError::BadResponse(_) => "Unexpected response from Spotify.".to_string(),
+            };
+            send_msg.edit(ctx, create_error_message(&user_msg)).await?;
+            return Ok(());
+        }
+    };
+
+    let requested_by = ctx.author().id.get();
+    let items: Vec<TrackMetadata> = tracks
+        .into_iter()
+        .map(|t| {
+            let search_query = if t.artist.is_empty() {
+                t.name.clone()
+            } else {
+                format!("{} {}", t.name, t.artist)
+            };
+            TrackMetadata {
+                title: t.name,
+                url: search_query,
+                artist: t.artist,
+                duration: format_duration(Some(t.duration_ms / 1000)),
+                requested_by,
+                platform: "spotify".into(),
+            }
+        })
+        .collect();
+
+    let added_count = items.len();
+    enqueue_and_maybe_start(ctx, items, &guild_data, &handler_lock).await;
 
     let final_msg = create_default_message(
         &format!(
-            "Added {} songs from playlist \"{}\" to queue.",
-            added_count, search
+            "Added {} song(s) from Spotify {} to queue.",
+            added_count, kind
         ),
         false,
     );
@@ -386,6 +481,11 @@ fn validate_url(url: &str) -> bool {
 
     // SoundCloud URLs
     if url.contains("soundcloud.com") {
+        return true;
+    }
+
+    // Spotify URLs
+    if url.contains("open.spotify.com") {
         return true;
     }
 

@@ -10,7 +10,7 @@ A Discord bot that plays music
 - `clear`: clear the queue
 - `leave`: leave the voice channel
 - `pause`: pause the current song
-- `play <song>`: play a song, this can be a youtube url or a search query
+- `play <song>`: play a song, this can be a YouTube / SoundCloud / Spotify URL or a search query
 - `queue`: show the current queue
 - `resume`: resume the current song
 - `shuffle`: shuffle the queue
@@ -46,6 +46,17 @@ For installation instructions, you can refer to the [official yt-dlp installatio
 > ```
 > export PATH="$HOME/.local/bin:$PATH"
 > ```
+
+### Spotify (optional)
+
+Spotify URL playback is optional. If you want users to be able to queue Spotify tracks, playlists, or albums, create an app at the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and set the following environment variables:
+
+```
+SPOTIFY_CLIENT_ID=<your client id>
+SPOTIFY_CLIENT_SECRET=<your client secret>
+```
+
+Spotify tracks are played by searching for them on YouTube via `yt-dlp`. If these variables are not set, the bot still runs normally
 
 ### Adding the bot to your server
 
