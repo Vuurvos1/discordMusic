@@ -516,7 +516,9 @@ async fn fetch_via_embed(
         SpotifyResource::Track(id) => crate::spotify_embed::fetch_track(http, id)
             .await
             .map(|t| vec![t]),
-        SpotifyResource::Playlist(id) => crate::spotify_embed::fetch_playlist_tracks(http, id).await,
+        SpotifyResource::Playlist(id) => {
+            crate::spotify_embed::fetch_playlist_tracks(http, id).await
+        }
         SpotifyResource::Album(id) => crate::spotify_embed::fetch_album_tracks(http, id).await,
     }
 }

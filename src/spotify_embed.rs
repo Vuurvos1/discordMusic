@@ -87,9 +87,7 @@ fn entity_from_html(html: &str) -> Result<Value, SpotifyError> {
     let json = extract_next_data(html)?;
     json.pointer("/props/pageProps/state/data/entity")
         .cloned()
-        .ok_or_else(|| {
-            SpotifyError::BadResponse("Spotify embed missing /props/.../entity".into())
-        })
+        .ok_or_else(|| SpotifyError::BadResponse("Spotify embed missing /props/.../entity".into()))
 }
 
 fn extract_next_data(html: &str) -> Result<Value, SpotifyError> {
@@ -122,10 +120,7 @@ fn parse_track_entity(entity: &Value) -> Result<SpotifyTrack, SpotifyError> {
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_string();
-    let duration_ms = entity
-        .get("duration")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let duration_ms = entity.get("duration").and_then(Value::as_u64).unwrap_or(0);
     Ok(SpotifyTrack {
         name,
         artist,
@@ -144,7 +139,11 @@ fn parse_track_list(entity: &Value) -> (usize, Vec<SpotifyTrack>) {
         .iter()
         .filter_map(|item| {
             // Skip items the embed flags as not playable (region-locked, removed, etc.).
-            if !item.get("isPlayable").and_then(Value::as_bool).unwrap_or(true) {
+            if !item
+                .get("isPlayable")
+                .and_then(Value::as_bool)
+                .unwrap_or(true)
+            {
                 return None;
             }
             let name = item.get("title").and_then(Value::as_str)?.to_string();
@@ -178,7 +177,10 @@ mod tests {
     fn extracts_entity_from_next_data_html() {
         let html = wrap_in_next_data(r#"{"title":"Fireflies"}"#);
         let entity = entity_from_html(&html).unwrap();
-        assert_eq!(entity.get("title").and_then(Value::as_str), Some("Fireflies"));
+        assert_eq!(
+            entity.get("title").and_then(Value::as_str),
+            Some("Fireflies")
+        );
     }
 
     #[test]
