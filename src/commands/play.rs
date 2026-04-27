@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::process::Command as TokioCommand;
 use tracing::{debug, error, info};
 
-use crate::spotify::{SpotifyError, SpotifyResource};
+use crate::spotify::{SpotifyError, SpotifyResource, SpotifyTrack};
 use crate::utils::get_guild_data;
 use crate::{
     check_msg, create_default_message, create_error_message, CommandResult, Context, GuildData,
@@ -297,14 +297,6 @@ async fn process_spotify(
     guild_data: Arc<tokio::sync::Mutex<GuildData>>,
     handler_lock: Arc<tokio::sync::Mutex<songbird::Call>>,
 ) -> CommandResult {
-    let Some(spotify) = ctx.data().spotify.clone() else {
-        let reply = create_error_message(
-            "Spotify support is not configured on this bot. Ask the operator to set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.",
-        );
-        check_msg(ctx.send(reply).await);
-        return Ok(());
-    };
-
     let kind = match &resource {
         SpotifyResource::Track(_) => "track",
         SpotifyResource::Playlist(_) => "playlist",
@@ -314,10 +306,30 @@ async fn process_spotify(
     let processing_msg = create_default_message(&format!("Processing Spotify {kind}..."), false);
     let send_msg = ctx.send(processing_msg).await?;
 
-    let result = match &resource {
-        SpotifyResource::Track(id) => spotify.fetch_track(id).await.map(|t| vec![t]),
-        SpotifyResource::Playlist(id) => spotify.fetch_playlist_tracks(id).await,
-        SpotifyResource::Album(id) => spotify.fetch_album_tracks(id).await,
+    // Try the official Web API first when credentials are configured. If that returns
+    // an Auth error (e.g. dev account without Premium, app not approved for Web API),
+    // or if no API client is configured at all, fall back to scraping the public
+    // open.spotify.com embed pages, which need no auth but cap playlists at ~100 tracks.
+    let http = &ctx.data().http;
+    let result: Result<Vec<SpotifyTrack>, SpotifyError> = match ctx.data().spotify.clone() {
+        Some(spotify) => {
+            let api_result = match &resource {
+                SpotifyResource::Track(id) => spotify.fetch_track(id).await.map(|t| vec![t]),
+                SpotifyResource::Playlist(id) => spotify.fetch_playlist_tracks(id).await,
+                SpotifyResource::Album(id) => spotify.fetch_album_tracks(id).await,
+            };
+            match api_result {
+                Err(SpotifyError::Auth(msg)) => {
+                    info!("Spotify API auth failed ({msg}); falling back to embed scrape");
+                    fetch_via_embed(http, &resource).await
+                }
+                other => other,
+            }
+        }
+        None => {
+            info!("Spotify API not configured; using embed scrape");
+            fetch_via_embed(http, &resource).await
+        }
     };
 
     let tracks = match result {
@@ -494,6 +506,19 @@ fn validate_url(url: &str) -> bool {
     }
 
     false
+}
+
+async fn fetch_via_embed(
+    http: &reqwest::Client,
+    resource: &SpotifyResource,
+) -> Result<Vec<SpotifyTrack>, SpotifyError> {
+    match resource {
+        SpotifyResource::Track(id) => crate::spotify_embed::fetch_track(http, id)
+            .await
+            .map(|t| vec![t]),
+        SpotifyResource::Playlist(id) => crate::spotify_embed::fetch_playlist_tracks(http, id).await,
+        SpotifyResource::Album(id) => crate::spotify_embed::fetch_album_tracks(http, id).await,
+    }
 }
 
 fn format_duration(duration: Option<u64>) -> String {

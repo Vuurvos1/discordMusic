@@ -1,6 +1,7 @@
 mod commands;
 mod queue;
 mod spotify;
+mod spotify_embed;
 mod utils;
 
 use songbird::tracks::TrackHandle;
@@ -217,18 +218,21 @@ async fn main() {
                         let client = SpotifyClient::new(id, secret);
                         match client.request_token().await {
                             Ok(()) => {
-                                info!("Spotify integration enabled");
+                                info!("Spotify Web API enabled");
                                 Some(client)
                             }
                             Err(e) => {
-                                error!("Spotify integration disabled — failed to obtain token: {:?}", e);
+                                error!(
+                                    "Spotify Web API token request failed ({:?}); Spotify URLs will use the public embed fallback",
+                                    e
+                                );
                                 None
                             }
                         }
                     }
                     _ => {
                         info!(
-                            "Spotify integration disabled — SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not set"
+                            "Spotify Web API not configured, using public embed fallback"
                         );
                         None
                     }

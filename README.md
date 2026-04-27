@@ -47,16 +47,21 @@ For installation instructions, you can refer to the [official yt-dlp installatio
 > export PATH="$HOME/.local/bin:$PATH"
 > ```
 
-### Spotify (optional)
+### Spotify
 
-Spotify URL playback is optional. If you want users to be able to queue Spotify tracks, playlists, or albums, create an app at the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and set the following environment variables:
+Spotify URLs (tracks, playlists, albums) work out of the box, no configuration required.
+
+#### Optional: Spotify Web API credentials
+
+Only useful for playlists larger than 100 tracks (the fallback's cap). Create an app at the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and set:
 
 ```
 SPOTIFY_CLIENT_ID=<your client id>
 SPOTIFY_CLIENT_SECRET=<your client secret>
 ```
 
-Spotify tracks are played by searching for them on YouTube via `yt-dlp`. If these variables are not set, the bot still runs normally
+> [!NOTE]
+> Spotify requires a Premium subscription on the developer account to access the Web API. Without Premium, leave these unset — the embed fallback still works.
 
 ### Adding the bot to your server
 
