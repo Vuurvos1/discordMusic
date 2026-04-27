@@ -61,7 +61,8 @@ pub struct GuildData {
     track_handle: Option<TrackHandle>,
     // Auto-leave task cancellation
     auto_leave_cancel: Option<oneshot::Sender<()>>,
-    // play_mode: PlayMode,
+    // Set by the skip command so TrackEndNotifier doesn't advance the queue a second time
+    pub skip_requested: bool,
 }
 
 pub type GuildDataMap = HashMap<serenity::GuildId, Arc<Mutex<GuildData>>>;
@@ -73,12 +74,86 @@ struct UserData {
     spotify: Option<Arc<SpotifyClient>>,
 }
 
-struct Handler;
+struct Handler {
+    songbird: Arc<songbird::Songbird>,
+    guilds: Arc<Mutex<GuildDataMap>>,
+}
 
 #[serenity::async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: serenity::Context, ready: serenity::Ready) {
         info!("{} is connected!", ready.user.name);
+    }
+
+    async fn voice_state_update(
+        &self,
+        ctx: serenity::Context,
+        _old: Option<serenity::VoiceState>,
+        new: serenity::VoiceState,
+    ) {
+        let guild_id = match new.guild_id {
+            Some(id) => id,
+            None => return,
+        };
+
+        let bot_id = ctx.cache.current_user().id;
+
+        // Ignore the bot's own voice state changes
+        if new.user_id == bot_id {
+            return;
+        }
+
+        // Check if bot is currently in a voice channel in this guild
+        let bot_channel_id = {
+            let handler = match self.songbird.get(guild_id) {
+                Some(h) => h,
+                None => return,
+            };
+            let handler = handler.lock().await;
+            match handler.current_channel() {
+                Some(id) => id,
+                None => return,
+            }
+        };
+
+        // Get guild data for this guild
+        let guild_data = {
+            let guilds = self.guilds.lock().await;
+            match guilds.get(&guild_id) {
+                Some(d) => Arc::clone(d),
+                None => return,
+            }
+        };
+
+        // Count non-bot members in the bot's channel using the serenity cache
+        let is_alone = {
+            match ctx.cache.guild(guild_id) {
+                Some(guild) => guild
+                    .voice_states
+                    .values()
+                    .filter(|vs| vs.channel_id.map(|c| c.get()) == Some(bot_channel_id.0.get()))
+                    .all(|vs| vs.user_id == bot_id),
+                None => return,
+            }
+        };
+
+        if is_alone {
+            debug!(
+                "Bot is alone in channel in guild {}, stopping playback and starting auto-leave timer",
+                guild_id.get()
+            );
+            {
+                let mut data = guild_data.lock().await;
+                if let Some(handle) = data.track_handle.take() {
+                    let _ = handle.stop();
+                }
+                data.queue.clear();
+            }
+            start_auto_leave_task(guild_id, Arc::clone(&self.songbird), guild_data).await;
+        } else {
+            // Someone is in the channel, cancel any pending auto-leave
+            cancel_auto_leave(&guild_data).await;
+        }
     }
 }
 
@@ -122,6 +197,11 @@ async fn main() {
 
     // We have to clone our voice manager's Arc to share it between serenity and our user data.
     let manager_clone = Arc::clone(&manager);
+    let manager_handler = Arc::clone(&manager);
+
+    // Create guilds map up front so it can be shared between the poise UserData and the Handler.
+    let guilds: Arc<Mutex<GuildDataMap>> = Arc::new(Mutex::new(HashMap::new()));
+    let guilds_clone = Arc::clone(&guilds);
 
     let framework = poise::Framework::builder()
         .options(options)
@@ -157,7 +237,7 @@ async fn main() {
                 Ok(UserData {
                     http: HttpClient::new(),
                     songbird: manager_clone,
-                    guilds: Arc::new(Mutex::new(HashMap::new())),
+                    guilds,
                     spotify,
                 })
             })
@@ -169,7 +249,10 @@ async fn main() {
         | GatewayIntents::GUILD_VOICE_STATES;
     let mut client = serenity::Client::builder(&token, intents)
         .voice_manager_arc(manager)
-        .event_handler(Handler)
+        .event_handler(Handler {
+            songbird: manager_handler,
+            guilds: guilds_clone,
+        })
         .framework(framework)
         .await
         .expect("Error creating client");
@@ -307,7 +390,13 @@ impl VoiceEventHandler for TrackEndNotifier {
         // Advance and copy next URL under guild_data lock
         let (next_url, cancel_sender_opt) = {
             let mut data = self.guild_data.lock().await;
-            let _ = data.queue.next_track();
+            if data.skip_requested {
+                // Bypass loop mode and force-advance to the next track
+                data.skip_requested = false;
+                let _ = data.queue.skip();
+            } else {
+                let _ = data.queue.next_track();
+            }
             let url = data.queue.front().map(|m| m.url.clone());
             let cancel = if url.is_some() {
                 data.auto_leave_cancel.take()

@@ -7,7 +7,9 @@ use crate::{check_msg, create_default_message, CommandResult, Context};
 pub async fn queue(ctx: Context<'_>) -> CommandResult {
     // TODO: add pagination
 
-    let guild_id = ctx.guild_id().unwrap();
+    let guild_id = ctx
+        .guild_id()
+        .ok_or("guild_only command called outside a guild")?;
 
     let guild_data = get_guild_data(ctx, guild_id).await;
     let guild_data = guild_data.lock().await;
