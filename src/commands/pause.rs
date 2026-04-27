@@ -8,7 +8,9 @@ use crate::{
 /// Pause the current song
 #[poise::command(slash_command, guild_only)]
 pub async fn pause(ctx: Context<'_>) -> CommandResult {
-    let guild_id = ctx.guild_id().unwrap();
+    let guild_id = ctx
+        .guild_id()
+        .ok_or("guild_only command called outside a guild")?;
 
     let _handler_lock = match require_voice_handler(ctx).await {
         Some(lock) => lock,

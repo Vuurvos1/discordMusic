@@ -24,10 +24,6 @@ impl Queue {
     pub fn is_empty(&self) -> bool {
         self.tracks.is_empty()
     }
-    #[allow(dead_code)]
-    pub fn set_looping(&mut self, looping: bool) {
-        self.looping = looping;
-    }
     pub fn toggle_looping(&mut self) {
         self.looping = !self.looping;
     }
@@ -53,7 +49,6 @@ impl Queue {
 
     // Little redundant when you can call next_track instead
     // skip the current track
-    #[allow(dead_code)]
     pub fn skip(&mut self) -> Option<TrackMetadata> {
         let _ = self.tracks.pop_front();
         self.tracks.front().cloned()
@@ -231,7 +226,7 @@ mod tests {
         }
         // Make current be t1, then enable looping
         let _ = q.skip();
-        q.set_looping(true);
+        q.toggle_looping();
         let n = q.next_track().expect("should keep current when looping");
         assert_eq!(n.title, "t1");
         assert_eq!(q.front().unwrap().title, "t1");
