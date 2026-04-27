@@ -14,9 +14,7 @@ reqwest = { default-features = false, features = [
 ], version = "0.12.28" }
 serde = "1.0.228"
 serde_json = "1.0.149"
-# Use fork with DAVE/E2EE support until PR #291 is merged upstream
-# https://github.com/serenity-rs/songbird/pull/291
-songbird = { git = "https://github.com/beerpsi-forks/songbird", branch = "davey", default-features = true }
+songbird = "0.6.0"
 symphonia = "0.5.5" # needed for yt-dlp playback
 thiserror = "2.0.18"
 tokio = { version = "1.50.0", features = ["full", "macros", "rt-multi-thread"] }
