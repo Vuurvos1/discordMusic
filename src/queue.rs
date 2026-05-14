@@ -115,6 +115,7 @@ mod tests {
             duration: "".into(),
             requested_by: 0,
             platform: "youtube".into(),
+            source_url: None,
         }
     }
 

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::process::Command as TokioCommand;
 use tracing::{debug, error, info};
 
+use crate::spotify::{SpotifyError, SpotifyResource, SpotifyTrack};
 use crate::utils::get_guild_data;
 use crate::{
     check_msg, create_default_message, create_error_message, CommandResult, Context, GuildData,
@@ -12,7 +13,6 @@ use crate::{
 };
 
 // TODO: support soundcloud sets
-// TOOD: support spotify through youtube
 
 /// Play a song
 #[poise::command(slash_command, guild_only)]
@@ -28,7 +28,7 @@ pub async fn play(
     // Validate URL if it looks like a URL
     if search.starts_with("http") && !validate_url(&search) {
         let reply = create_error_message(
-            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud."
+            "This platform is not supported. Currently supported platforms: YouTube, SoundCloud, and Spotify."
         );
         check_msg(ctx.send(reply).await);
         return Ok(());
@@ -106,7 +106,15 @@ pub async fn play(
         }
     }
 
-    if is_youtube_playlist(&search) {
+    if let Some(resource) = crate::spotify::parse_url(&search) {
+        process_spotify(
+            ctx,
+            resource,
+            Arc::clone(&guild_data),
+            Arc::clone(&handler_lock),
+        )
+        .await?;
+    } else if is_youtube_playlist(&search) {
         process_playlist(
             ctx,
             search,
@@ -226,6 +234,7 @@ async fn process_playlist(
             let title = entry.title.unwrap_or_else(|| url.clone());
             items.push(TrackMetadata {
                 title,
+                source_url: Some(url.clone()),
                 url,
                 artist: String::new(),
                 duration: String::new(),
@@ -245,24 +254,7 @@ async fn process_playlist(
     }
 
     let added_count = items.len();
-
-    // Enqueue all items with a single lock; then, if previously empty, start playback
-    let queue_was_empty = {
-        let mut data = guild_data.lock().await;
-        let was_empty = data.queue.is_empty();
-        for m in items {
-            data.queue.push(m);
-        }
-        was_empty
-    };
-
-    if queue_was_empty {
-        if let Some(handler) = play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await
-        {
-            let mut data = guild_data.lock().await;
-            data.track_handle = Some(handler);
-        }
-    }
+    enqueue_and_maybe_start(ctx, items, &guild_data, &handler_lock).await;
 
     let final_msg = create_default_message(
         &format!(
@@ -276,6 +268,156 @@ async fn process_playlist(
     Ok(())
 }
 
+/// Enqueue tracks under a single lock; if the queue was previously empty, start playback.
+async fn enqueue_and_maybe_start(
+    ctx: Context<'_>,
+    items: Vec<TrackMetadata>,
+    guild_data: &Arc<tokio::sync::Mutex<GuildData>>,
+    handler_lock: &Arc<tokio::sync::Mutex<songbird::Call>>,
+) {
+    let queue_was_empty = {
+        let mut data = guild_data.lock().await;
+        let was_empty = data.queue.is_empty();
+        for m in items {
+            data.queue.push(m);
+        }
+        was_empty
+    };
+
+    if queue_was_empty {
+        if let Some(handler) = play_next_in_queue(ctx, handler_lock, Arc::clone(guild_data)).await {
+            let mut data = guild_data.lock().await;
+            data.track_handle = Some(handler);
+        }
+    }
+}
+
+async fn process_spotify(
+    ctx: Context<'_>,
+    resource: SpotifyResource,
+    guild_data: Arc<tokio::sync::Mutex<GuildData>>,
+    handler_lock: Arc<tokio::sync::Mutex<songbird::Call>>,
+) -> CommandResult {
+    let kind = match &resource {
+        SpotifyResource::Track(_) => "track",
+        SpotifyResource::Playlist(_) => "playlist",
+        SpotifyResource::Album(_) => "album",
+    };
+
+    let wrapper_url = crate::spotify::build_resource_url(kind, resource_id(&resource));
+    let processing_msg = create_default_message(
+        &format!("Processing [Spotify {kind}]({wrapper_url})..."),
+        false,
+    );
+    let send_msg = ctx.send(processing_msg).await?;
+
+    // Try the official Web API first when credentials are configured. If that returns
+    // an Auth error (e.g. dev account without Premium, app not approved for Web API),
+    // or if no API client is configured at all, fall back to scraping the public
+    // open.spotify.com embed pages, which need no auth but cap playlists at ~100 tracks.
+    let http = &ctx.data().http;
+    let result: Result<Vec<SpotifyTrack>, SpotifyError> = match ctx.data().spotify.clone() {
+        Some(spotify) => {
+            let api_result = match &resource {
+                SpotifyResource::Track(id) => spotify.fetch_track(id).await.map(|t| vec![t]),
+                SpotifyResource::Playlist(id) => spotify.fetch_playlist_tracks(id).await,
+                SpotifyResource::Album(id) => spotify.fetch_album_tracks(id).await,
+            };
+            match api_result {
+                Err(SpotifyError::Auth(msg)) => {
+                    info!("Spotify API auth failed ({msg}); falling back to embed scrape");
+                    fetch_via_embed(http, &resource).await
+                }
+                other => other,
+            }
+        }
+        None => {
+            info!("Spotify API not configured; using embed scrape");
+            fetch_via_embed(http, &resource).await
+        }
+    };
+
+    let tracks = match result {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Spotify fetch failed for {kind}: {:?}", e);
+            let user_msg = match e {
+                SpotifyError::NotFound => format!("Spotify {kind} not found."),
+                SpotifyError::Empty => format!("No tracks found in this Spotify {kind}."),
+                SpotifyError::Auth(_) => "Failed to authenticate with Spotify.".to_string(),
+                SpotifyError::Network(_) => "Failed to reach Spotify.".to_string(),
+                SpotifyError::BadResponse(_) => "Unexpected response from Spotify.".to_string(),
+            };
+            send_msg.edit(ctx, create_error_message(&user_msg)).await?;
+            return Ok(());
+        }
+    };
+
+    let requested_by = ctx.author().id.get();
+    let items: Vec<TrackMetadata> = tracks
+        .into_iter()
+        .map(|t| {
+            let search_query = if t.artist.is_empty() {
+                t.name.clone()
+            } else {
+                format!("{} {}", t.name, t.artist)
+            };
+            let source_url = if t.url.is_empty() { None } else { Some(t.url) };
+            TrackMetadata {
+                title: t.name,
+                url: search_query,
+                artist: t.artist,
+                duration: format_duration(Some(t.duration_ms / 1000)),
+                requested_by,
+                platform: "spotify".into(),
+                source_url,
+            }
+        })
+        .collect();
+
+    let final_msg = build_spotify_added_message(&resource, kind, &items);
+    enqueue_and_maybe_start(ctx, items, &guild_data, &handler_lock).await;
+
+    send_msg.edit(ctx, final_msg).await?;
+
+    Ok(())
+}
+
+fn build_spotify_added_message(
+    resource: &SpotifyResource,
+    kind: &str,
+    items: &[TrackMetadata],
+) -> poise::CreateReply {
+    if items.len() == 1 {
+        let track = &items[0];
+        let label = if track.artist.is_empty() {
+            track.title.clone()
+        } else {
+            format!("{} – {}", track.title, track.artist)
+        };
+        let body = match &track.source_url {
+            Some(url) => format!("Added [{label}]({url}) to the queue"),
+            None => format!("Added \"{label}\" to the queue"),
+        };
+        return create_default_message(&body, false);
+    }
+
+    let wrapper_url = crate::spotify::build_resource_url(kind, resource_id(resource));
+    let body = format!(
+        "Added {} tracks from [Spotify {kind}]({wrapper_url}) to the queue",
+        items.len()
+    );
+    create_default_message(&body, false)
+}
+
+fn resource_id(resource: &SpotifyResource) -> &str {
+    match resource {
+        SpotifyResource::Track(id) | SpotifyResource::Playlist(id) | SpotifyResource::Album(id) => {
+            id
+        }
+    }
+}
+
 async fn play_next_in_queue(
     ctx: Context<'_>,
     handler_lock: &Arc<tokio::sync::Mutex<songbird::Call>>,
@@ -284,10 +426,14 @@ async fn play_next_in_queue(
     let data = ctx.data();
 
     // Extract required metadata without holding the lock longer than necessary
-    let (url, title) = {
+    let (url, title, link_url) = {
         let guild_data_lock = guild_data.lock().await;
         if let Some(metadata) = guild_data_lock.queue.front() {
-            (metadata.url.clone(), metadata.title.clone())
+            (
+                metadata.url.clone(),
+                metadata.title.clone(),
+                metadata.source_url.clone(),
+            )
         } else {
             debug!("play_next_in_queue called but custom queue was empty.");
             return None;
@@ -306,14 +452,12 @@ async fn play_next_in_queue(
         handler.play_only_input(src.into())
     };
 
-    // Send the message after releasing all locks
-    check_msg(
-        ctx.send(create_default_message(
-            &format!("Playing: [{}]({})", title, url),
-            false,
-        ))
-        .await,
-    );
+    let body = match link_url {
+        Some(link) => format!("Playing: [{title}]({link})"),
+        None if url.starts_with("http") => format!("Playing: [{title}]({url})"),
+        None => format!("Playing: {title}"),
+    };
+    check_msg(ctx.send(create_default_message(&body, false)).await);
 
     Some(track_handle)
 }
@@ -350,6 +494,12 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
         .output()
         .await;
 
+    let source_url = if url.starts_with("http") {
+        Some(url.to_string())
+    } else {
+        None
+    };
+
     let default_metadata = || TrackMetadata {
         title: url.to_string(),
         url: url.to_string(),
@@ -357,6 +507,7 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
         requested_by: ctx.author().id.get(),
         platform: "youtube".to_string(),
         duration: String::new(),
+        source_url: source_url.clone(),
     };
 
     match output {
@@ -369,6 +520,7 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
                     requested_by: ctx.author().id.get(),
                     platform: "youtube".to_string(),
                     duration: format_duration(metadata.duration),
+                    source_url,
                 },
                 Err(_) => default_metadata(),
             }
@@ -393,7 +545,27 @@ fn validate_url(url: &str) -> bool {
         return true;
     }
 
+    // Spotify URLs
+    if url.contains("open.spotify.com") {
+        return true;
+    }
+
     false
+}
+
+async fn fetch_via_embed(
+    http: &reqwest::Client,
+    resource: &SpotifyResource,
+) -> Result<Vec<SpotifyTrack>, SpotifyError> {
+    match resource {
+        SpotifyResource::Track(id) => crate::spotify_embed::fetch_track(http, id)
+            .await
+            .map(|t| vec![t]),
+        SpotifyResource::Playlist(id) => {
+            crate::spotify_embed::fetch_playlist_tracks(http, id).await
+        }
+        SpotifyResource::Album(id) => crate::spotify_embed::fetch_album_tracks(http, id).await,
+    }
 }
 
 fn format_duration(duration: Option<u64>) -> String {

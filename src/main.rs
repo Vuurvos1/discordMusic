@@ -1,5 +1,7 @@
 mod commands;
 mod queue;
+mod spotify;
+mod spotify_embed;
 mod utils;
 
 use songbird::tracks::TrackHandle;
@@ -24,6 +26,7 @@ use songbird::input::YoutubeDl;
 use songbird::Call;
 
 use crate::queue::Queue;
+use crate::spotify::SpotifyClient;
 
 #[derive(Clone, Debug)]
 pub struct TrackMetadata {
@@ -33,6 +36,10 @@ pub struct TrackMetadata {
     pub duration: String,
     pub requested_by: u64,
     pub platform: String,
+    /// Canonical link to the original source (Spotify track URL, etc.).
+    /// `url` is the playback hint passed to yt-dlp; for Spotify that's a
+    /// search query, not something we want to render in chat.
+    pub source_url: Option<String>,
 }
 
 struct CustomColours {
@@ -69,6 +76,7 @@ struct UserData {
     http: HttpClient,
     songbird: Arc<songbird::Songbird>,
     guilds: Arc<Mutex<GuildDataMap>>,
+    spotify: Option<Arc<SpotifyClient>>,
 }
 
 struct Handler {
@@ -205,10 +213,40 @@ async fn main() {
         .setup(|ctx: &serenity::Context, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+
+                let spotify = match (
+                    std::env::var("SPOTIFY_CLIENT_ID"),
+                    std::env::var("SPOTIFY_CLIENT_SECRET"),
+                ) {
+                    (Ok(id), Ok(secret)) if !id.is_empty() && !secret.is_empty() => {
+                        let client = SpotifyClient::new(id, secret);
+                        match client.request_token().await {
+                            Ok(()) => {
+                                info!("Spotify Web API enabled");
+                                Some(client)
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Spotify Web API token request failed ({:?}); Spotify URLs will use the public embed fallback",
+                                    e
+                                );
+                                None
+                            }
+                        }
+                    }
+                    _ => {
+                        info!(
+                            "Spotify Web API not configured, using public embed fallback"
+                        );
+                        None
+                    }
+                };
+
                 Ok(UserData {
                     http: HttpClient::new(),
                     songbird: manager_clone,
                     guilds,
+                    spotify,
                 })
             })
         })
