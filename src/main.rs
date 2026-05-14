@@ -36,6 +36,10 @@ pub struct TrackMetadata {
     pub duration: String,
     pub requested_by: u64,
     pub platform: String,
+    /// Canonical link to the original source (Spotify track URL, etc.).
+    /// `url` is the playback hint passed to yt-dlp; for Spotify that's a
+    /// search query, not something we want to render in chat.
+    pub source_url: Option<String>,
 }
 
 struct CustomColours {

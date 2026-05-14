@@ -234,6 +234,7 @@ async fn process_playlist(
             let title = entry.title.unwrap_or_else(|| url.clone());
             items.push(TrackMetadata {
                 title,
+                source_url: Some(url.clone()),
                 url,
                 artist: String::new(),
                 duration: String::new(),
@@ -303,7 +304,11 @@ async fn process_spotify(
         SpotifyResource::Album(_) => "album",
     };
 
-    let processing_msg = create_default_message(&format!("Processing Spotify {kind}..."), false);
+    let wrapper_url = crate::spotify::build_resource_url(kind, resource_id(&resource));
+    let processing_msg = create_default_message(
+        &format!("Processing [Spotify {kind}]({wrapper_url})..."),
+        false,
+    );
     let send_msg = ctx.send(processing_msg).await?;
 
     // Try the official Web API first when credentials are configured. If that returns
@@ -357,6 +362,7 @@ async fn process_spotify(
             } else {
                 format!("{} {}", t.name, t.artist)
             };
+            let source_url = if t.url.is_empty() { None } else { Some(t.url) };
             TrackMetadata {
                 title: t.name,
                 url: search_query,
@@ -364,23 +370,52 @@ async fn process_spotify(
                 duration: format_duration(Some(t.duration_ms / 1000)),
                 requested_by,
                 platform: "spotify".into(),
+                source_url,
             }
         })
         .collect();
 
-    let added_count = items.len();
+    let final_msg = build_spotify_added_message(&resource, kind, &items);
     enqueue_and_maybe_start(ctx, items, &guild_data, &handler_lock).await;
 
-    let final_msg = create_default_message(
-        &format!(
-            "Added {} song(s) from Spotify {} to queue.",
-            added_count, kind
-        ),
-        false,
-    );
     send_msg.edit(ctx, final_msg).await?;
 
     Ok(())
+}
+
+fn build_spotify_added_message(
+    resource: &SpotifyResource,
+    kind: &str,
+    items: &[TrackMetadata],
+) -> poise::CreateReply {
+    if items.len() == 1 {
+        let track = &items[0];
+        let label = if track.artist.is_empty() {
+            track.title.clone()
+        } else {
+            format!("{} – {}", track.title, track.artist)
+        };
+        let body = match &track.source_url {
+            Some(url) => format!("Added [{label}]({url}) to the queue"),
+            None => format!("Added \"{label}\" to the queue"),
+        };
+        return create_default_message(&body, false);
+    }
+
+    let wrapper_url = crate::spotify::build_resource_url(kind, resource_id(resource));
+    let body = format!(
+        "Added {} tracks from [Spotify {kind}]({wrapper_url}) to the queue",
+        items.len()
+    );
+    create_default_message(&body, false)
+}
+
+fn resource_id(resource: &SpotifyResource) -> &str {
+    match resource {
+        SpotifyResource::Track(id) | SpotifyResource::Playlist(id) | SpotifyResource::Album(id) => {
+            id
+        }
+    }
 }
 
 async fn play_next_in_queue(
@@ -391,10 +426,14 @@ async fn play_next_in_queue(
     let data = ctx.data();
 
     // Extract required metadata without holding the lock longer than necessary
-    let (url, title) = {
+    let (url, title, link_url) = {
         let guild_data_lock = guild_data.lock().await;
         if let Some(metadata) = guild_data_lock.queue.front() {
-            (metadata.url.clone(), metadata.title.clone())
+            (
+                metadata.url.clone(),
+                metadata.title.clone(),
+                metadata.source_url.clone(),
+            )
         } else {
             debug!("play_next_in_queue called but custom queue was empty.");
             return None;
@@ -413,14 +452,12 @@ async fn play_next_in_queue(
         handler.play_only_input(src.into())
     };
 
-    // Send the message after releasing all locks
-    check_msg(
-        ctx.send(create_default_message(
-            &format!("Playing: [{}]({})", title, url),
-            false,
-        ))
-        .await,
-    );
+    let body = match link_url {
+        Some(link) => format!("Playing: [{title}]({link})"),
+        None if url.starts_with("http") => format!("Playing: [{title}]({url})"),
+        None => format!("Playing: {title}"),
+    };
+    check_msg(ctx.send(create_default_message(&body, false)).await);
 
     Some(track_handle)
 }
@@ -457,6 +494,12 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
         .output()
         .await;
 
+    let source_url = if url.starts_with("http") {
+        Some(url.to_string())
+    } else {
+        None
+    };
+
     let default_metadata = || TrackMetadata {
         title: url.to_string(),
         url: url.to_string(),
@@ -464,6 +507,7 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
         requested_by: ctx.author().id.get(),
         platform: "youtube".to_string(),
         duration: String::new(),
+        source_url: source_url.clone(),
     };
 
     match output {
@@ -476,6 +520,7 @@ async fn get_video_metadata(url: &str, ctx: Context<'_>) -> TrackMetadata {
                     requested_by: ctx.author().id.get(),
                     platform: "youtube".to_string(),
                     duration: format_duration(metadata.duration),
+                    source_url,
                 },
                 Err(_) => default_metadata(),
             }

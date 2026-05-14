@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rspotify::{
     clients::BaseClient,
-    model::{AlbumId, PlayableItem, PlaylistId, SimplifiedArtist, TrackId},
+    model::{AlbumId, Id, PlayableItem, PlaylistId, SimplifiedArtist, TrackId},
     ClientCredsSpotify, ClientError, Credentials,
 };
 use thiserror::Error;
@@ -63,6 +63,12 @@ pub struct SpotifyTrack {
     pub name: String,
     pub artist: String,
     pub duration_ms: u64,
+    pub url: String,
+}
+
+/// Build a canonical `https://open.spotify.com/{kind}/{id}` URL.
+pub fn build_resource_url(kind: &str, id: &str) -> String {
+    format!("https://open.spotify.com/{kind}/{id}")
 }
 
 /// Parse an `open.spotify.com` URL into a resource.
@@ -104,6 +110,7 @@ fn make_spotify_track(
     name: String,
     artists: Vec<SimplifiedArtist>,
     duration_ms: i64,
+    url: String,
 ) -> SpotifyTrack {
     SpotifyTrack {
         name,
@@ -113,6 +120,22 @@ fn make_spotify_track(
             .map(|a| a.name)
             .unwrap_or_default(),
         duration_ms: u64::try_from(duration_ms).unwrap_or(0),
+        url,
+    }
+}
+
+/// Pick the canonical Spotify URL for a track: prefer `external_urls["spotify"]`,
+/// fall back to constructing it from the track id.
+fn track_url(
+    external_urls: &std::collections::HashMap<String, String>,
+    id: Option<&TrackId<'_>>,
+) -> String {
+    if let Some(url) = external_urls.get("spotify") {
+        return url.clone();
+    }
+    match id {
+        Some(track_id) => build_resource_url("track", track_id.id()),
+        None => String::new(),
     }
 }
 
@@ -134,10 +157,12 @@ impl SpotifyClient {
     pub async fn fetch_track(&self, id: &str) -> Result<SpotifyTrack, SpotifyError> {
         let track_id = TrackId::from_id(id).map_err(|_| SpotifyError::NotFound)?;
         let track = self.inner.track(track_id, None).await?;
+        let url = track_url(&track.external_urls, track.id.as_ref());
         Ok(make_spotify_track(
             track.name,
             track.artists,
             track.duration.num_milliseconds(),
+            url,
         ))
     }
 
@@ -164,10 +189,12 @@ impl SpotifyClient {
                 if track.is_local {
                     continue;
                 }
+                let url = track_url(&track.external_urls, track.id.as_ref());
                 tracks.push(make_spotify_track(
                     track.name,
                     track.artists,
                     track.duration.num_milliseconds(),
+                    url,
                 ));
             }
 
@@ -200,10 +227,12 @@ impl SpotifyClient {
                 if track.is_local {
                     continue;
                 }
+                let url = track_url(&track.external_urls, track.id.as_ref());
                 tracks.push(make_spotify_track(
                     track.name,
                     track.artists,
                     track.duration.num_milliseconds(),
+                    url,
                 ));
             }
 

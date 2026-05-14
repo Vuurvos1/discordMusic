@@ -11,7 +11,7 @@ use reqwest::Client;
 use serde_json::Value;
 use tracing::{info, warn};
 
-use crate::spotify::{SpotifyError, SpotifyTrack};
+use crate::spotify::{build_resource_url, SpotifyError, SpotifyTrack};
 
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
     (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -23,7 +23,7 @@ pub async fn fetch_track(client: &Client, id: &str) -> Result<SpotifyTrack, Spot
     let url = format!("https://open.spotify.com/embed/track/{id}");
     let html = fetch_html(client, &url).await?;
     let entity = entity_from_html(&html)?;
-    parse_track_entity(&entity)
+    parse_track_entity(&entity, id)
 }
 
 pub async fn fetch_playlist_tracks(
@@ -106,7 +106,7 @@ fn extract_next_data(html: &str) -> Result<Value, SpotifyError> {
         .map_err(|e| SpotifyError::BadResponse(format!("__NEXT_DATA__ JSON parse: {e}")))
 }
 
-fn parse_track_entity(entity: &Value) -> Result<SpotifyTrack, SpotifyError> {
+fn parse_track_entity(entity: &Value, fallback_id: &str) -> Result<SpotifyTrack, SpotifyError> {
     let name = entity
         .get("title")
         .and_then(Value::as_str)
@@ -121,11 +121,27 @@ fn parse_track_entity(entity: &Value) -> Result<SpotifyTrack, SpotifyError> {
         .unwrap_or("")
         .to_string();
     let duration_ms = entity.get("duration").and_then(Value::as_u64).unwrap_or(0);
+    let url = entity
+        .get("uri")
+        .and_then(Value::as_str)
+        .and_then(|uri| url_from_uri(uri, "track"))
+        .unwrap_or_else(|| build_resource_url("track", fallback_id));
     Ok(SpotifyTrack {
         name,
         artist,
         duration_ms,
+        url,
     })
+}
+
+/// Convert a `spotify:track:<id>` (or similar) URI into the canonical web URL.
+/// Returns `None` if the URI doesn't have the expected `spotify:{kind}:<id>` shape.
+fn url_from_uri(uri: &str, kind: &str) -> Option<String> {
+    let id = uri.strip_prefix(&format!("spotify:{kind}:"))?;
+    if id.is_empty() {
+        return None;
+    }
+    Some(build_resource_url(kind, id))
 }
 
 /// Returns `(raw_count, playable_tracks)`. The raw count is the unfiltered trackList
@@ -153,10 +169,16 @@ fn parse_track_list(entity: &Value) -> (usize, Vec<SpotifyTrack>) {
                 .unwrap_or("")
                 .to_string();
             let duration_ms = item.get("duration").and_then(Value::as_u64).unwrap_or(0);
+            let url = item
+                .get("uri")
+                .and_then(Value::as_str)
+                .and_then(|uri| url_from_uri(uri, "track"))
+                .unwrap_or_default();
             Some(SpotifyTrack {
                 name,
                 artist,
                 duration_ms,
+                url,
             })
         })
         .collect();
@@ -206,20 +228,29 @@ mod tests {
     #[test]
     fn parses_track_entity() {
         let entity: Value = serde_json::from_str(
-            r#"{"title":"Fireflies","artists":[{"name":"Owl City"}],"duration":228346}"#,
+            r#"{"title":"Fireflies","artists":[{"name":"Owl City"}],"duration":228346,"uri":"spotify:track:abc123"}"#,
         )
         .unwrap();
-        let track = parse_track_entity(&entity).unwrap();
+        let track = parse_track_entity(&entity, "abc123").unwrap();
         assert_eq!(track.name, "Fireflies");
         assert_eq!(track.artist, "Owl City");
         assert_eq!(track.duration_ms, 228346);
+        assert_eq!(track.url, "https://open.spotify.com/track/abc123");
+    }
+
+    #[test]
+    fn track_entity_without_uri_uses_fallback_id() {
+        let entity: Value =
+            serde_json::from_str(r#"{"title":"Untitled","duration":1000}"#).unwrap();
+        let track = parse_track_entity(&entity, "fallback42").unwrap();
+        assert_eq!(track.url, "https://open.spotify.com/track/fallback42");
     }
 
     #[test]
     fn track_entity_without_artists_yields_empty_artist() {
         let entity: Value =
             serde_json::from_str(r#"{"title":"Untitled","duration":1000}"#).unwrap();
-        let track = parse_track_entity(&entity).unwrap();
+        let track = parse_track_entity(&entity, "id").unwrap();
         assert_eq!(track.name, "Untitled");
         assert_eq!(track.artist, "");
     }
@@ -228,7 +259,7 @@ mod tests {
     fn track_entity_missing_title_is_bad_response() {
         let entity: Value = serde_json::from_str(r#"{"duration":1000}"#).unwrap();
         assert!(matches!(
-            parse_track_entity(&entity),
+            parse_track_entity(&entity, "id"),
             Err(SpotifyError::BadResponse(_))
         ));
     }
@@ -237,9 +268,9 @@ mod tests {
     fn parses_track_list_with_playable_filter() {
         let entity: Value = serde_json::from_str(
             r#"{"trackList":[
-                {"title":"a","subtitle":"x","duration":1000,"isPlayable":true},
-                {"title":"b","subtitle":"y","duration":2000,"isPlayable":false},
-                {"title":"c","subtitle":"z","duration":3000}
+                {"title":"a","subtitle":"x","duration":1000,"isPlayable":true,"uri":"spotify:track:aaa"},
+                {"title":"b","subtitle":"y","duration":2000,"isPlayable":false,"uri":"spotify:track:bbb"},
+                {"title":"c","subtitle":"z","duration":3000,"uri":"spotify:track:ccc"}
             ]}"#,
         )
         .unwrap();
@@ -249,7 +280,19 @@ mod tests {
         assert_eq!(tracks[0].name, "a");
         assert_eq!(tracks[0].artist, "x");
         assert_eq!(tracks[0].duration_ms, 1000);
+        assert_eq!(tracks[0].url, "https://open.spotify.com/track/aaa");
         assert_eq!(tracks[1].name, "c");
+        assert_eq!(tracks[1].url, "https://open.spotify.com/track/ccc");
+    }
+
+    #[test]
+    fn track_list_item_without_uri_leaves_url_empty() {
+        let entity: Value =
+            serde_json::from_str(r#"{"trackList":[{"title":"a","subtitle":"x","duration":1000}]}"#)
+                .unwrap();
+        let (_, tracks) = parse_track_list(&entity);
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].url, "");
     }
 
     #[test]
