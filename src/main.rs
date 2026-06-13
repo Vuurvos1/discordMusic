@@ -189,6 +189,15 @@ async fn main() {
             commands::skip::skip(),
             commands::stop::stop(),
         ],
+        on_error: |error| {
+            Box::pin(async move {
+                error!("Command error: {}", error);
+                if let poise::FrameworkError::Command { ctx, .. } = error {
+                    let reply = create_error_message("Something went wrong while running the command.");
+                    let _ = ctx.send(reply).await;
+                }
+            })
+        },
         ..Default::default()
     };
 
