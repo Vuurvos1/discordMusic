@@ -193,7 +193,8 @@ async fn main() {
             Box::pin(async move {
                 error!("Command error: {}", error);
                 if let poise::FrameworkError::Command { ctx, .. } = error {
-                    let reply = create_error_message("Something went wrong while running the command.");
+                    let reply =
+                        create_error_message("Something went wrong while running the command.");
                     let _ = ctx.send(reply).await;
                 }
             })
