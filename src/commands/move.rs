@@ -1,6 +1,6 @@
 use crate::{
-    check_msg, create_default_message, create_error_message, utils::get_guild_data,
-    utils::require_voice_handler, CommandResult, Context,
+    CommandResult, Context, check_msg, create_default_message, create_error_message,
+    utils::get_guild_data, utils::require_voice_handler,
 };
 
 // TODO: change to an options command where you can select a song from the queue

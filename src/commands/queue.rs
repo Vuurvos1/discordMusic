@@ -1,6 +1,6 @@
 use crate::queue::Queue;
 use crate::utils::get_guild_data;
-use crate::{check_msg, create_default_message, CommandResult, Context};
+use crate::{CommandResult, Context, check_msg, create_default_message};
 
 /// Display the current song queue.
 #[poise::command(slash_command, guild_only)]

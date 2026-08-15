@@ -7,8 +7,8 @@ use tracing::{debug, error, info};
 
 use crate::utils::get_guild_data;
 use crate::{
-    check_msg, create_default_message, create_error_message, CommandResult, Context, GuildData,
-    TrackEndNotifier, TrackErrorNotifier, TrackMetadata,
+    CommandResult, Context, GuildData, TrackEndNotifier, TrackErrorNotifier, TrackMetadata,
+    check_msg, create_default_message, create_error_message,
 };
 
 // TODO: support soundcloud sets
@@ -28,7 +28,7 @@ pub async fn play(
     // Validate URL if it looks like a URL
     if search.starts_with("http") && !validate_url(&search) {
         let reply = create_error_message(
-            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud."
+            "This platform is not supported. Currently supported platforms: YouTube and SoundCloud.",
         );
         check_msg(ctx.send(reply).await);
         return Ok(());
@@ -99,10 +99,10 @@ pub async fn play(
 
     {
         let mut handler = handler_lock.lock().await;
-        if !handler.is_deaf() {
-            if let Err(e) = handler.deafen(true).await {
-                error!("Failed to deafen: {:?}", e);
-            }
+        if !handler.is_deaf()
+            && let Err(e) = handler.deafen(true).await
+        {
+            error!("Failed to deafen: {:?}", e);
         }
     }
 
@@ -256,12 +256,11 @@ async fn process_playlist(
         was_empty
     };
 
-    if queue_was_empty {
-        if let Some(handler) = play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await
-        {
-            let mut data = guild_data.lock().await;
-            data.track_handle = Some(handler);
-        }
+    if queue_was_empty
+        && let Some(handler) = play_next_in_queue(ctx, &handler_lock, Arc::clone(&guild_data)).await
+    {
+        let mut data = guild_data.lock().await;
+        data.track_handle = Some(handler);
     }
 
     let final_msg = create_default_message(

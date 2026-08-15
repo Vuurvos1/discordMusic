@@ -1,8 +1,8 @@
 use tracing::error;
 
 use crate::{
-    check_msg, create_default_message, create_error_message, utils::get_guild_data,
-    utils::require_voice_handler, CommandResult, Context,
+    CommandResult, Context, check_msg, create_default_message, create_error_message,
+    utils::get_guild_data, utils::require_voice_handler,
 };
 
 /// Pause the current song
@@ -23,13 +23,13 @@ pub async fn pause(ctx: Context<'_>) -> CommandResult {
         data.track_handle.clone()
     };
 
-    if let Some(handler) = handle_opt {
-        if let Err(e) = handler.pause() {
-            error!("Failed to pause: {:?}", e);
-            let reply = create_error_message("Failed to pause");
-            check_msg(ctx.send(reply).await);
-            return Ok(());
-        }
+    if let Some(handler) = handle_opt
+        && let Err(e) = handler.pause()
+    {
+        error!("Failed to pause: {:?}", e);
+        let reply = create_error_message("Failed to pause");
+        check_msg(ctx.send(reply).await);
+        return Ok(());
     }
 
     let reply = create_default_message("Paused music", false);

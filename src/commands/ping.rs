@@ -1,4 +1,4 @@
-use crate::{check_msg, create_default_message, CommandResult, Context};
+use crate::{CommandResult, Context, check_msg, create_default_message};
 
 #[poise::command(slash_command, guild_only)]
 pub async fn ping(ctx: Context<'_>) -> CommandResult {

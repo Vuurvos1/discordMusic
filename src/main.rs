@@ -5,7 +5,7 @@ mod utils;
 use songbird::tracks::TrackHandle;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{oneshot, Mutex};
+use tokio::sync::{Mutex, oneshot};
 use tracing::warn;
 use tracing::{debug, error, info};
 
@@ -20,8 +20,8 @@ use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 
 // YtDl requests need an HTTP client to operate -- we'll create and store our own.
 use reqwest::Client as HttpClient;
-use songbird::input::YoutubeDl;
 use songbird::Call;
+use songbird::input::YoutubeDl;
 
 use crate::queue::Queue;
 

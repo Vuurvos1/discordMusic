@@ -1,4 +1,4 @@
-use crate::{check_msg, create_error_message, Context, GuildData};
+use crate::{Context, GuildData, check_msg, create_error_message};
 use serenity::all as serenity;
 use std::sync::Arc;
 use tokio::sync::Mutex;

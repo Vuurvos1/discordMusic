@@ -1,7 +1,6 @@
 use crate::{
-    check_msg, create_default_message,
+    CommandResult, Context, check_msg, create_default_message,
     utils::{get_guild_data, require_voice_handler},
-    CommandResult, Context,
 };
 
 /// Toggle looping for the current song

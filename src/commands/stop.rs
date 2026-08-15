@@ -1,8 +1,8 @@
 use tracing::error;
 
 use crate::{
-    check_msg, create_default_message, create_error_message, utils::get_guild_data,
-    utils::require_voice_handler, CommandResult, Context,
+    CommandResult, Context, check_msg, create_default_message, create_error_message,
+    utils::get_guild_data, utils::require_voice_handler,
 };
 
 /// Stop playback and clear the queue

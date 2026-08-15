@@ -1,8 +1,8 @@
 use tracing::error;
 
 use crate::{
-    check_msg, create_default_message, create_error_message, utils::get_guild_data,
-    utils::require_voice_handler, CommandResult, Context,
+    CommandResult, Context, check_msg, create_default_message, create_error_message,
+    utils::get_guild_data, utils::require_voice_handler,
 };
 
 #[poise::command(slash_command, guild_only, aliases("unpause"))]
@@ -22,13 +22,13 @@ pub async fn resume(ctx: Context<'_>) -> CommandResult {
         data.track_handle.clone()
     };
 
-    if let Some(handler) = handle_opt {
-        if let Err(e) = handler.play() {
-            error!("Failed to resume: {:?}", e);
-            let reply = create_error_message("Failed to resume");
-            check_msg(ctx.send(reply).await);
-            return Ok(());
-        }
+    if let Some(handler) = handle_opt
+        && let Err(e) = handler.play()
+    {
+        error!("Failed to resume: {:?}", e);
+        let reply = create_error_message("Failed to resume");
+        check_msg(ctx.send(reply).await);
+        return Ok(());
     }
 
     let reply = create_default_message("Resumed playing", false);
